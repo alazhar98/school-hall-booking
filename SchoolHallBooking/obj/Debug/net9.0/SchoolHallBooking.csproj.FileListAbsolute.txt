@@ -261,3 +261,5 @@
 /Users/macbookprom3/SchoolHallBooking/obj/Debug/net9.0/SchoolHallBooking.genruntimeconfig.cache
 /Users/macbookprom3/SchoolHallBooking/obj/Debug/net9.0/ref/SchoolHallBooking.dll
 /Users/macbookprom3/SchoolHallBooking/obj/Debug/net9.0/compressed/oyky555mq5-manzv9wpld.gz
+/Users/macbookprom3/SchoolHallBooking/bin/Debug/net9.0/appsettings.Production.json
+/Users/macbookprom3/SchoolHallBooking/obj/Debug/net9.0/SchoolHallBooking.sourcelink.json
