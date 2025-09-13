@@ -1,8 +1,9 @@
 services:
   - type: web
     name: school-hall-booking
-    env: docker
-    dockerfilePath: ./Dockerfile
+    env: dotnet
+    buildCommand: dotnet publish -c Release -o ./publish
+    startCommand: dotnet ./publish/SchoolHallBooking.dll
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
