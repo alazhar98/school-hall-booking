@@ -1,0 +1,250 @@
+﻿@page "/"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IBookingService BookingService
+@inject ILogger<Home> Logger
+@rendermode InteractiveServer
+
+<PageTitle>نظام حجز القاعات المدرسية</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="display-4 text-center mb-4">نظام حجز القاعات المدرسية</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>القاعات المتاحة</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="bookingDate" class="form-label">اختر التاريخ:</label>
+                        <input type="date" @bind="selectedDate" @bind:format="yyyy-MM-dd" class="form-control" id="bookingDate" />
+                        <button class="btn btn-primary mt-2" @onclick="LoadAvailableHalls">تحديث</button>
+                    </div>
+
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">جاري التحميل...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (availableHalls.Any())
+                    {
+                        <div class="row">
+                        @foreach (var hall in availableHalls)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">@hall.Name</h5>
+                                        @if (hallAvailablePeriods.ContainsKey(hall.Id) && hallAvailablePeriods[hall.Id].Any())
+                                        {
+                                            <div class="mb-3">
+                                                <small class="text-muted">الحصص المتاحة:</small>
+                                                <div class="d-flex flex-wrap justify-content-center gap-1 mt-1">
+                                                    @foreach (var period in hallAvailablePeriods[hall.Id])
+                                                    {
+                                                        <span class="badge bg-success">@period</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-success btn-lg" @onclick="@(() => BookHall(hall.Id))">
+                                                احجز هذه القاعة
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <div class="mb-3">
+                                                <span class="badge bg-danger">محجوزة بالكامل</span>
+                                            </div>
+                                            <button class="btn btn-secondary btn-lg" disabled>
+                                                غير متاحة
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <h5>لا توجد قاعات متاحة</h5>
+                            <p>جميع القاعات محجوزة للتاريخ المحدد. يرجى اختيار تاريخ آخر.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@if (showBookingModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تأكيد الحجز</h5>
+                    <button type="button" class="btn-close" @onclick="CancelBooking"></button>
+                </div>
+                <div class="modal-body">
+                    <p>هل أنت متأكد من حجز <strong>@selectedHallName</strong> في <strong>@selectedDate.ToString("yyyy/MM/dd")</strong> في <strong>الحصة @selectedPeriod</strong>؟</p>
+                    <div class="mb-3">
+                        <label for="teacherName" class="form-label">اسم المدرس:</label>
+                        <input type="text" class="form-control" id="teacherName" @bind="teacherName" placeholder="أدخل اسمك" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="period" class="form-label">الحصة:</label>
+                        <select class="form-select" id="period" @bind="selectedPeriod">
+                            @if (hallAvailablePeriods.ContainsKey(selectedHallId))
+                            {
+                                @foreach (var period in hallAvailablePeriods[selectedHallId])
+                                {
+                                    <option value="@period">الحصة @period</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelBooking">إلغاء</button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmBooking">تأكيد الحجز</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+    </div>
+}
+
+@code {
+    private DateTime selectedDate = DateTime.Today;
+    private List<Hall> availableHalls = new();
+    private Dictionary<int, List<int>> hallAvailablePeriods = new();
+    private bool isLoading = false;
+    private bool showBookingModal = false;
+    private int selectedHallId;
+    private string selectedHallName = string.Empty;
+    private string teacherName = string.Empty;
+    private int selectedPeriod = 1;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableHalls();
+    }
+
+    private async Task LoadAvailableHalls()
+    {
+        try
+        {
+            isLoading = true;
+            availableHalls = await BookingService.GetAvailableHallsAsync(selectedDate);
+            
+            // Load available periods for each hall
+            hallAvailablePeriods.Clear();
+            foreach (var hall in availableHalls)
+            {
+                var periods = await BookingService.GetAvailablePeriodsAsync(hall.Id, selectedDate);
+                hallAvailablePeriods[hall.Id] = periods;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading available halls");
+            errorMessage = "خطأ في تحميل القاعات المتاحة. يرجى المحاولة مرة أخرى.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private void BookHall(int hallId)
+    {
+        var hall = availableHalls.FirstOrDefault(h => h.Id == hallId);
+        if (hall != null && hallAvailablePeriods.ContainsKey(hallId) && hallAvailablePeriods[hallId].Any())
+        {
+            selectedHallId = hallId;
+            selectedHallName = hall.Name;
+            selectedPeriod = hallAvailablePeriods[hallId].First(); // Set to first available period
+            showBookingModal = true;
+            StateHasChanged(); // Force re-render
+        }
+    }
+
+    private async Task ConfirmBooking()
+    {
+        try
+        {
+            // Validate teacher name
+            if (string.IsNullOrWhiteSpace(teacherName))
+            {
+                errorMessage = "يرجى إدخال اسمك لإكمال الحجز.";
+                return;
+            }
+
+            // Check if hall is available for the selected period
+            var isAvailable = await BookingService.IsHallAvailableAsync(selectedHallId, selectedDate, selectedPeriod);
+            if (!isAvailable)
+            {
+                errorMessage = $"{selectedHallName} محجوزة بالفعل في الحصة {selectedPeriod} في {selectedDate:yyyy/MM/dd}. يرجى اختيار حصة أو قاعة أخرى.";
+                return;
+            }
+            
+            await BookingService.CreateBookingAsync(selectedHallId, selectedDate, teacherName.Trim(), selectedPeriod);
+            successMessage = $"تم حجز {selectedHallName} بنجاح في {selectedDate:yyyy/MM/dd} في الحصة {selectedPeriod}";
+            
+            showBookingModal = false;
+            teacherName = string.Empty; // Clear the input
+            await LoadAvailableHalls();
+        }
+        catch (InvalidOperationException ex)
+        {
+            errorMessage = ex.Message;
+            showBookingModal = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating booking");
+            errorMessage = "خطأ في إنشاء الحجز. يرجى المحاولة مرة أخرى.";
+            showBookingModal = false;
+        }
+    }
+
+    private void CancelBooking()
+    {
+        showBookingModal = false;
+        selectedHallId = 0;
+        selectedHallName = string.Empty;
+        teacherName = string.Empty;
+        selectedPeriod = 1;
+    }
+}

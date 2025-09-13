@@ -1,0 +1,81 @@
+@page "/login"
+@using SchoolHallBooking.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>تسجيل الدخول - نظام حجز القاعات</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card mt-5">
+                <div class="card-header">
+                    <h3 class="text-center">تسجيل الدخول</h3>
+                </div>
+                <div class="card-body">
+                    <form @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">اسم المستخدم</label>
+                            <input type="text" class="form-control" id="username" @bind="username" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">كلمة المرور</label>
+                            <input type="password" class="form-control" id="password" @bind="password" required />
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                }
+                                تسجيل الدخول
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3" role="alert">
+                    @errorMessage
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var isValid = await AuthService.ValidateAdminAsync(username, password);
+            if (isValid)
+            {
+                Navigation.NavigateTo("/admin");
+            }
+            else
+            {
+                errorMessage = "اسم المستخدم أو كلمة المرور غير صحيحة";
+            }
+        }
+        catch (Exception)
+        {
+            errorMessage = "حدث خطأ أثناء تسجيل الدخول";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

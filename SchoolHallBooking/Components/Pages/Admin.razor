@@ -1,0 +1,246 @@
+@page "/admin"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IBookingService BookingService
+@inject IAuthService AuthService
+@inject ILogger<Admin> Logger
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>الإدارة - إدارة حجوزات القاعات</PageTitle>
+
+@if (!isAdminLoggedIn)
+{
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card mt-5">
+                    <div class="card-header">
+                        <h3 class="text-center">الوصول مرفوض</h3>
+                    </div>
+                    <div class="card-body text-center">
+                        <p>تحتاج إلى تسجيل الدخول كمدير للوصول إلى هذه الصفحة.</p>
+                        <a href="/login" class="btn btn-primary">اذهب إلى تسجيل الدخول</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col-12 text-end">
+                <span class="text-muted">مرحباً، المدير</span>
+                <button class="btn btn-outline-secondary btn-sm ms-2" @onclick="Logout">تسجيل الخروج</button>
+            </div>
+        </div>
+    <div class="row">
+        <div class="col-12">
+            <h1 class="display-4 text-center mb-4">لوحة الإدارة</h1>
+            <p class="lead text-center mb-5">إدارة حجوزات القاعات وعرض جميع الحجوزات</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>جميع الحجوزات</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary" @onclick="LoadAllBookings">تحديث جميع الحجوزات</button>
+                    </div>
+
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">جاري التحميل...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (allBookings.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>اسم القاعة</th>
+                                        <th>المدرس</th>
+                                        <th>الحصة</th>
+                                        <th>تاريخ الحجز</th>
+                                        <th>تاريخ الإنشاء</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var booking in allBookings)
+                                    {
+                                        <tr>
+                                            <td>@booking.Hall.Name</td>
+                                            <td>@booking.TeacherName</td>
+                                            <td>الحصة @booking.Period</td>
+                                            <td>@booking.BookingDate.ToString("yyyy/MM/dd")</td>
+                                            <td>@booking.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                                            <td>
+                                                <button class="btn btn-danger btn-sm" @onclick="() => DeleteBooking(booking.Id)">
+                                                    حذف
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <h5>لا توجد حجوزات</h5>
+                            <p>لم يتم العثور على حجوزات للتاريخ المحدد.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showDeleteModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تأكيد الحذف</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>هل أنت متأكد من حذف هذا الحجز؟</p>
+                    <p><strong>القاعة:</strong> @selectedBookingHallName</p>
+                    <p><strong>الحصة:</strong> @selectedBookingPeriod</p>
+                    <p><strong>التاريخ:</strong> @selectedBookingDate.ToString("yyyy/MM/dd")</p>
+                    <p><strong>المدرس:</strong> @selectedBookingTeacher</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">إلغاء</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">حذف الحجز</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+    </div>
+}
+
+@code {
+    private List<Booking> allBookings = new();
+    private bool isLoading = false;
+    private bool showDeleteModal = false;
+    private int selectedBookingId;
+    private string selectedBookingHallName = string.Empty;
+    private string selectedBookingTeacher = string.Empty;
+    private int selectedBookingPeriod;
+    private DateTime selectedBookingDate;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isAdminLoggedIn = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAdminLoggedIn = await AuthService.IsAdminLoggedIn();
+        if (isAdminLoggedIn)
+        {
+            await LoadAllBookings();
+        }
+        StateHasChanged(); // Force re-render after async check
+    }
+
+    private async Task LoadAllBookings()
+    {
+        try
+        {
+            isLoading = true;
+            allBookings = await BookingService.GetAllBookingsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading all bookings");
+            errorMessage = "خطأ في تحميل الحجوزات. يرجى المحاولة مرة أخرى.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void DeleteBooking(int bookingId)
+    {
+        var booking = allBookings.FirstOrDefault(b => b.Id == bookingId);
+        if (booking != null)
+        {
+            selectedBookingId = bookingId;
+            selectedBookingHallName = booking.Hall.Name;
+            selectedBookingTeacher = booking.TeacherName;
+            selectedBookingPeriod = booking.Period;
+            selectedBookingDate = booking.BookingDate;
+            showDeleteModal = true;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            await BookingService.DeleteBookingAsync(selectedBookingId);
+            successMessage = "تم حذف الحجز بنجاح.";
+            
+            showDeleteModal = false;
+            await LoadAllBookings();
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+            showDeleteModal = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting booking");
+            errorMessage = "خطأ في حذف الحجز. يرجى المحاولة مرة أخرى.";
+            showDeleteModal = false;
+        }
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteModal = false;
+        selectedBookingId = 0;
+        selectedBookingHallName = string.Empty;
+        selectedBookingTeacher = string.Empty;
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.SetAdminLoggedIn(false);
+        Navigation.NavigateTo("/");
+    }
+}
+}
