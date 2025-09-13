@@ -1,6 +1,6 @@
-# School Hall Booking System
+# نظام حجز القاعات المدرسية
 
-A complete ASP.NET Core (.NET 8) Blazor Server application for managing school hall bookings with Azure AD authentication and Azure SQL Database integration.
+نظام متكامل لإدارة حجز القاعات المدرسية مبني على ASP.NET Core (.NET 9) و Blazor Server مع دعم قاعدة بيانات SQLite.
 
 ## Features
 
@@ -220,6 +220,52 @@ dotnet publish -c Release -o ./publish
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
+
+## خيارات الاستضافة
+
+### 1. Railway (مُوصى به)
+- **المميزات**: مجاني، سهل الاستخدام، دعم .NET
+- **الخطوات**:
+  1. اذهب إلى [railway.app](https://railway.app)
+  2. سجل دخول بحساب GitHub
+  3. اضغط "New Project" > "Deploy from GitHub repo"
+  4. اختر هذا المشروع
+  5. سيتم النشر تلقائياً
+
+### 2. Render
+- **المميزات**: مجاني، دعم Docker
+- **الخطوات**:
+  1. اذهب إلى [render.com](https://render.com)
+  2. سجل دخول بحساب GitHub
+  3. اضغط "New" > "Web Service"
+  4. اختر هذا المشروع
+  5. اختر "Docker" كبيئة التشغيل
+
+### 3. Vercel
+- **المميزات**: مجاني، سريع
+- **الخطوات**:
+  1. اذهب إلى [vercel.com](https://vercel.com)
+  2. سجل دخول بحساب GitHub
+  3. اضغط "New Project"
+  4. اختر هذا المشروع
+  5. سيتم النشر تلقائياً
+
+### 4. Heroku
+- **المميزات**: مجاني، سهل الاستخدام
+- **الخطوات**:
+  1. اذهب إلى [heroku.com](https://heroku.com)
+  2. أنشئ حساب جديد
+  3. اضغط "Create new app"
+  4. اربط المشروع بـ GitHub
+  5. اضغط "Deploy"
+
+## متطلبات الاستضافة
+
+- .NET 9 Runtime
+- قاعدة بيانات SQLite (مضمنة)
+- متغيرات البيئة:
+  - `ASPNETCORE_ENVIRONMENT=Production`
+  - `PORT=8080` (أو أي رقم منصة الاستضافة)
 
 ## License
 

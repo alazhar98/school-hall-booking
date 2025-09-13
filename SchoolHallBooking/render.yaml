@@ -3,8 +3,11 @@ services:
     name: school-hall-booking
     env: docker
     dockerfilePath: ./Dockerfile
+    plan: free
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:$PORT
+      - key: PORT
+        value: 8080
