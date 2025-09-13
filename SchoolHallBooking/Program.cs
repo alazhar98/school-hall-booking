@@ -27,11 +27,23 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
-// Ensure database is created and seeded
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
-    context.Database.EnsureCreated();
+        // Ensure database is created and seeded
+        using (var scope = app.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+
+            // Ensure data directory exists for VPS deployment
+            var dbPath = context.Database.GetConnectionString();
+            if (dbPath != null && dbPath.Contains("Data Source="))
+            {
+                var dbDirectory = Path.GetDirectoryName(dbPath.Replace("Data Source=", ""));
+                if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+                {
+                    Directory.CreateDirectory(dbDirectory);
+                }
+            }
+
+            context.Database.EnsureCreated();
     
     // Update hall names to simple format and add 6th hall if it doesn't exist
     var halls = await context.Halls.ToListAsync();

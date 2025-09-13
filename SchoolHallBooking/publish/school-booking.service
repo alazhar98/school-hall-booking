@@ -1,0 +1,18 @@
+[Unit]
+Description=School Hall Booking Application
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/dotnet /var/www/school-booking/SchoolHallBooking.dll
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=school-booking
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://localhost:5000
+WorkingDirectory=/var/www/school-booking
+
+[Install]
+WantedBy=multi-user.target
