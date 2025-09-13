@@ -87,6 +87,6 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Get port from environment variable (Render uses PORT)
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+// Get port from environment variable (Render uses PORT, DigitalOcean uses 8080)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
