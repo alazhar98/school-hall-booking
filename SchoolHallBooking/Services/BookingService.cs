@@ -34,13 +34,23 @@ public class BookingService : IBookingService
             .Select(b => b.Period)
             .ToListAsync();
 
-        var allPeriods = Enumerable.Range(1, 8).ToList();
+        // Define available periods based on hall
+        List<int> allPeriods;
+        if (hallId == 3) // مركز مصادر التعلم - only sessions 2-7
+        {
+            allPeriods = Enumerable.Range(2, 6).ToList(); // 2, 3, 4, 5, 6, 7
+        }
+        else // All other halls - sessions 1-8
+        {
+            allPeriods = Enumerable.Range(1, 8).ToList();
+        }
+        
         var availablePeriods = allPeriods.Except(bookedPeriods).ToList();
 
         return availablePeriods;
     }
 
-    public async Task<Booking> CreateBookingAsync(int hallId, DateTime date, string teacherName, int period)
+    public async Task<Booking> CreateBookingAsync(int hallId, DateTime date, string teacherName, string section, int period)
     {
         var normalizedDate = date.Date; // Normalize to midnight
         
@@ -49,6 +59,12 @@ public class BookingService : IBookingService
         if (hall == null)
         {
             throw new ArgumentException($"Hall with ID {hallId} not found.");
+        }
+
+        // Validate period for specific halls
+        if (hallId == 3 && (period < 2 || period > 7))
+        {
+            throw new InvalidOperationException($"مركز مصادر التعلم متاح فقط للحصص من 2 إلى 7. الحصة المحددة: {period}");
         }
 
         // Check if hall is already booked on this date and period
@@ -65,6 +81,7 @@ public class BookingService : IBookingService
             HallId = hallId,
             BookingDate = normalizedDate,
             TeacherName = teacherName,
+            Section = section,
             Period = period,
             CreatedAt = DateTime.UtcNow
         };
@@ -138,6 +155,66 @@ public class BookingService : IBookingService
             .FirstOrDefaultAsync(b => b.HallId == hallId && b.BookingDate == normalizedDate && b.Period == period);
 
         return existingBooking == null;
+    }
+
+    public async Task<List<Booking>> GetHallBookingsAsync(int hallId, DateTime date)
+    {
+        var normalizedDate = date.Date;
+        
+        var bookings = await _context.Bookings
+            .Include(b => b.Hall)
+            .Where(b => b.HallId == hallId && b.BookingDate == normalizedDate)
+            .OrderBy(b => b.Period)
+            .ToListAsync();
+
+        return bookings;
+    }
+
+    public async Task<Dictionary<string, int>> GetHallBookingStatisticsAsync()
+    {
+        var stats = await _context.Bookings
+            .Include(b => b.Hall)
+            .GroupBy(b => b.Hall.Name)
+            .Select(g => new { HallName = g.Key, BookingCount = g.Count() })
+            .ToDictionaryAsync(x => x.HallName, x => x.BookingCount);
+
+        return stats;
+    }
+
+    public async Task<Dictionary<string, int>> GetSectionBookingStatisticsAsync()
+    {
+        var stats = await _context.Bookings
+            .GroupBy(b => b.Section)
+            .Select(g => new { Section = g.Key, BookingCount = g.Count() })
+            .ToDictionaryAsync(x => x.Section, x => x.BookingCount);
+
+        return stats;
+    }
+
+    public async Task<List<Booking>> GetFilteredBookingsAsync(int? hallId, DateTime? fromDate, DateTime? toDate)
+    {
+        var query = _context.Bookings.Include(b => b.Hall).AsQueryable();
+
+        if (hallId.HasValue)
+        {
+            query = query.Where(b => b.HallId == hallId.Value);
+        }
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(b => b.BookingDate >= fromDate.Value.Date);
+        }
+
+        if (toDate.HasValue)
+        {
+            query = query.Where(b => b.BookingDate <= toDate.Value.Date);
+        }
+
+        return await query
+            .OrderBy(b => b.BookingDate)
+            .ThenBy(b => b.Hall.Name)
+            .ThenBy(b => b.Period)
+            .ToListAsync();
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)

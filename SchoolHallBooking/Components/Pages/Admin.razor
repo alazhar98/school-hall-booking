@@ -3,11 +3,24 @@
 @using SchoolHallBooking.Services
 @inject IBookingService BookingService
 @inject IAuthService AuthService
+@inject IExportService ExportService
 @inject ILogger<Admin> Logger
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <PageTitle>الإدارة - إدارة حجوزات القاعات</PageTitle>
+
+<script>
+    window.downloadFile = function (dataUrl, fileName) {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>
 
 @if (!isAdminLoggedIn)
 {
@@ -43,16 +56,184 @@ else
         </div>
     </div>
 
-    <div class="row">
+    <!-- Filtering Section -->
+    <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3>جميع الحجوزات</h3>
+                    <h3>فلترة الحجوزات</h3>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="filterHall" class="form-label">فلترة حسب القاعة:</label>
+                            <select class="form-select" id="filterHall" @bind="filterHallId">
+                                <option value="">جميع القاعات</option>
+                                @foreach (var hall in availableHalls)
+                                {
+                                    <option value="@hall.Id">@hall.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterFromDate" class="form-label">من تاريخ:</label>
+                            <input type="date" class="form-control" id="filterFromDate" @bind="filterFromDate" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterToDate" class="form-label">إلى تاريخ:</label>
+                            <input type="date" class="form-control" id="filterToDate" @bind="filterToDate" />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button class="btn btn-primary me-2" @onclick="ApplyFilters">تطبيق الفلترة</button>
+                            <button class="btn btn-outline-secondary" @onclick="ClearFilters">مسح الفلترة</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>إحصائيات الحجوزات</h3>
+                    <button class="btn btn-outline-primary btn-sm" @onclick="LoadStatistics">
+                        <i class="bi bi-arrow-clockwise"></i> تحديث الإحصائيات
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (bookingStatistics.Any() || sectionStatistics.Any())
+                    {
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h5>عدد الحجوزات لكل قاعة:</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>اسم القاعة</th>
+                                                <th>عدد الحجوزات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var stat in bookingStatistics.OrderByDescending(x => x.Value))
+                                            {
+                                                <tr>
+                                                    <td>@stat.Key</td>
+                                                    <td>
+                                                        <span class="badge bg-primary">@stat.Value</span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h5>عدد الحجوزات لكل قسم:</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>اسم القسم</th>
+                                                <th>عدد الحجوزات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var stat in sectionStatistics.OrderByDescending(x => x.Value))
+                                            {
+                                                <tr>
+                                                    <td>@stat.Key</td>
+                                                    <td>
+                                                        <span class="badge bg-success">@stat.Value</span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h5>ملخص الإحصائيات:</h5>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="card bg-success text-white">
+                                            <div class="card-body text-center">
+                                                <h4>@mostBookedHall</h4>
+                                                <small>الأكثر حجزاً</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="card bg-warning text-dark">
+                                            <div class="card-body text-center">
+                                                <h4>@leastBookedHall</h4>
+                                                <small>الأقل حجزاً</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="card bg-info text-white">
+                                                <div class="card-body text-center">
+                                                    <h4>@mostActiveSection</h4>
+                                                    <small>الأكثر نشاطاً</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="card bg-secondary text-white">
+                                                <div class="card-body text-center">
+                                                    <h4>@leastActiveSection</h4>
+                                                    <small>الأقل نشاطاً</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="card bg-primary text-white">
+                                        <div class="card-body text-center">
+                                            <h4>@totalBookings</h4>
+                                            <small>إجمالي الحجوزات</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <p>لا توجد إحصائيات متاحة حالياً.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>جميع الحجوزات</h3>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-success" @onclick="ExportToExcel" disabled="@isExporting">
+                            @if (isExporting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            <i class="bi bi-file-earmark-excel"></i> تحميل كملف Excel
+                        </button>
                         <button class="btn btn-primary" @onclick="LoadAllBookings">تحديث جميع الحجوزات</button>
                     </div>
+                </div>
+                <div class="card-body">
 
                     @if (isLoading)
                     {
@@ -65,15 +246,16 @@ else
                     else if (allBookings.Any())
                     {
                         <div class="table-responsive">
-                            <table class="table table-striped table-hover">
+                            <table class="table table-striped table-hover" id="bookingsTable">
                                 <thead class="table-dark">
                                     <tr>
                                         <th>اسم القاعة</th>
                                         <th>المدرس</th>
+                                        <th>القسم</th>
                                         <th>الحصة</th>
                                         <th>تاريخ الحجز</th>
                                         <th>تاريخ الإنشاء</th>
-                                        <th>الإجراءات</th>
+                                        <th class="no-print">الإجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -82,10 +264,11 @@ else
                                         <tr>
                                             <td>@booking.Hall.Name</td>
                                             <td>@booking.TeacherName</td>
+                                            <td>@booking.Section</td>
                                             <td>الحصة @booking.Period</td>
                                             <td>@booking.BookingDate.ToString("yyyy/MM/dd")</td>
                                             <td>@booking.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
-                                            <td>
+                                            <td class="no-print">
                                                 <button class="btn btn-danger btn-sm" @onclick="() => DeleteBooking(booking.Id)">
                                                     حذف
                                                 </button>
@@ -153,6 +336,7 @@ else
 
 @code {
     private List<Booking> allBookings = new();
+    private List<Hall> availableHalls = new();
     private bool isLoading = false;
     private bool showDeleteModal = false;
     private int selectedBookingId;
@@ -163,13 +347,30 @@ else
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
     private bool isAdminLoggedIn = false;
+    private Dictionary<string, int> bookingStatistics = new();
+    private Dictionary<string, int> sectionStatistics = new();
+    private string mostBookedHall = string.Empty;
+    private string leastBookedHall = string.Empty;
+    private string mostActiveSection = string.Empty;
+    private string leastActiveSection = string.Empty;
+    private int totalBookings = 0;
+    
+    // Filter variables
+    private int? filterHallId = null;
+    private DateTime? filterFromDate = null;
+    private DateTime? filterToDate = null;
+    
+    // Export/Print variables
+    private bool isExporting = false;
 
     protected override async Task OnInitializedAsync()
     {
         isAdminLoggedIn = await AuthService.IsAdminLoggedIn();
         if (isAdminLoggedIn)
         {
+            await LoadHalls();
             await LoadAllBookings();
+            await LoadStatistics();
         }
         StateHasChanged(); // Force re-render after async check
     }
@@ -237,10 +438,130 @@ else
         selectedBookingTeacher = string.Empty;
     }
 
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            bookingStatistics = await BookingService.GetHallBookingStatisticsAsync();
+            sectionStatistics = await BookingService.GetSectionBookingStatisticsAsync();
+            
+            if (bookingStatistics.Any())
+            {
+                totalBookings = bookingStatistics.Values.Sum();
+                mostBookedHall = bookingStatistics.OrderByDescending(x => x.Value).First().Key;
+                leastBookedHall = bookingStatistics.OrderBy(x => x.Value).First().Key;
+            }
+            else
+            {
+                totalBookings = 0;
+                mostBookedHall = "لا توجد حجوزات";
+                leastBookedHall = "لا توجد حجوزات";
+            }
+
+            if (sectionStatistics.Any())
+            {
+                mostActiveSection = sectionStatistics.OrderByDescending(x => x.Value).First().Key;
+                leastActiveSection = sectionStatistics.OrderBy(x => x.Value).First().Key;
+            }
+            else
+            {
+                mostActiveSection = "لا توجد حجوزات";
+                leastActiveSection = "لا توجد حجوزات";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading booking statistics");
+            errorMessage = "خطأ في تحميل الإحصائيات. يرجى المحاولة مرة أخرى.";
+        }
+    }
+
+    private async Task LoadHalls()
+    {
+        try
+        {
+            availableHalls = await BookingService.GetAvailableHallsAsync(DateTime.Today);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading halls");
+            errorMessage = "خطأ في تحميل القاعات. يرجى المحاولة مرة أخرى.";
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        try
+        {
+            isLoading = true;
+            allBookings = await BookingService.GetFilteredBookingsAsync(filterHallId, filterFromDate, filterToDate);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error applying filters");
+            errorMessage = "خطأ في تطبيق الفلترة. يرجى المحاولة مرة أخرى.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        filterHallId = null;
+        filterFromDate = null;
+        filterToDate = null;
+        await LoadAllBookings();
+    }
+
     private async Task Logout()
     {
         await AuthService.SetAdminLoggedIn(false);
         Navigation.NavigateTo("/");
     }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            isExporting = true;
+            StateHasChanged();
+
+            // Get the current filtered bookings
+            var bookingsToExport = allBookings;
+            
+            // If no bookings to export, show message
+            if (!bookingsToExport.Any())
+            {
+                errorMessage = "لا توجد حجوزات للتصدير.";
+                return;
+            }
+
+            // Generate Excel file
+            var excelData = await ExportService.ExportToExcelAsync(bookingsToExport);
+            var fileName = ExportService.GenerateFileName();
+
+            // Convert to base64 for download
+            var base64 = Convert.ToBase64String(excelData);
+            var dataUrl = $"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64}";
+
+            // Trigger download using JavaScript
+            await JSRuntime.InvokeVoidAsync("downloadFile", dataUrl, fileName);
+            
+            successMessage = "تم تصدير البيانات بنجاح.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error exporting to Excel");
+            errorMessage = "خطأ في تصدير البيانات. يرجى المحاولة مرة أخرى.";
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+
 }
 }

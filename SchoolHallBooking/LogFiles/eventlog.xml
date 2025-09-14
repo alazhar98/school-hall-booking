@@ -1,0 +1,29 @@
+<Events><Event><System><Provider Name=".NET Runtime"/><EventID>1026</EventID><Level>1</Level><Task>0</Task><Keywords>Keywords</Keywords><TimeCreated SystemTime="2025-09-13T17:44:33Z"/><EventRecordID>24351093</EventRecordID><Channel>Application</Channel><Computer>DW1SDWK0008GR</Computer><Security/></System><EventData><Data>Application: w3wp.exe
+CoreCLR Version: 9.0.525.21509
+.NET Version: 9.0.5
+Description: The process was terminated due to an unhandled exception.
+Exception Info: System.InvalidOperationException: Changing the URL is not supported because Addresses IsReadOnly.
+   at Microsoft.AspNetCore.Builder.WebApplication.Listen(String url)
+   at Program.&lt;Main&gt;$(String[] args) in /Users/macbookprom3/SchoolHallBooking/Program.cs:line 104
+   at Program.&lt;Main&gt;(String[] args)
+</Data></EventData></Event><Event><System><Provider Name="IIS AspNetCore Module V2"/><EventID>1018</EventID><Level>1</Level><Task>0</Task><Keywords>Keywords</Keywords><TimeCreated SystemTime="2025-09-13T17:44:33Z"/><EventRecordID>24351109</EventRecordID><Channel>Application</Channel><Computer>DW1SDWK0008GR</Computer><Security/></System><EventData><Data>Application '/LM/W3SVC/1300063693/ROOT' with physical root 'C:\home\site\wwwroot\' hit unexpected managed exception, exception code = '0xe0434352'. First 30KB characters of captured stdout and stderr logs:
+Unhandled exception. System.InvalidOperationException: Changing the URL is not supported because Addresses IsReadOnly.
+   at Microsoft.AspNetCore.Builder.WebApplication.Listen(String url)
+   at Program.&lt;Main&gt;$(String[] args) in /Users/macbookprom3/SchoolHallBooking/Program.cs:line 104
+   at Program.&lt;Main&gt;(String[] args)
+</Data><Data>Process Id: 5396.</Data><Data>File Version: 19.0.25119.5. Description: IIS ASP.NET Core Module V2 Request Handler. Commit: </Data></EventData></Event><Event><System><Provider Name="IIS AspNetCore Module V2"/><EventID>1007</EventID><Level>1</Level><Task>0</Task><Keywords>Keywords</Keywords><TimeCreated SystemTime="2025-09-13T17:44:33Z"/><EventRecordID>24351109</EventRecordID><Channel>Application</Channel><Computer>DW1SDWK0008GR</Computer><Security/></System><EventData><Data>Application '/LM/W3SVC/1300063693/ROOT' with physical root 'C:\home\site\wwwroot\' failed to load coreclr. Exception message:
+CLR worker thread exited prematurely</Data><Data>Process Id: 5396.</Data><Data>File Version: 19.0.25119.5. Description: IIS ASP.NET Core Module V2 Request Handler. Commit: </Data></EventData></Event><Event><System><Provider Name=".NET Runtime"/><EventID>1026</EventID><Level>1</Level><Task>0</Task><Keywords>Keywords</Keywords><TimeCreated SystemTime="2025-09-13T18:44:43Z"/><EventRecordID>27960625</EventRecordID><Channel>Application</Channel><Computer>DW1SDWK0008GR</Computer><Security/></System><EventData><Data>Application: w3wp.exe
+CoreCLR Version: 9.0.525.21509
+.NET Version: 9.0.5
+Description: The process was terminated due to an unhandled exception.
+Exception Info: System.InvalidOperationException: Changing the URL is not supported because Addresses IsReadOnly.
+   at Microsoft.AspNetCore.Builder.WebApplication.Listen(String url)
+   at Program.&lt;Main&gt;$(String[] args) in /Users/macbookprom3/SchoolHallBooking/Program.cs:line 104
+   at Program.&lt;Main&gt;(String[] args)
+</Data></EventData></Event><Event><System><Provider Name="IIS AspNetCore Module V2"/><EventID>1018</EventID><Level>1</Level><Task>0</Task><Keywords>Keywords</Keywords><TimeCreated SystemTime="2025-09-13T18:44:43Z"/><EventRecordID>27960625</EventRecordID><Channel>Application</Channel><Computer>DW1SDWK0008GR</Computer><Security/></System><EventData><Data>Application '/LM/W3SVC/1300063693/ROOT' with physical root 'C:\home\site\wwwroot\' hit unexpected managed exception, exception code = '0xe0434352'. First 30KB characters of captured stdout and stderr logs:
+Unhandled exception. System.InvalidOperationException: Changing the URL is not supported because Addresses IsReadOnly.
+   at Microsoft.AspNetCore.Builder.WebApplication.Listen(String url)
+   at Program.&lt;Main&gt;$(String[] args) in /Users/macbookprom3/SchoolHallBooking/Program.cs:line 104
+   at Program.&lt;Main&gt;(String[] args)
+</Data><Data>Process Id: 2388.</Data><Data>File Version: 19.0.25119.5. Description: IIS ASP.NET Core Module V2 Request Handler. Commit: </Data></EventData></Event><Event><System><Provider Name="IIS AspNetCore Module V2"/><EventID>1007</EventID><Level>1</Level><Task>0</Task><Keywords>Keywords</Keywords><TimeCreated SystemTime="2025-09-13T18:44:43Z"/><EventRecordID>27960640</EventRecordID><Channel>Application</Channel><Computer>DW1SDWK0008GR</Computer><Security/></System><EventData><Data>Application '/LM/W3SVC/1300063693/ROOT' with physical root 'C:\home\site\wwwroot\' failed to load coreclr. Exception message:
+CLR worker thread exited prematurely</Data><Data>Process Id: 2388.</Data><Data>File Version: 19.0.25119.5. Description: IIS ASP.NET Core Module V2 Request Handler. Commit: </Data></EventData></Event></Events>

@@ -35,6 +35,11 @@ namespace SchoolHallBooking.Migrations
                     b.Property<int>("Period")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Section")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("TeacherName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -42,7 +47,7 @@ namespace SchoolHallBooking.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("HallId", "BookingDate")
+                    b.HasIndex("HallId", "BookingDate", "Period")
                         .IsUnique();
 
                     b.ToTable("Bookings");
@@ -74,44 +79,44 @@ namespace SchoolHallBooking.Migrations
                         new
                         {
                             Id = 1,
-                            Capacity = 200,
-                            Location = "Ground Floor",
-                            Name = "Room 1"
+                            Capacity = 30,
+                            Location = "الطابق الأول",
+                            Name = "قاعة التوجيه المهني"
                         },
                         new
                         {
                             Id = 2,
                             Capacity = 50,
-                            Location = "First Floor",
-                            Name = "Room 2"
+                            Location = "الطابق الأول",
+                            Name = "قاعة الفضل"
                         },
                         new
                         {
                             Id = 3,
-                            Capacity = 30,
-                            Location = "First Floor",
-                            Name = "Room 3"
+                            Capacity = 200,
+                            Location = "الطابق الأرضي",
+                            Name = "مركز مصادر التعلم"
                         },
                         new
                         {
                             Id = 4,
                             Capacity = 500,
-                            Location = "Second Floor",
-                            Name = "Room 4"
+                            Location = "الطابق الثاني",
+                            Name = "قاعة اللغة الإنجليزية"
                         },
                         new
                         {
                             Id = 5,
                             Capacity = 20,
-                            Location = "Ground Floor",
-                            Name = "Room 5"
+                            Location = "الطابق الأرضي",
+                            Name = "قاعة اللغة العربية"
                         },
                         new
                         {
                             Id = 6,
                             Capacity = 40,
-                            Location = "Second Floor",
-                            Name = "Room 6"
+                            Location = "الطابق الثاني",
+                            Name = "قاعة المهارات الموسيقية"
                         });
                 });
 

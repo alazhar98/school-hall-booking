@@ -20,6 +20,7 @@ public class BookingDbContext : DbContext
         modelBuilder.Entity<Hall>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Capacity).IsRequired();
             entity.Property(e => e.Location).HasMaxLength(200);
@@ -29,6 +30,7 @@ public class BookingDbContext : DbContext
         modelBuilder.Entity<Booking>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.BookingDate).HasColumnType("date");
             entity.Property(e => e.TeacherName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.CreatedAt).IsRequired();
@@ -39,19 +41,19 @@ public class BookingDbContext : DbContext
                   .HasForeignKey(e => e.HallId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Create unique index to prevent double booking
-            entity.HasIndex(e => new { e.HallId, e.BookingDate })
+            // Create unique index to prevent double booking for same hall, date, and period
+            entity.HasIndex(e => new { e.HallId, e.BookingDate, e.Period })
                   .IsUnique();
         });
 
         // Seed data
         modelBuilder.Entity<Hall>().HasData(
-            new Hall { Id = 1, Name = "Room 1", Capacity = 200, Location = "Ground Floor" },
-            new Hall { Id = 2, Name = "Room 2", Capacity = 50, Location = "First Floor" },
-            new Hall { Id = 3, Name = "Room 3", Capacity = 30, Location = "First Floor" },
-            new Hall { Id = 4, Name = "Room 4", Capacity = 500, Location = "Second Floor" },
-            new Hall { Id = 5, Name = "Room 5", Capacity = 20, Location = "Ground Floor" },
-            new Hall { Id = 6, Name = "Room 6", Capacity = 40, Location = "Second Floor" }
+            new Hall { Id = 1, Name = "قاعة التوجيه المهني", Capacity = 30, Location = "الطابق الأول" },
+            new Hall { Id = 2, Name = "قاعة الفضل", Capacity = 50, Location = "الطابق الأول" },
+            new Hall { Id = 3, Name = "مركز مصادر التعلم", Capacity = 200, Location = "الطابق الأرضي" },
+            new Hall { Id = 4, Name = "قاعة اللغة الإنجليزية", Capacity = 500, Location = "الطابق الثاني" },
+            new Hall { Id = 5, Name = "قاعة اللغة العربية", Capacity = 20, Location = "الطابق الأرضي" },
+            new Hall { Id = 6, Name = "قاعة المهارات الموسيقية", Capacity = 40, Location = "الطابق الثاني" }
         );
     }
 }

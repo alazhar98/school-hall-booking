@@ -19,6 +19,10 @@ public class Booking
     public string TeacherName { get; set; } = string.Empty;
     
     [Required]
+    [StringLength(50)]
+    public string Section { get; set; } = string.Empty;
+    
+    [Required]
     [Range(1, 8)]
     public int Period { get; set; }
     

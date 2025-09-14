@@ -7,7 +7,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  dotNetFramework: 'net8.0'
+  dotNetFramework: 'net9.0'
 
 stages:
 - stage: Build
@@ -17,10 +17,10 @@ stages:
     displayName: 'Build Application'
     steps:
     - task: UseDotNet@2
-      displayName: 'Use .NET 8 SDK'
+      displayName: 'Use .NET 9 SDK'
       inputs:
         packageType: 'sdk'
-        version: '8.x'
+        version: '9.x'
 
     - task: DotNetCoreCLI@2
       displayName: 'Restore packages'

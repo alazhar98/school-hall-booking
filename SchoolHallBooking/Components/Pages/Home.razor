@@ -8,11 +8,6 @@
 <PageTitle>نظام حجز القاعات المدرسية</PageTitle>
 
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="display-4 text-center mb-4">نظام حجز القاعات المدرسية</h1>
-        </div>
-    </div>
 
     <div class="row">
         <div class="col-12">
@@ -55,18 +50,28 @@
                                                     }
                                                 </div>
                                             </div>
-                                            <button class="btn btn-success btn-lg" @onclick="@(() => BookHall(hall.Id))">
-                                                احجز هذه القاعة
-                                            </button>
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-success btn-lg" @onclick="@(() => BookHall(hall.Id))">
+                                                    احجز هذه القاعة
+                                                </button>
+                                                <button class="btn btn-outline-info" @onclick="@(() => ShowBookingDetails(hall.Id))">
+                                                    عرض تفاصيل الحجز
+                                                </button>
+                                            </div>
                                         }
                                         else
                                         {
                                             <div class="mb-3">
                                                 <span class="badge bg-danger">محجوزة بالكامل</span>
                                             </div>
-                                            <button class="btn btn-secondary btn-lg" disabled>
-                                                غير متاحة
-                                            </button>
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-secondary btn-lg" disabled>
+                                                    غير متاحة
+                                                </button>
+                                                <button class="btn btn-outline-info" @onclick="@(() => ShowBookingDetails(hall.Id))">
+                                                    عرض تفاصيل الحجز
+                                                </button>
+                                            </div>
                                         }
                                     </div>
                                 </div>
@@ -104,6 +109,20 @@
                         <input type="text" class="form-control" id="teacherName" @bind="teacherName" placeholder="أدخل اسمك" required />
                     </div>
                     <div class="mb-3">
+                        <label for="section" class="form-label">القسم:</label>
+                        <select class="form-select" id="section" @bind="selectedSection" required>
+                            <option value="">اختر القسم</option>
+                            <option value="الرياضيات">الرياضيات</option>
+                            <option value="العلوم">العلوم</option>
+                            <option value="التربية الإسلامية">التربية الإسلامية</option>
+                            <option value="اللغة العربية">اللغة العربية</option>
+                            <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
+                            <option value="الدراسات الاجتماعية">الدراسات الاجتماعية</option>
+                            <option value="المهارات الفردية">المهارات الفردية</option>
+                            <option value="الإدارة">الإدارة</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label for="period" class="form-label">الحصة:</label>
                         <select class="form-select" id="period" @bind="selectedPeriod">
                             @if (hallAvailablePeriods.ContainsKey(selectedHallId))
@@ -119,6 +138,60 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CancelBooking">إلغاء</button>
                     <button type="button" class="btn btn-primary" @onclick="ConfirmBooking">تأكيد الحجز</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
+@if (showBookingDetailsModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تفاصيل حجوزات @selectedHallName</h5>
+                    <button type="button" class="btn-close" @onclick="CancelBookingDetails"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">التاريخ: @selectedDate.ToString("yyyy/MM/dd")</p>
+                    
+                    @if (hallBookings.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>الحصة</th>
+                                        <th>اسم المدرس</th>
+                                        <th>القسم</th>
+                                        <th>تاريخ الحجز</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var booking in hallBookings)
+                                    {
+                                        <tr>
+                                            <td>الحصة @booking.Period</td>
+                                            <td>@booking.TeacherName</td>
+                                            <td>@booking.Section</td>
+                                            <td>@booking.CreatedAt.ToString("yyyy/MM/dd HH:mm")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <p>لا توجد حجوزات لهذه القاعة في التاريخ المحدد.</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelBookingDetails">إغلاق</button>
                 </div>
             </div>
         </div>
@@ -148,12 +221,15 @@
     private Dictionary<int, List<int>> hallAvailablePeriods = new();
     private bool isLoading = false;
     private bool showBookingModal = false;
+    private bool showBookingDetailsModal = false;
     private int selectedHallId;
     private string selectedHallName = string.Empty;
     private string teacherName = string.Empty;
+    private string selectedSection = string.Empty;
     private int selectedPeriod = 1;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+    private List<Booking> hallBookings = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -211,6 +287,13 @@
                 return;
             }
 
+            // Validate section
+            if (string.IsNullOrWhiteSpace(selectedSection))
+            {
+                errorMessage = "يرجى اختيار القسم لإكمال الحجز.";
+                return;
+            }
+
             // Check if hall is available for the selected period
             var isAvailable = await BookingService.IsHallAvailableAsync(selectedHallId, selectedDate, selectedPeriod);
             if (!isAvailable)
@@ -219,7 +302,7 @@
                 return;
             }
             
-            await BookingService.CreateBookingAsync(selectedHallId, selectedDate, teacherName.Trim(), selectedPeriod);
+            await BookingService.CreateBookingAsync(selectedHallId, selectedDate, teacherName.Trim(), selectedSection, selectedPeriod);
             successMessage = $"تم حجز {selectedHallName} بنجاح في {selectedDate:yyyy/MM/dd} في الحصة {selectedPeriod}";
             
             showBookingModal = false;
@@ -245,6 +328,36 @@
         selectedHallId = 0;
         selectedHallName = string.Empty;
         teacherName = string.Empty;
+        selectedSection = string.Empty;
         selectedPeriod = 1;
+    }
+
+    private async Task ShowBookingDetails(int hallId)
+    {
+        try
+        {
+            var hall = availableHalls.FirstOrDefault(h => h.Id == hallId);
+            if (hall != null)
+            {
+                selectedHallId = hallId;
+                selectedHallName = hall.Name;
+                hallBookings = await BookingService.GetHallBookingsAsync(hallId, selectedDate);
+                showBookingDetailsModal = true;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading booking details for hall {HallId}", hallId);
+            errorMessage = "خطأ في تحميل تفاصيل الحجوزات. يرجى المحاولة مرة أخرى.";
+        }
+    }
+
+    private void CancelBookingDetails()
+    {
+        showBookingDetailsModal = false;
+        selectedHallId = 0;
+        selectedHallName = string.Empty;
+        hallBookings.Clear();
     }
 }
