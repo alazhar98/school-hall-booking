@@ -4,6 +4,7 @@
 @inject IBookingService BookingService
 @inject IAuthService AuthService
 @inject IExportService ExportService
+@inject ITimeZoneService TimeZoneService
 @inject ILogger<Admin> Logger
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -480,7 +481,7 @@ else
     {
         try
         {
-            availableHalls = await BookingService.GetAvailableHallsAsync(DateTime.Today);
+            availableHalls = await BookingService.GetAvailableHallsAsync(TimeZoneService.GetCurrentDate());
         }
         catch (Exception ex)
         {

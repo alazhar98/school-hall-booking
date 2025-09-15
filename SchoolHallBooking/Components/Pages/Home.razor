@@ -2,6 +2,7 @@
 @using SchoolHallBooking.Models
 @using SchoolHallBooking.Services
 @inject IBookingService BookingService
+@inject ITimeZoneService TimeZoneService
 @inject ILogger<Home> Logger
 @rendermode InteractiveServer
 
@@ -244,9 +245,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Set the date range for the current week (Saturday to Thursday)
+        // Set the date range for the current week (Saturday to Thursday) in Oman timezone
         minDate = BookingService.GetCurrentWeekStartPublic();
         maxDate = BookingService.GetCurrentWeekEndPublic();
+        
+        // Set selectedDate to current date in Oman timezone
+        selectedDate = TimeZoneService.GetCurrentDate();
         
         // Ensure selectedDate is within the valid range
         if (selectedDate < minDate || selectedDate > maxDate || BookingService.IsWeekend(selectedDate))

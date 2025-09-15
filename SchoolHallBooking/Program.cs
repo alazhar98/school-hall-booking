@@ -19,6 +19,7 @@ builder.Services.AddDbContext<BookingDbContext>(options =>
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<ITimeZoneService, TimeZoneService>();
 
 // Add Azure AD authentication (temporarily disabled for testing)
 // builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -8,15 +8,20 @@ public class BookingService : IBookingService
 {
     private readonly BookingDbContext _context;
     private readonly ILogger<BookingService> _logger;
+    private readonly ITimeZoneService _timeZoneService;
 
-    public BookingService(BookingDbContext context, ILogger<BookingService> logger)
+    public BookingService(BookingDbContext context, ILogger<BookingService> logger, ITimeZoneService timeZoneService)
     {
         _context = context;
         _logger = logger;
+        _timeZoneService = timeZoneService;
     }
 
     public async Task<List<Hall>> GetAvailableHallsAsync(DateTime date)
     {
+        // Convert the input date to Oman timezone
+        var omanDate = _timeZoneService.ConvertToOmanTime(date);
+        
         // Return all halls - availability will be checked per period
         var availableHalls = await _context.Halls
             .OrderBy(h => h.Name)
@@ -27,7 +32,9 @@ public class BookingService : IBookingService
 
     public async Task<List<int>> GetAvailablePeriodsAsync(int hallId, DateTime date)
     {
-        var normalizedDate = date.Date;
+        // Convert the input date to Oman timezone
+        var omanDate = _timeZoneService.ConvertToOmanTime(date);
+        var normalizedDate = omanDate.Date;
         
         var bookedPeriods = await _context.Bookings
             .Where(b => b.HallId == hallId && b.BookingDate == normalizedDate)
@@ -52,7 +59,9 @@ public class BookingService : IBookingService
 
     public async Task<Booking> CreateBookingAsync(int hallId, DateTime date, string teacherName, string section, int period)
     {
-        var normalizedDate = date.Date; // Normalize to midnight
+        // Convert the input date to Oman timezone for validation
+        var omanDate = _timeZoneService.ConvertToOmanTime(date);
+        var normalizedDate = omanDate.Date; // Normalize to midnight in Oman time
         
         // Check if hall exists
         var hall = await _context.Halls.FindAsync(hallId);
@@ -61,13 +70,13 @@ public class BookingService : IBookingService
             throw new ArgumentException($"Hall with ID {hallId} not found.");
         }
 
-        // Validate weekend restriction (Friday = 5, Saturday = 6)
+        // Validate weekend restriction (Friday = 5, Saturday = 6) in Oman time
         if (normalizedDate.DayOfWeek == DayOfWeek.Friday || normalizedDate.DayOfWeek == DayOfWeek.Saturday)
         {
             throw new InvalidOperationException("لا يمكن الحجز في عطلة نهاية الأسبوع (الجمعة والسبت).");
         }
 
-        // Validate weekly booking restriction
+        // Validate weekly booking restriction in Oman time
         if (!IsWithinCurrentWeek(normalizedDate))
         {
             var currentWeekStart = GetCurrentWeekStart();
@@ -93,11 +102,11 @@ public class BookingService : IBookingService
         var booking = new Booking
         {
             HallId = hallId,
-            BookingDate = normalizedDate,
+            BookingDate = normalizedDate, // Store the date in Oman timezone
             TeacherName = teacherName,
             Section = section,
             Period = period,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow // Store creation time in UTC
         };
 
         try
@@ -119,13 +128,21 @@ public class BookingService : IBookingService
 
     public async Task<List<Booking>> GetBookingsAsync(DateTime date)
     {
-        var normalizedDate = date.Date;
+        // Convert the input date to Oman timezone
+        var omanDate = _timeZoneService.ConvertToOmanTime(date);
+        var normalizedDate = omanDate.Date;
         
         var bookings = await _context.Bookings
             .Include(b => b.Hall)
             .Where(b => b.BookingDate == normalizedDate)
             .OrderBy(b => b.Hall.Name)
             .ToListAsync();
+
+        // Convert CreatedAt to Oman time for display
+        foreach (var booking in bookings)
+        {
+            booking.CreatedAt = _timeZoneService.ConvertFromUtc(booking.CreatedAt);
+        }
 
         return bookings;
     }
@@ -137,6 +154,12 @@ public class BookingService : IBookingService
             .OrderBy(b => b.BookingDate)
             .ThenBy(b => b.Hall.Name)
             .ToListAsync();
+
+        // Convert CreatedAt to Oman time for display
+        foreach (var booking in bookings)
+        {
+            booking.CreatedAt = _timeZoneService.ConvertFromUtc(booking.CreatedAt);
+        }
 
         return bookings;
     }
@@ -173,17 +196,17 @@ public class BookingService : IBookingService
     }
 
     /// <summary>
-    /// Gets the start of the current week (Saturday)
+    /// Gets the start of the current week (Saturday) in Oman timezone
     /// </summary>
     private DateTime GetCurrentWeekStart()
     {
-        var today = DateTime.Today;
+        var today = _timeZoneService.GetCurrentDate();
         var daysSinceSaturday = ((int)today.DayOfWeek + 1) % 7; // Saturday = 0, Sunday = 1, ..., Friday = 6
         return today.AddDays(-daysSinceSaturday);
     }
 
     /// <summary>
-    /// Gets the end of the current week (Thursday)
+    /// Gets the end of the current week (Thursday) in Oman timezone
     /// </summary>
     private DateTime GetCurrentWeekEnd()
     {
@@ -217,7 +240,9 @@ public class BookingService : IBookingService
 
     public async Task<bool> IsHallAvailableAsync(int hallId, DateTime date, int period)
     {
-        var normalizedDate = date.Date;
+        // Convert the input date to Oman timezone
+        var omanDate = _timeZoneService.ConvertToOmanTime(date);
+        var normalizedDate = omanDate.Date;
         
         var existingBooking = await _context.Bookings
             .FirstOrDefaultAsync(b => b.HallId == hallId && b.BookingDate == normalizedDate && b.Period == period);
@@ -227,13 +252,21 @@ public class BookingService : IBookingService
 
     public async Task<List<Booking>> GetHallBookingsAsync(int hallId, DateTime date)
     {
-        var normalizedDate = date.Date;
+        // Convert the input date to Oman timezone
+        var omanDate = _timeZoneService.ConvertToOmanTime(date);
+        var normalizedDate = omanDate.Date;
         
         var bookings = await _context.Bookings
             .Include(b => b.Hall)
             .Where(b => b.HallId == hallId && b.BookingDate == normalizedDate)
             .OrderBy(b => b.Period)
             .ToListAsync();
+
+        // Convert CreatedAt to Oman time for display
+        foreach (var booking in bookings)
+        {
+            booking.CreatedAt = _timeZoneService.ConvertFromUtc(booking.CreatedAt);
+        }
 
         return bookings;
     }

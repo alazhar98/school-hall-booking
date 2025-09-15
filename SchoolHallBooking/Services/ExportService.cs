@@ -76,7 +76,7 @@ namespace SchoolHallBooking.Services
 
         public string GenerateFileName()
         {
-            return $"Bookings_{DateTime.Now:yyyyMMdd}.xlsx";
+            return $"Bookings_{DateTime.UtcNow:yyyyMMdd}.xlsx";
         }
     }
 }

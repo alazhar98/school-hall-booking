@@ -1,0 +1,18 @@
+[
+  {
+    "cloudName": "AzureCloud",
+    "homeTenantId": "7e2c1f43-8439-4666-b0a7-ff443557725c",
+    "id": "c1087a0b-e7a7-4985-ac64-461fbdcac6ce",
+    "isDefault": true,
+    "managedByTenants": [],
+    "name": "Azure subscription 1",
+    "state": "Enabled",
+    "tenantDefaultDomain": "alazhar9814gmail.onmicrosoft.com",
+    "tenantDisplayName": "Default Directory",
+    "tenantId": "7e2c1f43-8439-4666-b0a7-ff443557725c",
+    "user": {
+      "name": "alazhar9814@gmail.com",
+      "type": "user"
+    }
+  }
+]
