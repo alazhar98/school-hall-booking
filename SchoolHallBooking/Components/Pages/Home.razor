@@ -18,7 +18,16 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label for="bookingDate" class="form-label">اختر التاريخ:</label>
-                        <input type="date" @bind="selectedDate" @bind:format="yyyy-MM-dd" class="form-control" id="bookingDate" />
+                        <input type="date" 
+                               @bind="selectedDate" 
+                               @bind:format="yyyy-MM-dd" 
+                               class="form-control" 
+                               id="bookingDate"
+                               min="@minDate.ToString("yyyy-MM-dd")"
+                               max="@maxDate.ToString("yyyy-MM-dd")" />
+                        <small class="form-text text-muted">
+                            يمكن الحجز من @minDate.ToString("yyyy/MM/dd") إلى @maxDate.ToString("yyyy/MM/dd") فقط
+                        </small>
                         <button class="btn btn-primary mt-2" @onclick="LoadAvailableHalls">تحديث</button>
                     </div>
 
@@ -217,6 +226,8 @@
 
 @code {
     private DateTime selectedDate = DateTime.Today;
+    private DateTime minDate;
+    private DateTime maxDate;
     private List<Hall> availableHalls = new();
     private Dictionary<int, List<int>> hallAvailablePeriods = new();
     private bool isLoading = false;
@@ -233,6 +244,16 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Set the date range for the current week (Saturday to Thursday)
+        minDate = BookingService.GetCurrentWeekStartPublic();
+        maxDate = BookingService.GetCurrentWeekEndPublic();
+        
+        // Ensure selectedDate is within the valid range
+        if (selectedDate < minDate || selectedDate > maxDate || BookingService.IsWeekend(selectedDate))
+        {
+            selectedDate = minDate;
+        }
+        
         await LoadAvailableHalls();
     }
 
@@ -241,6 +262,22 @@
         try
         {
             isLoading = true;
+            
+            // Validate selected date
+            if (BookingService.IsWeekend(selectedDate))
+            {
+                errorMessage = "لا يمكن الحجز في عطلة نهاية الأسبوع (الجمعة والسبت).";
+                availableHalls.Clear();
+                return;
+            }
+            
+            if (selectedDate < minDate || selectedDate > maxDate)
+            {
+                errorMessage = $"يمكن الحجز فقط خلال الأسبوع الحالي من {minDate:yyyy/MM/dd} إلى {maxDate:yyyy/MM/dd}.";
+                availableHalls.Clear();
+                return;
+            }
+            
             availableHalls = await BookingService.GetAvailableHallsAsync(selectedDate);
             
             // Load available periods for each hall

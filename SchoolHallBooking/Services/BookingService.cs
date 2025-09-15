@@ -61,6 +61,20 @@ public class BookingService : IBookingService
             throw new ArgumentException($"Hall with ID {hallId} not found.");
         }
 
+        // Validate weekend restriction (Friday = 5, Saturday = 6)
+        if (normalizedDate.DayOfWeek == DayOfWeek.Friday || normalizedDate.DayOfWeek == DayOfWeek.Saturday)
+        {
+            throw new InvalidOperationException("لا يمكن الحجز في عطلة نهاية الأسبوع (الجمعة والسبت).");
+        }
+
+        // Validate weekly booking restriction
+        if (!IsWithinCurrentWeek(normalizedDate))
+        {
+            var currentWeekStart = GetCurrentWeekStart();
+            var currentWeekEnd = GetCurrentWeekEnd();
+            throw new InvalidOperationException($"يمكن الحجز فقط خلال الأسبوع الحالي من {currentWeekStart:yyyy/MM/dd} إلى {currentWeekEnd:yyyy/MM/dd}.");
+        }
+
         // Validate period for specific halls
         if (hallId == 3 && (period < 2 || period > 7))
         {
@@ -145,6 +159,60 @@ public class BookingService : IBookingService
     public async Task<Hall?> GetHallByIdAsync(int hallId)
     {
         return await _context.Halls.FindAsync(hallId);
+    }
+
+    /// <summary>
+    /// Checks if the given date is within the current week (Saturday to Thursday)
+    /// </summary>
+    private bool IsWithinCurrentWeek(DateTime date)
+    {
+        var currentWeekStart = GetCurrentWeekStart();
+        var currentWeekEnd = GetCurrentWeekEnd();
+        
+        return date >= currentWeekStart && date <= currentWeekEnd;
+    }
+
+    /// <summary>
+    /// Gets the start of the current week (Saturday)
+    /// </summary>
+    private DateTime GetCurrentWeekStart()
+    {
+        var today = DateTime.Today;
+        var daysSinceSaturday = ((int)today.DayOfWeek + 1) % 7; // Saturday = 0, Sunday = 1, ..., Friday = 6
+        return today.AddDays(-daysSinceSaturday);
+    }
+
+    /// <summary>
+    /// Gets the end of the current week (Thursday)
+    /// </summary>
+    private DateTime GetCurrentWeekEnd()
+    {
+        var weekStart = GetCurrentWeekStart();
+        return weekStart.AddDays(5); // Saturday + 5 days = Thursday
+    }
+
+    /// <summary>
+    /// Gets the start of the current week (Saturday) - public method for UI
+    /// </summary>
+    public DateTime GetCurrentWeekStartPublic()
+    {
+        return GetCurrentWeekStart();
+    }
+
+    /// <summary>
+    /// Gets the end of the current week (Thursday) - public method for UI
+    /// </summary>
+    public DateTime GetCurrentWeekEndPublic()
+    {
+        return GetCurrentWeekEnd();
+    }
+
+    /// <summary>
+    /// Checks if a date is a weekend (Friday or Saturday)
+    /// </summary>
+    public bool IsWeekend(DateTime date)
+    {
+        return date.DayOfWeek == DayOfWeek.Friday || date.DayOfWeek == DayOfWeek.Saturday;
     }
 
     public async Task<bool> IsHallAvailableAsync(int hallId, DateTime date, int period)

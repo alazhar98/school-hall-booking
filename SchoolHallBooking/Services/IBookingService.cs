@@ -16,4 +16,7 @@ public interface IBookingService
     Task<Dictionary<string, int>> GetHallBookingStatisticsAsync();
     Task<Dictionary<string, int>> GetSectionBookingStatisticsAsync();
     Task<List<Booking>> GetFilteredBookingsAsync(int? hallId, DateTime? fromDate, DateTime? toDate);
+    DateTime GetCurrentWeekStartPublic();
+    DateTime GetCurrentWeekEndPublic();
+    bool IsWeekend(DateTime date);
 }
