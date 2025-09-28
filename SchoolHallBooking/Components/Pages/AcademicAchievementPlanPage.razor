@@ -1,0 +1,294 @@
+@page "/academic-achievement/{subject}/plan"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IAcademicAchievementService AcademicAchievementService
+@inject IJSRuntime JSRuntime
+@inject ILogger<AcademicAchievementPlanPage> Logger
+@rendermode InteractiveServer
+
+<PageTitle>خطة التحصيل الدراسي - @SubjectName</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">خطة التحصيل الدراسي - @SubjectName</h2>
+        <div>
+            <button class="btn btn-success me-2" @onclick="ExportToPDF">
+                <i class="bi bi-file-pdf"></i> PDF
+            </button>
+            <button class="btn btn-warning me-2" @onclick="ExportToExcel">
+                <i class="bi bi-file-excel"></i> Excel
+            </button>
+            <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
+                <i class="bi bi-plus"></i> إضافة خطة جديدة
+            </button>
+        </div>
+    </div>
+
+    <!-- Plans Table -->
+    <div class="card">
+        <div class="card-body">
+            @if (plans.Any())
+            {
+                <div class="table-responsive">
+                    <table id="plans-table" class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>الإجراء/الفعالية</th>
+                                <th>فترة التنفيذ</th>
+                                <th>الفئة المستهدفة</th>
+                                <th>جهة التنفيذ</th>
+                                <th>التنفيذ</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var plan in plans)
+                            {
+                                <tr>
+                                    <td>@plan.Activity</td>
+                                    <td>@plan.ImplementationPeriod</td>
+                                    <td>@plan.TargetGroup</td>
+                                    <td>@plan.ImplementingBody</td>
+                                    <td>
+                                        @if (plan.IsImplemented)
+                                        {
+                                            <span class="badge bg-success">نفذ</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">لم ينفذ</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="@(() => EditPlan(plan))">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="@(() => DeletePlan(plan.Id))">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="text-muted mt-3">لا توجد خطط مسجلة</h5>
+                    <p class="text-muted">اضغط على "إضافة خطة جديدة" لبدء إضافة خطط التحصيل الدراسي</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    @if (showModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(isEditing ? "تعديل الخطة" : "إضافة خطة جديدة")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <EditForm Model="currentPlan" OnValidSubmit="SavePlan">
+                            <DataAnnotationsValidator />
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="activity" class="form-label">الإجراء/الفعالية *</label>
+                                    <InputText id="activity" class="form-control" @bind-Value="currentPlan.Activity" placeholder="أدخل الإجراء أو الفعالية" />
+                                    <ValidationMessage For="@(() => currentPlan.Activity)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="implementationPeriod" class="form-label">فترة التنفيذ *</label>
+                                    <InputText id="implementationPeriod" class="form-control" @bind-Value="currentPlan.ImplementationPeriod" placeholder="أدخل فترة التنفيذ" />
+                                    <ValidationMessage For="@(() => currentPlan.ImplementationPeriod)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="targetGroup" class="form-label">الفئة المستهدفة *</label>
+                                    <InputText id="targetGroup" class="form-control" @bind-Value="currentPlan.TargetGroup" placeholder="أدخل الفئة المستهدفة" />
+                                    <ValidationMessage For="@(() => currentPlan.TargetGroup)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="implementingBody" class="form-label">جهة التنفيذ *</label>
+                                    <InputText id="implementingBody" class="form-control" @bind-Value="currentPlan.ImplementingBody" placeholder="أدخل جهة التنفيذ" />
+                                    <ValidationMessage For="@(() => currentPlan.ImplementingBody)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="isImplemented" class="form-label">التنفيذ</label>
+                                    <div class="form-check">
+                                        <InputCheckbox id="isImplemented" class="form-check-input" @bind-Value="currentPlan.IsImplemented" />
+                                        <label class="form-check-label" for="isImplemented">
+                                            تم التنفيذ
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="notes" class="form-label">الملاحظات</label>
+                                    <InputTextArea id="notes" class="form-control" @bind-Value="currentPlan.Notes" placeholder="أدخل أي ملاحظات إضافية" rows="3" />
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" @onclick="CloseModal">إلغاء</button>
+                                <button type="submit" class="btn btn-primary">@(isEditing ? "تحديث" : "حفظ")</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Subject { get; set; } = string.Empty;
+
+    private string SubjectName => Subject switch
+    {
+        "islamic-education" => "التربية الإسلامية",
+        "arabic-language" => "اللغة العربية",
+        "english-language" => "اللغة الإنجليزية",
+        "mathematics" => "الرياضيات",
+        "sciences" => "العلوم",
+        "social-studies" => "الدراسات الاجتماعية",
+        "management" => "الإدارة",
+        _ => "غير محدد"
+    };
+
+    private List<AcademicAchievementPlan> plans = new();
+    private bool showModal = false;
+    private bool isEditing = false;
+    private AcademicAchievementPlan currentPlan = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlans();
+    }
+
+    private async Task LoadPlans()
+    {
+        try
+        {
+            plans = await AcademicAchievementService.GetPlansBySubjectAsync(SubjectName);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "خطأ في تحميل خطط التحصيل الدراسي");
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        currentPlan = new AcademicAchievementPlan { Subject = string.Empty };
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void EditPlan(AcademicAchievementPlan plan)
+    {
+        currentPlan = new AcademicAchievementPlan
+        {
+            Id = plan.Id,
+            Activity = plan.Activity,
+            ImplementationPeriod = plan.ImplementationPeriod,
+            TargetGroup = plan.TargetGroup,
+            ImplementingBody = plan.ImplementingBody,
+            IsImplemented = plan.IsImplemented,
+            Notes = plan.Notes,
+            Subject = plan.Subject
+        };
+        isEditing = true;
+        showModal = true;
+    }
+
+    private async Task SavePlan()
+    {
+        try
+        {
+            currentPlan.Subject = SubjectName; // Set the subject before saving
+            
+            if (isEditing)
+            {
+                await AcademicAchievementService.UpdatePlanAsync(currentPlan);
+            }
+            else
+            {
+                await AcademicAchievementService.AddPlanAsync(currentPlan);
+            }
+
+            await LoadPlans();
+            CloseModal();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "خطأ في حفظ خطة التحصيل الدراسي");
+        }
+    }
+
+    private async Task DeletePlan(int id)
+    {
+        try
+        {
+            if (await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذه الخطة؟"))
+            {
+                await AcademicAchievementService.DeletePlanAsync(id);
+                await LoadPlans();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "خطأ في حذف خطة التحصيل الدراسي");
+        }
+    }
+
+    private async Task PrintPlan(AcademicAchievementPlan plan)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("printElement", $"plan-{plan.Id}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "خطأ في طباعة خطة التحصيل الدراسي");
+        }
+    }
+
+
+    private async Task ExportToPDF()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("exportToPDF", "plans-table", $"خطط_التحصيل_الدراسي_{SubjectName}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "خطأ في تصدير PDF");
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("exportToExcel", "plans-table", $"خطط_التحصيل_الدراسي_{SubjectName}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "خطأ في تصدير Excel");
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentPlan = new AcademicAchievementPlan();
+        isEditing = false;
+    }
+}

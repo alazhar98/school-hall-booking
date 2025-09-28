@@ -40,6 +40,35 @@ namespace SchoolHallBooking.Data
                 Console.WriteLine($"Warning: Could not apply migrations: {ex.Message}");
             }
 
+            // Cleanup: ensure one row per staff role and remove invalid roles
+            try
+            {
+                var allStaff = await context.StaffStatistics.ToListAsync();
+                // Remove invalid roles
+                var invalid = allStaff.Where(s => !Enum.IsDefined(typeof(StaffRole), s.Role)).ToList();
+                if (invalid.Count > 0)
+                {
+                    context.StaffStatistics.RemoveRange(invalid);
+                    await context.SaveChangesAsync();
+                }
+
+                // Deduplicate: keep newest per role
+                allStaff = await context.StaffStatistics.ToListAsync();
+                var duplicates = allStaff
+                    .GroupBy(s => s.Role)
+                    .SelectMany(g => g.OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt).Skip(1))
+                    .ToList();
+                if (duplicates.Count > 0)
+                {
+                    context.StaffStatistics.RemoveRange(duplicates);
+                    await context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not cleanup StaffStatistics: {ex.Message}");
+            }
+
             // Seed initial data for halls if they don't exist or update their names
             if (!context.Halls.Any())
             {

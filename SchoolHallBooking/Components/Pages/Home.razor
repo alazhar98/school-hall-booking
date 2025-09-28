@@ -4,9 +4,11 @@
 @inject IBookingService BookingService
 @inject ITimeZoneService TimeZoneService
 @inject ILogger<Home> Logger
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <PageTitle>نظام حجز القاعات المدرسية</PageTitle>
+
 
 <div class="container-fluid">
 
@@ -116,11 +118,11 @@
                     <p>هل أنت متأكد من حجز <strong>@selectedHallName</strong> في <strong>@selectedDate.ToString("yyyy/MM/dd")</strong> في <strong>الحصة @selectedPeriod</strong>؟</p>
                     <div class="mb-3">
                         <label for="teacherName" class="form-label">اسم المدرس:</label>
-                        <input type="text" class="form-control" id="teacherName" @bind="teacherName" placeholder="أدخل اسمك" required />
+                        <InputText class="form-control" id="teacherName" @bind-Value="teacherName" placeholder="أدخل اسمك" required />
                     </div>
                     <div class="mb-3">
                         <label for="section" class="form-label">القسم:</label>
-                        <select class="form-select" id="section" @bind="selectedSection" required>
+                        <InputSelect class="form-select" id="section" @bind-Value="selectedSection" TValue="string" required>
                             <option value="">اختر القسم</option>
                             <option value="الرياضيات">الرياضيات</option>
                             <option value="العلوم">العلوم</option>
@@ -130,11 +132,11 @@
                             <option value="الدراسات الاجتماعية">الدراسات الاجتماعية</option>
                             <option value="المهارات الفردية">المهارات الفردية</option>
                             <option value="الإدارة">الإدارة</option>
-                        </select>
+                        </InputSelect>
                     </div>
                     <div class="mb-3">
                         <label for="period" class="form-label">الحصة:</label>
-                        <select class="form-select" id="period" @bind="selectedPeriod">
+                        <InputSelect class="form-select" id="period" @bind-Value="selectedPeriod" TValue="int">
                             @if (hallAvailablePeriods.ContainsKey(selectedHallId))
                             {
                                 @foreach (var period in hallAvailablePeriods[selectedHallId])
@@ -142,7 +144,7 @@
                                     <option value="@period">الحصة @period</option>
                                 }
                             }
-                        </select>
+                        </InputSelect>
                     </div>
                 </div>
                 <div class="modal-footer">

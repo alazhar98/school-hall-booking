@@ -1,0 +1,1419 @@
+@page "/school-plan-followup"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject ISchoolPlanService SchoolPlanService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>متابعة الخطة المدرسية</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="bi bi-diagram-3 me-2"></i>
+                        متابعة الخطة المدرسية
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>
+                            @successMessage
+                            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @errorMessage
+                            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                        </div>
+                    }
+
+                    <!-- Main Navigation -->
+                    @if (currentView == "main")
+                    {
+                        <div class="d-flex justify-content-center gap-3 mb-4">
+                            <button class="btn btn-primary btn-lg" @onclick="() => NavigateToObjectives()">
+                                <i class="bi bi-list-task me-2"></i> الأهداف الإجرائية
+                            </button>
+                            <button class="btn btn-info btn-lg" @onclick="() => NavigateToAreas()">
+                                <i class="bi bi-diagram-3 me-2"></i> مجالات الخطة
+                            </button>
+                        </div>
+                    }
+
+                    <!-- Objectives View -->
+                    @if (currentView == "objectives")
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>الأهداف الإجرائية</h4>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success" @onclick="() => OpenAddObjectiveModal()">
+                                    <i class="bi bi-plus-circle me-1"></i> إضافة هدف جديد
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => NavigateToMain()">
+                                    <i class="bi bi-arrow-right me-1"></i> العودة
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Objectives Table -->
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-success me-2" @onclick="ExportToPDF">
+                                <i class="bi bi-file-pdf"></i> PDF
+                            </button>
+                            <button class="btn btn-info" @onclick="ExportToExcel">
+                                <i class="bi bi-file-excel"></i> Excel
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="objectives-table" class="table table-hover table-bordered align-middle text-center">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="width: 5%;">م</th>
+                                        <th style="width: 25%;">الهدف الرئيسي</th>
+                                        <th style="width: 25%;">المجال</th>
+                                        <th style="width: 35%;">الأهداف الإجرائية</th>
+                                        <th style="width: 10%;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (allObjectives == null || !allObjectives.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="5">لا توجد أهداف لعرضها.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        int rowIndex = 1;
+                                        @foreach (var objective in allObjectives.OrderBy(o => o.Objective))
+                                        {
+                                            var activeSubObjectives = objective.SubObjectives.Where(so => so.IsActive).ToList();
+                                            @if (activeSubObjectives.Any())
+                                            {
+                                                var groupedByArea = activeSubObjectives.GroupBy(so => so.Area).ToList();
+                                                @foreach (var areaGroup in groupedByArea.OrderBy(g => g.Key))
+                                                {
+                                                    var subObjectivesInArea = areaGroup.OrderBy(so => so.SubObjective).ToList();
+                                                    @for (int i = 0; i < subObjectivesInArea.Count; i++)
+                                                    {
+                                                        var subObjective = subObjectivesInArea[i];
+                                                        <tr>
+                                                            @if (i == 0)
+                                                            {
+                                                                <td class="text-center fw-bold" rowspan="@subObjectivesInArea.Count">@rowIndex</td>
+                                                                <td rowspan="@subObjectivesInArea.Count">@objective.Objective</td>
+                                                                <td rowspan="@subObjectivesInArea.Count">@subObjective.Area</td>
+                                                            }
+                                                            <td>@subObjective.SubObjective</td>
+                                                            <td>
+                                                                <div class="d-flex justify-content-center gap-1">
+                                                                    <button class="btn btn-warning btn-sm" @onclick="() => OpenEditSubObjectiveModal(subObjective)" title="تعديل">
+                                                                        <i class="bi bi-pencil"></i>
+                                                                    </button>
+                                                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteSubObjective(subObjective.Id)" title="حذف">
+                                                                        <i class="bi bi-trash"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                    rowIndex++;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <tr>
+                                                    <td class="text-center fw-bold">@rowIndex</td>
+                                                    <td>@objective.Objective</td>
+                                                    <td colspan="2">لا توجد أهداف إجرائية</td>
+                                                    <td>
+                                                        <div class="d-flex justify-content-center gap-1">
+                                                            <button class="btn btn-success btn-sm" @onclick="() => OpenAddSubObjectiveModal(objective)" title="إضافة هدف إجرائي">
+                                                                <i class="bi bi-plus"></i>
+                                                            </button>
+                                                            <button class="btn btn-warning btn-sm" @onclick="() => OpenEditObjectiveModal(objective)" title="تعديل">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </button>
+                                                            <button class="btn btn-danger btn-sm" @onclick="() => DeleteObjective(objective.Id)" title="حذف">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                rowIndex++;
+                                            }
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Export Buttons -->
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button class="btn btn-success" @onclick="() => ExportObjectivesToExcel()">
+                                <i class="bi bi-file-earmark-excel me-1"></i> تصدير Excel
+                            </button>
+                            <button class="btn btn-danger" @onclick="() => ExportObjectivesToPDF()">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> تصدير PDF
+                            </button>
+                        </div>
+                    }
+
+                    <!-- Areas View -->
+                    @if (currentView == "areas")
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>مجالات الخطة</h4>
+                            <button class="btn btn-secondary" @onclick="() => NavigateToMain()">
+                                <i class="bi bi-arrow-right me-1"></i> العودة
+                            </button>
+                        </div>
+
+                        <div class="row">
+                            @foreach (var area in allAreas)
+                            {
+                                <div class="col-md-6 col-lg-3 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title">@area.Name</h5>
+                                            <p class="card-text">عدد الأهداف: @(allSubObjectives?.Count(so => so.Area == area.Name) ?? 0)</p>
+                                            <button class="btn btn-primary" @onclick="() => NavigateToAreaSubObjectives(area)">
+                                                <i class="bi bi-arrow-left me-1"></i> عرض الأهداف
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- Area SubObjectives View (Slide 4) -->
+                    @if (currentView == "area-subobjectives" && selectedArea != null)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>أهداف مجال: @selectedArea.Name</h4>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success" @onclick="() => OpenAddSubObjectiveModal()">
+                                    <i class="bi bi-plus-circle me-1"></i> إضافة هدف إجرائي
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => NavigateToAreas()">
+                                    <i class="bi bi-arrow-right me-1"></i> العودة
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-success me-2" @onclick="ExportToPDF">
+                                <i class="bi bi-file-pdf"></i> PDF
+                            </button>
+                            <button class="btn btn-info" @onclick="ExportToExcel">
+                                <i class="bi bi-file-excel"></i> Excel
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="area-subobjectives-table" class="table table-hover table-bordered align-middle text-center">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="width: 5%;">م</th>
+                                        <th style="width: 50%;">الأهداف الإجرائية</th>
+                                        <th style="width: 15%;">عدد الإجراءات</th>
+                                        <th style="width: 15%;">دخول</th>
+                                        <th style="width: 15%;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (areaSubObjectives == null || !areaSubObjectives.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="5">لا توجد أهداف إجرائية لهذا المجال.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var subObjective in areaSubObjectives.OrderBy(so => so.SubObjective))
+                                        {
+                                            <tr>
+                                                <td class="text-center fw-bold">@(areaSubObjectives.IndexOf(subObjective) + 1)</td>
+                                                <td>@subObjective.SubObjective</td>
+                                                <td>@subObjective.Actions.Count(a => a.IsActive)</td>
+                                                <td>
+                                                    <button class="btn btn-primary btn-sm" @onclick="() => ViewSubObjectiveActions(subObjective)" title="عرض الإجراءات">
+                                                        <i class="bi bi-arrow-left"></i>
+                                                    </button>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <button class="btn btn-warning btn-sm" @onclick="() => OpenEditSubObjectiveModal(subObjective)" title="تعديل">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteSubObjective(subObjective.Id)" title="حذف">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Export Buttons -->
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button class="btn btn-success" @onclick="() => ExportAreaSubObjectivesToExcel()">
+                                <i class="bi bi-file-earmark-excel me-1"></i> تصدير Excel
+                            </button>
+                            <button class="btn btn-danger" @onclick="() => ExportAreaSubObjectivesToPDF()">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> تصدير PDF
+                            </button>
+                        </div>
+                    }
+
+                    <!-- Objective SubObjectives View -->
+                    @if (currentView == "objective-subobjectives" && selectedObjective != null)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>الأهداف الإجرائية للهدف: @selectedObjective.Objective</h4>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success" @onclick="() => OpenAddSubObjectiveModal()">
+                                    <i class="bi bi-plus-circle me-1"></i> إضافة هدف إجرائي
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => NavigateToObjectives()">
+                                    <i class="bi bi-arrow-right me-1"></i> العودة
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="objective-subobjectives-table" class="table table-hover table-bordered align-middle text-center">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="width: 5%;">م</th>
+                                        <th style="width: 20%;">المجال</th>
+                                        <th style="width: 50%;">الأهداف الإجرائية</th>
+                                        <th style="width: 15%;">عدد الإجراءات</th>
+                                        <th style="width: 10%;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (selectedObjective.SubObjectives == null || !selectedObjective.SubObjectives.Any(so => so.IsActive))
+                                    {
+                                        <tr>
+                                            <td colspan="5">لا توجد أهداف إجرائية لهذا الهدف.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var subObjective in selectedObjective.SubObjectives.Where(so => so.IsActive).OrderBy(so => so.Area).ThenBy(so => so.SubObjective))
+                                        {
+                                            <tr>
+                                                <td class="text-center fw-bold">@(selectedObjective.SubObjectives.ToList().IndexOf(subObjective) + 1)</td>
+                                                <td>@subObjective.Area</td>
+                                                <td>@subObjective.SubObjective</td>
+                                                <td>@subObjective.Actions.Count(a => a.IsActive)</td>
+                                                <td>
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <button class="btn btn-info btn-sm" @onclick="() => ViewSubObjectiveActions(subObjective)" title="عرض الإجراءات">
+                                                            <i class="bi bi-eye"></i>
+                                                        </button>
+                                                        <button class="btn btn-warning btn-sm" @onclick="() => OpenEditSubObjectiveModal(subObjective)" title="تعديل">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteSubObjective(subObjective.Id)" title="حذف">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Export Buttons -->
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button class="btn btn-success" @onclick="() => ExportObjectiveSubObjectivesToExcel()">
+                                <i class="bi bi-file-earmark-excel me-1"></i> تصدير Excel
+                            </button>
+                            <button class="btn btn-danger" @onclick="() => ExportObjectiveSubObjectivesToPDF()">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> تصدير PDF
+                            </button>
+                        </div>
+                    }
+
+                    <!-- SubObjective Actions View (Slide 5) -->
+                    @if (currentView == "subobjective-actions" && selectedSubObjective != null)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>إجراءات الهدف: @selectedSubObjective.SubObjective</h4>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success" @onclick="() => OpenAddActionModal()">
+                                    <i class="bi bi-plus-circle me-1"></i> إضافة إجراء
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => GoBack()">
+                                    <i class="bi bi-arrow-right me-1"></i> العودة
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="subobjective-actions-table" class="table table-hover table-bordered align-middle text-center">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="width: 5%;">م</th>
+                                        <th style="width: 30%;">الإجراءات</th>
+                                        <th style="width: 15%;">الفترة الزمنية</th>
+                                        <th style="width: 15%;">المنفذ</th>
+                                        <th style="width: 10%;">التنفيذ</th>
+                                        <th style="width: 10%;">الملاحظات</th>
+                                        <th style="width: 15%;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (selectedSubObjective.Actions == null || !selectedSubObjective.Actions.Any(a => a.IsActive))
+                                    {
+                                        <tr>
+                                            <td colspan="7">لا توجد إجراءات لهذا الهدف.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var action in selectedSubObjective.Actions.Where(a => a.IsActive).OrderBy(a => a.Id))
+                                        {
+                                            <tr>
+                                                <td class="text-center fw-bold">@(selectedSubObjective.Actions.ToList().IndexOf(action) + 1)</td>
+                                                <td>@action.Action</td>
+                                                <td>@action.TimePeriod</td>
+                                                <td>@action.Executor</td>
+                                                <td>
+                                                    @if (action.IsExecuted)
+                                                    {
+                                                        <span class="badge bg-success">منفذ</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning">غير منفذ</span>
+                                                    }
+                                                </td>
+                                                <td>@action.Notes</td>
+                                                <td>
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <button class="btn btn-warning btn-sm" @onclick="() => OpenEditActionModal(action)" title="تعديل">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteAction(action.Id)" title="حذف">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Export Buttons -->
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button class="btn btn-success" @onclick="() => ExportSubObjectiveToExcel()">
+                                <i class="bi bi-file-earmark-excel me-1"></i> تصدير Excel
+                            </button>
+                            <button class="btn btn-danger" @onclick="() => ExportSubObjectiveToPDF()">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> تصدير PDF
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Objective Modal -->
+<div class="modal fade @(showObjectiveModal ? "show d-block" : "")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">@(currentObjective.Id == 0 ? "إضافة هدف جديد" : "تعديل الهدف")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => CloseObjectiveModal()"></button>
+            </div>
+            <EditForm Model="@currentObjective" OnValidSubmit="SaveObjective" FormName="objectiveForm">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="objective" class="form-label">الهدف الرئيسي</label>
+                        <InputText id="objective" class="form-control" @bind-Value="currentObjective.Objective" />
+                        <ValidationMessage For="@(() => currentObjective.Objective)" />
+                    </div>
+                    
+                    <!-- Areas and Sub-Objectives Section -->
+                    <div class="mb-3">
+                        <label class="form-label">المجالات والأهداف الإجرائية</label>
+                        <div id="areas-container">
+                            @if (objectiveAreas != null && objectiveAreas.Any())
+                            {
+                                @for (int i = 0; i < objectiveAreas.Count; i++)
+                                {
+                                    int index = i;
+                                    <div class="card mb-3" style="border: 1px solid #dee2e6;">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold">المجال @(index + 1)</span>
+                                            <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveArea(index)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">اسم المجال</label>
+                                                <input class="form-control" @bind="objectiveAreas[index].Area" />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">الأهداف الإجرائية</label>
+                                                <div id="subobjectives-container-@index">
+                                                    @if (objectiveAreas[index].SubObjectives != null && objectiveAreas[index].SubObjectives.Any())
+                                                    {
+                                                        @for (int j = 0; j < objectiveAreas[index].SubObjectives.Count; j++)
+                                                        {
+                                                            int subIndex = j;
+                                                            <div class="input-group mb-2">
+                                                                <input class="form-control" @bind="objectiveAreas[index].SubObjectives[subIndex]" />
+                                                                <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveSubObjective(index, subIndex)">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        }
+                                                    }
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-success" @onclick="() => AddSubObjective(index)">
+                                                    <i class="bi bi-plus"></i> إضافة هدف إجرائي
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        <button type="button" class="btn btn-primary" @onclick="() => AddArea()">
+                            <i class="bi bi-plus"></i> إضافة مجال جديد
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => CloseObjectiveModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit SubObjective Modal -->
+<div class="modal fade @(showSubObjectiveModal ? "show d-block" : "")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">@(currentSubObjective.Id == 0 ? "إضافة هدف إجرائي جديد" : "تعديل الهدف الإجرائي")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => CloseSubObjectiveModal()"></button>
+            </div>
+            <EditForm Model="@currentSubObjective" OnValidSubmit="SaveSubObjective" FormName="subObjectiveForm">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="area" class="form-label">المجال</label>
+                        <InputText id="area" class="form-control" @bind-Value="currentSubObjective.Area" />
+                        <ValidationMessage For="@(() => currentSubObjective.Area)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="subObjective" class="form-label">الهدف الإجرائي</label>
+                        <InputText id="subObjective" class="form-control" @bind-Value="currentSubObjective.SubObjective" />
+                        <ValidationMessage For="@(() => currentSubObjective.SubObjective)" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => CloseSubObjectiveModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Action Modal -->
+<div class="modal fade @(showActionModal ? "show d-block" : "")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">@(currentAction.Id == 0 ? "إضافة إجراء جديد" : "تعديل الإجراء")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => CloseActionModal()"></button>
+            </div>
+            <EditForm Model="@currentAction" OnValidSubmit="SaveAction" FormName="actionForm">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="action" class="form-label">الإجراء</label>
+                        <InputText id="action" class="form-control" @bind-Value="currentAction.Action" />
+                        <ValidationMessage For="@(() => currentAction.Action)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="executor" class="form-label">المسؤول</label>
+                        <InputText id="executor" class="form-control" @bind-Value="currentAction.Executor" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="timePeriod" class="form-label">الفترة الزمنية</label>
+                        <InputText id="timePeriod" class="form-control" @bind-Value="currentAction.TimePeriod" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">الملاحظات</label>
+                        <InputTextArea id="notes" class="form-control" @bind-Value="currentAction.Notes" rows="3" />
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <InputCheckbox id="isExecuted" class="form-check-input" @bind-Value="currentAction.IsExecuted" />
+                            <label class="form-check-label" for="isExecuted">تم التنفيذ</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => CloseActionModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<PlanArea> allAreas = new List<PlanArea>();
+    private List<PlanObjective> allObjectives = new List<PlanObjective>();
+    private List<PlanSubObjective> allSubObjectives = new List<PlanSubObjective>();
+    private List<PlanSubObjective> areaSubObjectives = new List<PlanSubObjective>();
+    private PlanArea? selectedArea;
+    private PlanObjective? selectedObjective;
+    private PlanSubObjective? selectedSubObjective;
+    private PlanObjective currentObjective = new PlanObjective();
+    private PlanSubObjective currentSubObjective = new PlanSubObjective();
+    private PlanAction currentAction = new PlanAction();
+    
+    // Enhanced modal variables
+    private List<ObjectiveAreaData> objectiveAreas = new List<ObjectiveAreaData>();
+    
+    public class ObjectiveAreaData
+    {
+        public string Area { get; set; } = string.Empty;
+        public List<string> SubObjectives { get; set; } = new List<string>();
+    }
+    private string currentView = "main";
+    private bool showObjectiveModal = false;
+    private bool showSubObjectiveModal = false;
+    private bool showActionModal = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            allAreas = await SchoolPlanService.GetAllAreasAsync();
+            allObjectives = await SchoolPlanService.GetAllObjectivesAsync();
+            allSubObjectives = await SchoolPlanService.GetAllSubObjectivesAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تحميل البيانات: " + ex.Message;
+        }
+    }
+
+    private void NavigateToMain()
+    {
+        currentView = "main";
+        selectedArea = null;
+        selectedObjective = null;
+        selectedSubObjective = null;
+        StateHasChanged();
+    }
+
+    private void NavigateToAreas()
+    {
+        currentView = "areas";
+        selectedArea = null;
+        selectedObjective = null;
+        selectedSubObjective = null;
+        StateHasChanged();
+    }
+
+    private void NavigateToObjectives()
+    {
+        currentView = "objectives";
+        selectedArea = null;
+        selectedObjective = null;
+        selectedSubObjective = null;
+        StateHasChanged();
+    }
+
+    private void NavigateToAreaSubObjectives(PlanArea area)
+    {
+        selectedArea = area;
+        areaSubObjectives = allSubObjectives.Where(so => so.Area == area.Name).ToList();
+        currentView = "area-subobjectives";
+        StateHasChanged();
+    }
+
+    private void ViewObjectiveSubObjectives(PlanObjective objective)
+    {
+        selectedObjective = objective;
+        currentView = "objective-subobjectives";
+        StateHasChanged();
+    }
+
+    private void ViewSubObjectiveActions(PlanSubObjective subObjective)
+    {
+        selectedSubObjective = subObjective;
+        currentView = "subobjective-actions";
+        StateHasChanged();
+    }
+
+    private void GoBack()
+    {
+        if (currentView == "objectives" || currentView == "areas")
+        {
+            NavigateToMain();
+        }
+        else if (currentView == "area-subobjectives")
+        {
+            NavigateToAreas();
+        }
+        else if (currentView == "objective-subobjectives")
+        {
+            NavigateToObjectives();
+        }
+        else if (currentView == "subobjective-actions")
+        {
+            if (selectedArea != null)
+            {
+                NavigateToAreaSubObjectives(selectedArea);
+            }
+            else if (selectedObjective != null)
+            {
+                ViewObjectiveSubObjectives(selectedObjective);
+            }
+            else
+            {
+                NavigateToObjectives();
+            }
+        }
+    }
+
+    // Objective Methods
+    private void OpenAddObjectiveModal()
+    {
+        currentObjective = new PlanObjective();
+        objectiveAreas = new List<ObjectiveAreaData>();
+        showObjectiveModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenEditObjectiveModal(PlanObjective objective)
+    {
+        currentObjective = new PlanObjective
+        {
+            Id = objective.Id,
+            Objective = objective.Objective,
+            IsActive = objective.IsActive
+        };
+        
+        // Load existing areas and sub-objectives
+        objectiveAreas = objective.SubObjectives.Where(so => so.IsActive)
+            .GroupBy(so => so.Area)
+            .Select(g => new ObjectiveAreaData
+            {
+                Area = g.Key,
+                SubObjectives = g.Select(so => so.SubObjective).ToList()
+            }).ToList();
+        
+        showObjectiveModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseObjectiveModal()
+    {
+        showObjectiveModal = false;
+        currentObjective = new PlanObjective();
+        objectiveAreas = new List<ObjectiveAreaData>();
+        StateHasChanged();
+    }
+
+    private async Task SaveObjective()
+    {
+        try
+        {
+            if (currentObjective.Id == 0)
+            {
+                await SchoolPlanService.AddPlanObjectiveAsync(currentObjective);
+                
+                // Add areas and sub-objectives
+                foreach (var areaData in objectiveAreas)
+                {
+                    foreach (var subObjectiveText in areaData.SubObjectives)
+                    {
+                        if (!string.IsNullOrWhiteSpace(areaData.Area) && !string.IsNullOrWhiteSpace(subObjectiveText))
+                        {
+                            var subObjective = new PlanSubObjective
+                            {
+                                PlanObjectiveId = currentObjective.Id,
+                                Area = areaData.Area,
+                                SubObjective = subObjectiveText
+                            };
+                            await SchoolPlanService.AddPlanSubObjectiveAsync(subObjective);
+                        }
+                    }
+                }
+                successMessage = "تم إضافة الهدف بنجاح";
+            }
+            else
+            {
+                await SchoolPlanService.UpdatePlanObjectiveAsync(currentObjective);
+                
+                // Delete existing sub-objectives
+                var existingSubObjectives = await SchoolPlanService.GetSubObjectivesByObjectiveIdAsync(currentObjective.Id);
+                foreach (var subObj in existingSubObjectives)
+                {
+                    await SchoolPlanService.DeletePlanSubObjectiveAsync(subObj.Id);
+                }
+                
+                // Add new areas and sub-objectives
+                foreach (var areaData in objectiveAreas)
+                {
+                    foreach (var subObjectiveText in areaData.SubObjectives)
+                    {
+                        if (!string.IsNullOrWhiteSpace(areaData.Area) && !string.IsNullOrWhiteSpace(subObjectiveText))
+                        {
+                            var subObjective = new PlanSubObjective
+                            {
+                                PlanObjectiveId = currentObjective.Id,
+                                Area = areaData.Area,
+                                SubObjective = subObjectiveText
+                            };
+                            await SchoolPlanService.AddPlanSubObjectiveAsync(subObjective);
+                        }
+                    }
+                }
+                successMessage = "تم تحديث الهدف بنجاح";
+            }
+
+            await LoadData();
+            CloseObjectiveModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حفظ الهدف: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteObjective(int id)
+    {
+        try
+        {
+            if (await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذا الهدف؟"))
+            {
+                await SchoolPlanService.DeletePlanObjectiveAsync(id);
+                successMessage = "تم حذف الهدف بنجاح";
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حذف الهدف: " + ex.Message;
+        }
+    }
+
+    // Enhanced modal methods
+    private void AddArea()
+    {
+        objectiveAreas.Add(new ObjectiveAreaData());
+        StateHasChanged();
+    }
+
+    private void RemoveArea(int index)
+    {
+        if (index >= 0 && index < objectiveAreas.Count)
+        {
+            objectiveAreas.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void AddSubObjective(int areaIndex)
+    {
+        if (areaIndex >= 0 && areaIndex < objectiveAreas.Count)
+        {
+            objectiveAreas[areaIndex].SubObjectives.Add(string.Empty);
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveSubObjective(int areaIndex, int subObjectiveIndex)
+    {
+        if (areaIndex >= 0 && areaIndex < objectiveAreas.Count &&
+            subObjectiveIndex >= 0 && subObjectiveIndex < objectiveAreas[areaIndex].SubObjectives.Count)
+        {
+            objectiveAreas[areaIndex].SubObjectives.RemoveAt(subObjectiveIndex);
+            StateHasChanged();
+        }
+    }
+
+    // SubObjective Methods
+    private void OpenAddSubObjectiveModal(PlanObjective? objective = null)
+    {
+        currentSubObjective = new PlanSubObjective
+        {
+            Area = selectedArea?.Name ?? string.Empty
+        };
+        if (objective != null)
+        {
+            currentSubObjective.PlanObjectiveId = objective.Id;
+        }
+        showSubObjectiveModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenEditSubObjectiveModal(PlanSubObjective subObjective)
+    {
+        currentSubObjective = new PlanSubObjective
+        {
+            Id = subObjective.Id,
+            PlanObjectiveId = subObjective.PlanObjectiveId,
+            Area = subObjective.Area,
+            SubObjective = subObjective.SubObjective,
+            IsActive = subObjective.IsActive
+        };
+        showSubObjectiveModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseSubObjectiveModal()
+    {
+        showSubObjectiveModal = false;
+        currentSubObjective = new PlanSubObjective();
+        StateHasChanged();
+    }
+
+    private async Task SaveSubObjective()
+    {
+        try
+        {
+            if (currentSubObjective.Id == 0)
+            {
+                // Find the first objective to associate with
+                var firstObjective = allObjectives.FirstOrDefault();
+                if (firstObjective != null)
+                {
+                    currentSubObjective.PlanObjectiveId = firstObjective.Id;
+                }
+                await SchoolPlanService.AddPlanSubObjectiveAsync(currentSubObjective);
+                successMessage = "تم إضافة الهدف الإجرائي بنجاح";
+            }
+            else
+            {
+                await SchoolPlanService.UpdatePlanSubObjectiveAsync(currentSubObjective);
+                successMessage = "تم تحديث الهدف الإجرائي بنجاح";
+            }
+
+            await LoadData();
+            CloseSubObjectiveModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حفظ الهدف الإجرائي: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteSubObjective(int id)
+    {
+        try
+        {
+            if (await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذا الهدف الإجرائي؟"))
+            {
+                await SchoolPlanService.DeletePlanSubObjectiveAsync(id);
+                successMessage = "تم حذف الهدف الإجرائي بنجاح";
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حذف الهدف الإجرائي: " + ex.Message;
+        }
+    }
+
+    // Action Methods
+    private void OpenAddActionModal()
+    {
+        currentAction = new PlanAction
+        {
+            PlanSubObjectiveId = selectedSubObjective?.Id ?? 0
+        };
+        showActionModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenEditActionModal(PlanAction action)
+    {
+        currentAction = new PlanAction
+        {
+            Id = action.Id,
+            PlanSubObjectiveId = action.PlanSubObjectiveId,
+            Action = action.Action,
+            Executor = action.Executor,
+            TimePeriod = action.TimePeriod,
+            Notes = action.Notes,
+            IsExecuted = action.IsExecuted,
+            IsActive = action.IsActive
+        };
+        showActionModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseActionModal()
+    {
+        showActionModal = false;
+        currentAction = new PlanAction();
+        StateHasChanged();
+    }
+
+    private async Task SaveAction()
+    {
+        try
+        {
+            if (currentAction.Id == 0)
+            {
+                await SchoolPlanService.AddPlanActionAsync(currentAction);
+                successMessage = "تم إضافة الإجراء بنجاح";
+            }
+            else
+            {
+                await SchoolPlanService.UpdatePlanActionAsync(currentAction);
+                successMessage = "تم تحديث الإجراء بنجاح";
+            }
+
+            await LoadData();
+            CloseActionModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حفظ الإجراء: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteAction(int id)
+    {
+        try
+        {
+            if (await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذا الإجراء؟"))
+            {
+                await SchoolPlanService.DeletePlanActionAsync(id);
+                successMessage = "تم حذف الإجراء بنجاح";
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حذف الإجراء: " + ex.Message;
+        }
+    }
+
+    // Export Methods
+    private async Task ExportObjectivesToExcel()
+    {
+        try
+        {
+            var data = allObjectives.SelectMany(o => o.SubObjectives.Where(so => so.IsActive).Select(so => new
+            {
+                الهدف_الرئيسي = o.Objective,
+                المجال = so.Area,
+                الهدف_الإجرائي = so.SubObjective,
+                تاريخ_الإنشاء = o.CreatedAt.ToString("yyyy-MM-dd")
+            })).ToList();
+
+            await JSRuntime.InvokeVoidAsync("exportToExcel", data, "الأهداف_الإجرائية");
+            successMessage = "تم تصدير البيانات إلى Excel بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير Excel: " + ex.Message;
+        }
+    }
+
+    private async Task ExportObjectivesToPDF()
+    {
+        try
+        {
+            var tableRows = new List<string>();
+            int rowIndex = 1;
+
+            foreach (var objective in allObjectives.OrderBy(o => o.Objective))
+            {
+                var activeSubObjectives = objective.SubObjectives.Where(so => so.IsActive).ToList();
+                if (activeSubObjectives.Any())
+                {
+                    var groupedByArea = activeSubObjectives.GroupBy(so => so.Area).ToList();
+                    
+                    foreach (var areaGroup in groupedByArea.OrderBy(g => g.Key))
+                    {
+                        var subObjectivesInArea = areaGroup.OrderBy(so => so.SubObjective).ToList();
+                        bool isFirstRow = true;
+                        
+                        foreach (var subObjective in subObjectivesInArea)
+                        {
+                            if (isFirstRow)
+                            {
+                                // First row with rowspan for main objective and area
+                                tableRows.Add($"<tr><td rowspan=\"{subObjectivesInArea.Count}\">{rowIndex}</td><td rowspan=\"{subObjectivesInArea.Count}\">{objective.Objective}</td><td rowspan=\"{subObjectivesInArea.Count}\">{subObjective.Area}</td><td>{subObjective.SubObjective}</td></tr>");
+                                isFirstRow = false;
+                            }
+                            else
+                            {
+                                // Subsequent rows without main objective and area
+                                tableRows.Add($"<tr><td>{subObjective.SubObjective}</td></tr>");
+                            }
+                        }
+                        rowIndex++;
+                    }
+                }
+            }
+
+            var tableRowsHtml = string.Join("", tableRows);
+
+            var html = $@"
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>الأهداف الإجرائية</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; direction: rtl; }}
+                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; }}
+                        th {{ background-color: #f2f2f2; font-weight: bold; }}
+                        .header {{ text-align: center; margin-bottom: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>الأهداف الإجرائية</h1>
+                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>م</th>
+                                <th>الهدف الرئيسي</th>
+                                <th>المجال</th>
+                                <th>الأهداف الإجرائية</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tableRowsHtml}
+                        </tbody>
+                    </table>
+                </body>
+                </html>";
+
+            await JSRuntime.InvokeVoidAsync("exportToPDF", html, "الأهداف_الإجرائية");
+            successMessage = "تم تصدير البيانات إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+
+    private async Task ExportAreaSubObjectivesToExcel()
+    {
+        try
+        {
+            var data = areaSubObjectives.Select(so => new
+            {
+                المجال = so.Area,
+                الهدف_الإجرائي = so.SubObjective,
+                عدد_الإجراءات = so.Actions.Count(a => a.IsActive),
+                تاريخ_الإنشاء = so.CreatedAt.ToString("yyyy-MM-dd")
+            }).ToList();
+
+            await JSRuntime.InvokeVoidAsync("exportToExcel", data, $"أهداف_المجال_{selectedArea?.Name}");
+            successMessage = "تم تصدير البيانات إلى Excel بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير Excel: " + ex.Message;
+        }
+    }
+
+    private async Task ExportAreaSubObjectivesToPDF()
+    {
+        try
+        {
+            var tableRows = string.Join("", areaSubObjectives.Select((so, index) => 
+                $"<tr><td>{index + 1}</td><td>{so.SubObjective}</td><td>{so.Actions.Count(a => a.IsActive)}</td></tr>"));
+
+            var html = $@"
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>أهداف المجال</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; direction: rtl; }}
+                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+                        th {{ background-color: #f2f2f2; font-weight: bold; }}
+                        .header {{ text-align: center; margin-bottom: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>أهداف المجال: {selectedArea?.Name}</h1>
+                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>م</th>
+                                <th>الأهداف الإجرائية</th>
+                                <th>عدد الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tableRows}
+                        </tbody>
+                    </table>
+                </body>
+                </html>";
+
+            await JSRuntime.InvokeVoidAsync("exportToPDF", html, $"أهداف_المجال_{selectedArea?.Name}");
+            successMessage = "تم تصدير البيانات إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+
+    private async Task ExportSubObjectiveToExcel()
+    {
+        try
+        {
+            if (selectedSubObjective == null) return;
+
+            var data = selectedSubObjective.Actions.Where(a => a.IsActive).Select(a => new
+            {
+                الإجراء = a.Action,
+                المسؤول = a.Executor,
+                الفترة_الزمنية = a.TimePeriod,
+                الحالة = a.IsExecuted ? "منفذ" : "غير منفذ",
+                الملاحظات = a.Notes,
+                تاريخ_الإنشاء = a.CreatedAt.ToString("yyyy-MM-dd")
+            }).ToList();
+
+            await JSRuntime.InvokeVoidAsync("exportToExcel", data, $"إجراءات_{selectedSubObjective.SubObjective}");
+            successMessage = "تم تصدير البيانات إلى Excel بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير Excel: " + ex.Message;
+        }
+    }
+
+    private async Task ExportSubObjectiveToPDF()
+    {
+        try
+        {
+            if (selectedSubObjective == null) return;
+
+            var tableRows = string.Join("", selectedSubObjective.Actions.Where(a => a.IsActive).Select((a, index) => 
+                $"<tr><td>{index + 1}</td><td>{a.Action}</td><td>{a.TimePeriod}</td><td>{a.Executor}</td><td>{(a.IsExecuted ? "منفذ" : "غير منفذ")}</td><td>{a.Notes}</td></tr>"));
+
+            var html = $@"
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>إجراءات الهدف</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; direction: rtl; }}
+                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+                        th {{ background-color: #f2f2f2; font-weight: bold; }}
+                        .header {{ text-align: center; margin-bottom: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>إجراءات الهدف: {selectedSubObjective.SubObjective}</h1>
+                        <p>المجال: {selectedSubObjective.Area}</p>
+                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>م</th>
+                                <th>الإجراءات</th>
+                                <th>الفترة الزمنية</th>
+                                <th>المنفذ</th>
+                                <th>التنفيذ</th>
+                                <th>الملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tableRows}
+                        </tbody>
+                    </table>
+                </body>
+                </html>";
+
+            await JSRuntime.InvokeVoidAsync("exportToPDF", html, $"إجراءات_{selectedSubObjective.SubObjective}");
+            successMessage = "تم تصدير البيانات إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+
+    private async Task ExportObjectiveSubObjectivesToExcel()
+    {
+        try
+        {
+            if (selectedObjective == null) return;
+
+            var data = selectedObjective.SubObjectives.Where(so => so.IsActive).Select(so => new
+            {
+                المجال = so.Area,
+                الهدف_الإجرائي = so.SubObjective,
+                عدد_الإجراءات = so.Actions.Count(a => a.IsActive),
+                تاريخ_الإنشاء = so.CreatedAt.ToString("yyyy-MM-dd")
+            }).ToList();
+
+            await JSRuntime.InvokeVoidAsync("exportToExcel", data, $"أهداف_{selectedObjective.Objective}");
+            successMessage = "تم تصدير البيانات إلى Excel بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير Excel: " + ex.Message;
+        }
+    }
+
+    private async Task ExportObjectiveSubObjectivesToPDF()
+    {
+        try
+        {
+            if (selectedObjective == null) return;
+
+            var tableRows = string.Join("", selectedObjective.SubObjectives.Where(so => so.IsActive).Select((so, index) => 
+                $"<tr><td>{index + 1}</td><td>{so.Area}</td><td>{so.SubObjective}</td><td>{so.Actions.Count(a => a.IsActive)}</td></tr>"));
+
+            var html = $@"
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>الأهداف الإجرائية</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; direction: rtl; }}
+                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+                        th {{ background-color: #f2f2f2; font-weight: bold; }}
+                        .header {{ text-align: center; margin-bottom: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>الأهداف الإجرائية للهدف: {selectedObjective.Objective}</h1>
+                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>م</th>
+                                <th>المجال</th>
+                                <th>الأهداف الإجرائية</th>
+                                <th>عدد الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tableRows}
+                        </tbody>
+                    </table>
+                </body>
+                </html>";
+
+            await JSRuntime.InvokeVoidAsync("exportToPDF", html, $"أهداف_{selectedObjective.Objective}");
+            successMessage = "تم تصدير البيانات إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+
+    private async Task ExportToPDF()
+    {
+        try
+        {
+            string tableId = GetCurrentTableId();
+            if (string.IsNullOrEmpty(tableId))
+            {
+                errorMessage = "لا يمكن تحديد الجدول المطلوب تصديره";
+                return;
+            }
+
+            await JSRuntime.InvokeVoidAsync("exportToPDF", tableId, "متابعة_الخطة_المدرسية");
+            successMessage = "تم تصدير البيانات إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            string tableId = GetCurrentTableId();
+            if (string.IsNullOrEmpty(tableId))
+            {
+                errorMessage = "لا يمكن تحديد الجدول المطلوب تصديره";
+                return;
+            }
+
+            await JSRuntime.InvokeVoidAsync("exportToExcel", tableId, "متابعة_الخطة_المدرسية");
+            successMessage = "تم تصدير البيانات إلى Excel بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير Excel: " + ex.Message;
+        }
+    }
+
+    private string GetCurrentTableId()
+    {
+        return currentView switch
+        {
+            "objectives" => "objectives-table",
+            "area-subobjectives" => "area-subobjectives-table",
+            "objective-subobjectives" => "objective-subobjectives-table",
+            "subobjective-actions" => "subobjective-actions-table",
+            _ => string.Empty
+        };
+    }
+}

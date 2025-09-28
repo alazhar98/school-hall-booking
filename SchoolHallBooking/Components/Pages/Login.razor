@@ -1,6 +1,6 @@
 @page "/login"
 @using SchoolHallBooking.Services
-@inject IAuthService AuthService
+@inject IAdminAuthService AdminAuthService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
@@ -17,11 +17,11 @@
                     <form @onsubmit="HandleLogin" @onsubmit:preventDefault="true">
                         <div class="mb-3">
                             <label for="username" class="form-label">اسم المستخدم</label>
-                            <input type="text" class="form-control" id="username" @bind="username" required />
+                            <InputText class="form-control" id="username" @bind-Value="username" required />
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">كلمة المرور</label>
-                            <input type="password" class="form-control" id="password" @bind="password" required />
+                            <InputText type="password" class="form-control" id="password" @bind-Value="password" required />
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary" disabled="@isLoading">
@@ -59,7 +59,7 @@
 
         try
         {
-            var isValid = await AuthService.ValidateAdminAsync(username, password);
+            var isValid = await AdminAuthService.ValidateAdminAsync(username, password);
             if (isValid)
             {
                 Navigation.NavigateTo("/admin");

@@ -1,9 +1,13 @@
-namespace SchoolHallBooking.Services;
+using SchoolHallBooking.Models;
 
-public interface IAuthService
+namespace SchoolHallBooking.Services
 {
-    Task<bool> ValidateAdminAsync(string username, string password);
-    Task<bool> IsAdminLoggedIn();
-    bool IsAdminLoggedInSync();
-    Task SetAdminLoggedIn(bool isLoggedIn);
+    public interface IAuthService
+    {
+        Task<Employee?> LoginAsync(string employeeId, string password);
+        Task<bool> IsAuthenticatedAsync();
+        Task<Employee?> GetCurrentUserAsync();
+        Task LogoutAsync();
+        Task<bool> IsAuthorizedAsync(string? requiredRole = null);
+    }
 }
