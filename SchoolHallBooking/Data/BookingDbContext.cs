@@ -27,6 +27,14 @@ public class BookingDbContext : DbContext
         public DbSet<SupervisoryVisit> SupervisoryVisits { get; set; }
         public DbSet<SchoolHallBooking.Models.SupervisoryVisitAnalysis> SupervisoryVisitAnalyses { get; set; }
         public DbSet<SchoolHallBooking.Models.StudentWorkAnalysis> StudentWorkAnalyses { get; set; }
+        public DbSet<SchoolHallBooking.Models.AdminJobVisitAnalysis> AdminJobVisitAnalyses { get; set; }
+        public DbSet<SchoolHallBooking.Models.StudentOpinionAnalysis> StudentOpinionAnalyses { get; set; }
+        public DbSet<SchoolHallBooking.Models.StaffOpinionAnalysis> StaffOpinionAnalyses { get; set; }
+        public DbSet<SchoolHallBooking.Models.ParentsOpinionAnalysis> ParentsOpinionAnalyses { get; set; }
+        public DbSet<SchoolHallBooking.Models.SPDImprovementTeamMember> SPDImprovementTeamMembers { get; set; }
+        public DbSet<SchoolHallBooking.Models.SPDFollowupMeeting> SPDFollowupMeetings { get; set; }
+        public DbSet<SchoolHallBooking.Models.SPDDirectiveRecord> SPDDirectiveRecords { get; set; }
+        public DbSet<SchoolHallBooking.Models.SPDVisitRecord> SPDVisitRecords { get; set; }
         
         // Professional Development
         public DbSet<ProfessionalDevelopmentProgram> ProfessionalDevelopmentPrograms { get; set; }

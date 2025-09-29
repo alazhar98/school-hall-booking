@@ -64,7 +64,7 @@ else
                     }
                     else
                     {
-                        <div class="alert alert-secondary m-0">سيتم إضافة عناصر الإدارة لاحقاً</div>
+                        <button class="btn btn-warning" @onclick='@(() => SelectSlide2("admin"))'>الإدارة</button>
                     }
                 </div>
             </div>
@@ -239,6 +239,214 @@ else
                 </div>
             </div>
         }
+
+        @if (currentView == "admin")
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">الشريحة 5: خاصة بالإدارة</div>
+                <div class="card-body d-flex gap-3 flex-wrap">
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "jobs")'>الوظائف الإدارية</button>
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "students")'>آراء الطلبة</button>
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "staff")'>آراء الهيئة</button>
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "parents")'>آراء أولياء الأمور</button>
+                </div>
+            </div>
+
+            @if (adminView == "jobs")
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>الشريحة 6: تحليل الزيارة (الوظائف الإدارية والمساندة)</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "adminjobs-table", "تحليل_زيارة_الوظائف"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "adminjobs-table", "تحليل_زيارة_الوظائف"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentJob = new AdminJobVisitAnalysis(); adminJobs.Insert(0,currentJob); })'>+ إضافة سجل</button></div>
+                        @if (currentJob != null && (currentJob.Id == 0 || adminJobs.Contains(currentJob)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3"><InputText class="form-control" @bind-Value="currentJob.JobTitle" /><small class="text-muted">الوظيفة</small></div>
+                                <div class="col-md-3"><InputTextArea class="form-control" @bind-Value="currentJob.Strengths" /><small class="text-muted">جوانب القوة</small></div>
+                                <div class="col-md-3"><InputTextArea class="form-control" @bind-Value="currentJob.Enhancements" /><small class="text-muted">جوانب التعزيز</small></div>
+                                <div class="col-md-3"><InputTextArea class="form-control" @bind-Value="currentJob.FollowUpActions" /><small class="text-muted">إجراءات المتابعة</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentJob.DevelopmentPriorities" /><small class="text-muted">أولويات التطوير</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentJob.DevelopmentActions" /><small class="text-muted">إجراءات التطوير</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentJob.DevelopmentFollowUp" /><small class="text-muted">إجراءات المتابعة للتطوير</small></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveAdminJob">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentJob = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="adminjobs-table" class="table table-bordered text-center align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>الوظيفة</th><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أولويات التطوير</th><th>إجراءات التطوير</th><th>إجراءات المتابعة للتطوير</th><th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var j in adminJobs)
+                                {
+                                    <tr>
+                                        <td>@j.JobTitle</td><td>@j.Strengths</td><td>@j.Enhancements</td><td>@j.FollowUpActions</td><td>@j.DevelopmentPriorities</td><td>@j.DevelopmentActions</td><td>@j.DevelopmentFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentJob = j; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteAdminJob(j.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (adminView == "students")
+            {
+                @* Slide 7 *@
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>الشريحة 7: تحليل استمارة آراء الطلبة</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "stopinions-table", "اراء_الطلبة"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "stopinions-table", "اراء_الطلبة"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentStud = new StudentOpinionAnalysis(); studentOpinions.Insert(0,currentStud); })'>+ إضافة سجل</button></div>
+                        @if (currentStud != null && (currentStud.Id == 0 || studentOpinions.Contains(currentStud)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStud.Strengths" /><small class="text-muted">جوانب القوة</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStud.Enhancements" /><small class="text-muted">جوانب التعزيز</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStud.FollowUpActions" /><small class="text-muted">إجراءات المتابعة</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStud.SummarySuggestions" /><small class="text-muted">أهم المقترحات</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStud.SummaryFollowUp" /><small class="text-muted">جوانب المتابعة</small></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveStudentOpinion">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentStud = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="stopinions-table" class="table table-bordered text-center align-middle">
+                                <thead><tr><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أهم المقترحات</th><th>جوانب المتابعة</th><th>إجراءات</th></tr></thead>
+                                <tbody>
+                                @foreach (var r in studentOpinions)
+                                {
+                                    <tr>
+                                        <td>@r.Strengths</td><td>@r.Enhancements</td><td>@r.FollowUpActions</td><td>@r.SummarySuggestions</td><td>@r.SummaryFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentStud = r; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteStudentOpinion(r.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (adminView == "staff")
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>الشريحة 8: تحليل آراء الهيئة التعليمية</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "staffopinions-table", "اراء_الهيئة"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "staffopinions-table", "اراء_الهيئة"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentStaff = new StaffOpinionAnalysis(); staffOpinions.Insert(0,currentStaff); })'>+ إضافة سجل</button></div>
+                        @if (currentStaff != null && (currentStaff.Id == 0 || staffOpinions.Contains(currentStaff)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStaff.Strengths" /></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStaff.Enhancements" /></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStaff.FollowUpActions" /></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStaff.SummarySuggestions" /></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStaff.SummaryFollowUp" /></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveStaffOpinion">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentStaff = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="staffopinions-table" class="table table-bordered text-center align-middle">
+                                <thead><tr><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أهم المقترحات</th><th>جوانب المتابعة</th><th>إجراءات</th></tr></thead>
+                                <tbody>
+                                @foreach (var r in staffOpinions)
+                                {
+                                    <tr>
+                                        <td>@r.Strengths</td><td>@r.Enhancements</td><td>@r.FollowUpActions</td><td>@r.SummarySuggestions</td><td>@r.SummaryFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentStaff = r; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteStaffOpinion(r.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (adminView == "parents")
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>الشريحة 9: تحليل آراء أولياء الأمور</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "parentsopinions-table", "اراء_اولياء_الامور"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "parentsopinions-table", "اراء_اولياء_الامور"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentParent = new ParentsOpinionAnalysis(); parentsOpinions.Insert(0,currentParent); })'>+ إضافة سجل</button></div>
+                        @if (currentParent != null && (currentParent.Id == 0 || parentsOpinions.Contains(currentParent)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentParent.Strengths" /></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentParent.Enhancements" /></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentParent.FollowUpActions" /></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentParent.SummarySuggestions" /></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentParent.SummaryFollowUp" /></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveParentsOpinion">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentParent = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="parentsopinions-table" class="table table-bordered text-center align-middle">
+                                <thead><tr><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أهم المقترحات</th><th>جوانب المتابعة</th><th>إجراءات</th></tr></thead>
+                                <tbody>
+                                @foreach (var r in parentsOpinions)
+                                {
+                                    <tr>
+                                        <td>@r.Strengths</td><td>@r.Enhancements</td><td>@r.FollowUpActions</td><td>@r.SummarySuggestions</td><td>@r.SummaryFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentParent = r; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteParentsOpinion(r.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
     </div>
 }
 
@@ -248,11 +456,20 @@ else
     private readonly string[] subjects = new[] { "التربية الاسلامية", "اللغة العربية", "اللغة الانجليزية", "الرياضيات", "العلوم", "الدراسات الاجتماعية", "تقنية المعلومات والمهارات القربية", "الادارة" };
     private string selectedSubject = string.Empty;
     private string currentView = string.Empty; // "visit" or "work"
+    private string adminView = string.Empty;   // jobs/students/staff/parents
 
     private List<SupervisoryVisitAnalysis> visitItems = new();
     private SupervisoryVisitAnalysis currentVisit = new();
     private List<StudentWorkAnalysis> workItems = new();
     private StudentWorkAnalysis currentWork = new();
+    private List<AdminJobVisitAnalysis> adminJobs = new();
+    private AdminJobVisitAnalysis currentJob = new();
+    private List<StudentOpinionAnalysis> studentOpinions = new();
+    private StudentOpinionAnalysis currentStud = new();
+    private List<StaffOpinionAnalysis> staffOpinions = new();
+    private StaffOpinionAnalysis currentStaff = new();
+    private List<ParentsOpinionAnalysis> parentsOpinions = new();
+    private ParentsOpinionAnalysis currentParent = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -292,6 +509,13 @@ else
         else if (currentView == "work")
         {
             workItems = await Service.GetStudentWorkAnalysesBySubjectAsync(selectedSubject);
+        }
+        else if (currentView == "admin")
+        {
+            if (adminView == "jobs") adminJobs = await Service.GetAdminJobVisitsAsync();
+            if (adminView == "students") studentOpinions = await Service.GetStudentOpinionsAsync();
+            if (adminView == "staff") staffOpinions = await Service.GetStaffOpinionsAsync();
+            if (adminView == "parents") parentsOpinions = await Service.GetParentsOpinionsAsync();
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -363,4 +587,27 @@ else
     private Task ExportVisitExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "visit-table", "تحليل_الزيارات").AsTask();
     private Task ExportWorkPDF() => JSRuntime.InvokeVoidAsync("exportToPDF", "work-table", "تحليل_اعمال_الطلبة").AsTask();
     private Task ExportWorkExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "work-table", "تحليل_اعمال_الطلبة").AsTask();
+
+    private async Task SaveAdminJob()
+    {
+        if (currentJob.Id == 0) await Service.AddAdminJobVisitAsync(currentJob); else await Service.UpdateAdminJobVisitAsync(currentJob);
+        adminJobs = await Service.GetAdminJobVisitsAsync(); currentJob = new(); await InvokeAsync(StateHasChanged);
+    }
+    private async Task DeleteAdminJob(int id)
+    { await Service.DeleteAdminJobVisitAsync(id); adminJobs = await Service.GetAdminJobVisitsAsync(); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveStudentOpinion()
+    { if (currentStud.Id == 0) await Service.AddStudentOpinionAsync(currentStud); else await Service.UpdateStudentOpinionAsync(currentStud); studentOpinions = await Service.GetStudentOpinionsAsync(); currentStud = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteStudentOpinion(int id)
+    { await Service.DeleteStudentOpinionAsync(id); studentOpinions = await Service.GetStudentOpinionsAsync(); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveStaffOpinion()
+    { if (currentStaff.Id == 0) await Service.AddStaffOpinionAsync(currentStaff); else await Service.UpdateStaffOpinionAsync(currentStaff); staffOpinions = await Service.GetStaffOpinionsAsync(); currentStaff = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteStaffOpinion(int id)
+    { await Service.DeleteStaffOpinionAsync(id); staffOpinions = await Service.GetStaffOpinionsAsync(); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveParentsOpinion()
+    { if (currentParent.Id == 0) await Service.AddParentsOpinionAsync(currentParent); else await Service.UpdateParentsOpinionAsync(currentParent); parentsOpinions = await Service.GetParentsOpinionsAsync(); currentParent = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteParentsOpinion(int id)
+    { await Service.DeleteParentsOpinionAsync(id); parentsOpinions = await Service.GetParentsOpinionsAsync(); await InvokeAsync(StateHasChanged); }
 }
