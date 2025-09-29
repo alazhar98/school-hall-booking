@@ -59,8 +59,8 @@ else
                 <div class="card-body d-flex gap-3 flex-wrap">
                     @if (selectedSubject != "الادارة")
                     {
-                        <button class="btn btn-primary" @onclick="(() => SelectSlide2("visit"))">تحليل الزيارات</button>
-                        <button class="btn btn-primary" @onclick="(() => SelectSlide2("work"))">تحليل أعمال الطلبة</button>
+                        <button class="btn btn-primary" @onclick='@(() => SelectSlide2("visit"))'>تحليل الزيارات</button>
+                        <button class="btn btn-primary" @onclick='@(() => SelectSlide2("work"))'>تحليل أعمال الطلبة</button>
                     }
                     else
                     {
@@ -86,6 +86,39 @@ else
                     <div class="mb-3">
                         <button class="btn btn-outline-success" @onclick="OpenAddVisit">+ إضافة سجل</button>
                     </div>
+                    @if (currentVisit != null && currentVisit.Subject == selectedSubject && (currentVisit.Id == 0 || visitItems.Contains(currentVisit)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.Strengths" />
+                                <small class="text-muted">جوانب القوة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.Enhancements" />
+                                <small class="text-muted">جوانب التعزيز</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.FollowUpActions" />
+                                <small class="text-muted">إجراءات المتابعة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.DevelopmentPriorities" />
+                                <small class="text-muted">أولويات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.DevelopmentActions" />
+                                <small class="text-muted">إجراءات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.DevelopmentFollowUp" />
+                                <small class="text-muted">إجراءات المتابعة للتطوير</small>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveVisit">حفظ</button>
+                                <button class="btn btn-secondary" @onclick="CancelVisit">إلغاء</button>
+                            </div>
+                        </div>
+                    }
                     <div class="table-responsive">
                         <table id="visit-table" class="table table-bordered text-center align-middle">
                             <thead>
@@ -138,6 +171,39 @@ else
                     <div class="mb-3">
                         <button class="btn btn-outline-success" @onclick="OpenAddWork">+ إضافة سجل</button>
                     </div>
+                    @if (currentWork != null && currentWork.Subject == selectedSubject && (currentWork.Id == 0 || workItems.Contains(currentWork)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.Strengths" />
+                                <small class="text-muted">جوانب القوة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.Enhancements" />
+                                <small class="text-muted">جوانب التعزيز</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.FollowUpActions" />
+                                <small class="text-muted">إجراءات المتابعة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.DevelopmentPriorities" />
+                                <small class="text-muted">أولويات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.DevelopmentActions" />
+                                <small class="text-muted">إجراءات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.DevelopmentFollowUp" />
+                                <small class="text-muted">إجراءات المتابعة للتطوير</small>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveWork">حفظ</button>
+                                <button class="btn btn-secondary" @onclick="CancelWork">إلغاء</button>
+                            </div>
+                        </div>
+                    }
                     <div class="table-responsive">
                         <table id="work-table" class="table table-bordered text-center align-middle">
                             <thead>
@@ -238,6 +304,20 @@ else
         currentVisit = new SupervisoryVisitAnalysis { Subject = selectedSubject };
         visitItems.Insert(0, currentVisit);
     }
+    private async Task SaveVisit()
+    {
+        if (currentVisit.Id == 0)
+            await Service.AddVisitAnalysisAsync(currentVisit);
+        else
+            await Service.UpdateVisitAnalysisAsync(currentVisit);
+        await LoadDataAsync();
+        currentVisit = new SupervisoryVisitAnalysis();
+    }
+    private Task CancelVisit()
+    {
+        currentVisit = new SupervisoryVisitAnalysis();
+        return InvokeAsync(StateHasChanged);
+    }
     private async Task EditVisit(SupervisoryVisitAnalysis item)
     {
         currentVisit = item;
@@ -253,6 +333,20 @@ else
     {
         currentWork = new StudentWorkAnalysis { Subject = selectedSubject };
         workItems.Insert(0, currentWork);
+    }
+    private async Task SaveWork()
+    {
+        if (currentWork.Id == 0)
+            await Service.AddStudentWorkAnalysisAsync(currentWork);
+        else
+            await Service.UpdateStudentWorkAnalysisAsync(currentWork);
+        await LoadDataAsync();
+        currentWork = new StudentWorkAnalysis();
+    }
+    private Task CancelWork()
+    {
+        currentWork = new StudentWorkAnalysis();
+        return InvokeAsync(StateHasChanged);
     }
     private async Task EditWork(StudentWorkAnalysis item)
     {
