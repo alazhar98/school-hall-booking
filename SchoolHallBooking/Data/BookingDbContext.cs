@@ -25,6 +25,8 @@ public class BookingDbContext : DbContext
         public DbSet<PlanSubObjective> PlanSubObjectives { get; set; }
         public DbSet<PlanAction> PlanActions { get; set; }
         public DbSet<SupervisoryVisit> SupervisoryVisits { get; set; }
+        public DbSet<SchoolHallBooking.Models.SupervisoryVisitAnalysis> SupervisoryVisitAnalyses { get; set; }
+        public DbSet<SchoolHallBooking.Models.StudentWorkAnalysis> StudentWorkAnalyses { get; set; }
         
         // Professional Development
         public DbSet<ProfessionalDevelopmentProgram> ProfessionalDevelopmentPrograms { get; set; }

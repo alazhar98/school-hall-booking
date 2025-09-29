@@ -38,6 +38,7 @@ builder.Services.AddScoped<IDailyPlanService, DailyPlanService>();
 builder.Services.AddScoped<ISupervisoryVisitService, SupervisoryVisitService>();
 builder.Services.AddScoped<IProfessionalDevelopmentService, ProfessionalDevelopmentService>();
 builder.Services.AddScoped<IAcademicAchievementService, AcademicAchievementService>();
+builder.Services.AddScoped<ISchoolPerformanceDevelopmentService, SchoolPerformanceDevelopmentService>();
 
 // Add Azure AD authentication (temporarily disabled for testing)
 // builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

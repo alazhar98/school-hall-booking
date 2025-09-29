@@ -32,7 +32,7 @@ namespace SchoolHallBooking.Data
             // Apply pending migrations if any (with error handling)
             try
             {
-                await context.Database.MigrateAsync();
+            await context.Database.MigrateAsync();
             }
             catch (Exception ex)
             {

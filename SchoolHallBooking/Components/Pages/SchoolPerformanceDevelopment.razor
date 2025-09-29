@@ -1,4 +1,4 @@
-@page "/schoolperformancedevelopment"
+@page "/school-performance-development"
 @using SchoolHallBooking.Services
 @using SchoolHallBooking.Models
 @inject IAuthService AuthService
@@ -35,13 +35,158 @@ else if (!isAuthenticated)
 }
 else
 {
-    <h1>SchoolPerformanceDevelopment</h1>
-    <p>هذه الصفحة محمية وتتطلب تسجيل الدخول.</p>
+    <div class="container-fluid">
+        <h2 class="mb-4">نظام تطوير الأداء المدرسي</h2>
+
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">الشريحة 1: اختر البرنامج/المجال</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @foreach (var s in subjects)
+                    {
+                        <div class="col-6 col-md-3 d-grid">
+                            <button class="btn btn-outline-primary" @onclick="(() => SelectSubject(s))">@s</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(selectedSubject))
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-info">الشريحة 2: خاصة بالمادة الدراسية</div>
+                <div class="card-body d-flex gap-3 flex-wrap">
+                    @if (selectedSubject != "الادارة")
+                    {
+                        <button class="btn btn-primary" @onclick="(() => SelectSlide2("visit"))">تحليل الزيارات</button>
+                        <button class="btn btn-primary" @onclick="(() => SelectSlide2("work"))">تحليل أعمال الطلبة</button>
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary m-0">سيتم إضافة عناصر الإدارة لاحقاً</div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (currentView == "visit")
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        الشريحة 3: تحليل الزيارة الإشرافية - @selectedSubject
+                    </div>
+                    <div>
+                        <button class="btn btn-success me-2" @onclick="ExportVisitPDF">PDF</button>
+                        <button class="btn btn-info" @onclick="ExportVisitExcel">Excel</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-outline-success" @onclick="OpenAddVisit">+ إضافة سجل</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="visit-table" class="table table-bordered text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th>جوانب القوة</th>
+                                    <th>جوانب التعزيز</th>
+                                    <th>إجراءات المتابعة</th>
+                                    <th>أولويات التطوير</th>
+                                    <th>إجراءات التطوير</th>
+                                    <th>إجراءات المتابعة للتطوير</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in visitItems)
+                                {
+                                    <tr>
+                                        <td>@item.Strengths</td>
+                                        <td>@item.Enhancements</td>
+                                        <td>@item.FollowUpActions</td>
+                                        <td>@item.DevelopmentPriorities</td>
+                                        <td>@item.DevelopmentActions</td>
+                                        <td>@item.DevelopmentFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="(() => EditVisit(item))">تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteVisit(item.Id))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (currentView == "work")
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        الشريحة 4: تحليل أعمال الطلبة - @selectedSubject
+                    </div>
+                    <div>
+                        <button class="btn btn-success me-2" @onclick="ExportWorkPDF">PDF</button>
+                        <button class="btn btn-info" @onclick="ExportWorkExcel">Excel</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-outline-success" @onclick="OpenAddWork">+ إضافة سجل</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="work-table" class="table table-bordered text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th>جوانب القوة</th>
+                                    <th>جوانب التعزيز</th>
+                                    <th>إجراءات المتابعة</th>
+                                    <th>أولويات التطوير</th>
+                                    <th>إجراءات التطوير</th>
+                                    <th>إجراءات المتابعة للتطوير</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in workItems)
+                                {
+                                    <tr>
+                                        <td>@item.Strengths</td>
+                                        <td>@item.Enhancements</td>
+                                        <td>@item.FollowUpActions</td>
+                                        <td>@item.DevelopmentPriorities</td>
+                                        <td>@item.DevelopmentActions</td>
+                                        <td>@item.DevelopmentFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="(() => EditWork(item))">تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteWork(item.Id))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 }
 
 @code {
     private bool isLoading = true;
     private bool isAuthenticated = false;
+    private readonly string[] subjects = new[] { "التربية الاسلامية", "اللغة العربية", "اللغة الانجليزية", "الرياضيات", "العلوم", "الدراسات الاجتماعية", "تقنية المعلومات والمهارات القربية", "الادارة" };
+    private string selectedSubject = string.Empty;
+    private string currentView = string.Empty; // "visit" or "work"
+
+    private List<SupervisoryVisitAnalysis> visitItems = new();
+    private SupervisoryVisitAnalysis currentVisit = new();
+    private List<StudentWorkAnalysis> workItems = new();
+    private StudentWorkAnalysis currentWork = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -58,4 +203,70 @@ else
             isLoading = false;
         }
     }
+
+    private void SelectSubject(string subject)
+    {
+        selectedSubject = subject;
+        currentView = string.Empty;
+    }
+
+    private void SelectSlide2(string view)
+    {
+        currentView = view;
+        _ = LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        if (string.IsNullOrEmpty(selectedSubject)) return;
+        if (currentView == "visit")
+        {
+            visitItems = await Service.GetVisitAnalysesBySubjectAsync(selectedSubject);
+        }
+        else if (currentView == "work")
+        {
+            workItems = await Service.GetStudentWorkAnalysesBySubjectAsync(selectedSubject);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [Inject]
+    private ISchoolPerformanceDevelopmentService Service { get; set; } = default!;
+
+    private void OpenAddVisit()
+    {
+        currentVisit = new SupervisoryVisitAnalysis { Subject = selectedSubject };
+        visitItems.Insert(0, currentVisit);
+    }
+    private async Task EditVisit(SupervisoryVisitAnalysis item)
+    {
+        currentVisit = item;
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task DeleteVisit(int id)
+    {
+        await Service.DeleteVisitAnalysisAsync(id);
+        await LoadDataAsync();
+    }
+
+    private void OpenAddWork()
+    {
+        currentWork = new StudentWorkAnalysis { Subject = selectedSubject };
+        workItems.Insert(0, currentWork);
+    }
+    private async Task EditWork(StudentWorkAnalysis item)
+    {
+        currentWork = item;
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task DeleteWork(int id)
+    {
+        await Service.DeleteStudentWorkAnalysisAsync(id);
+        await LoadDataAsync();
+    }
+
+    private Task ExportVisitPDF() => JSRuntime.InvokeVoidAsync("exportToPDF", "visit-table", "تحليل_الزيارات").AsTask();
+    private Task ExportVisitExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "visit-table", "تحليل_الزيارات").AsTask();
+    private Task ExportWorkPDF() => JSRuntime.InvokeVoidAsync("exportToPDF", "work-table", "تحليل_اعمال_الطلبة").AsTask();
+    private Task ExportWorkExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "work-table", "تحليل_اعمال_الطلبة").AsTask();
 }
