@@ -1,0 +1,1050 @@
+@page "/followuprecords"
+@page "/followup-records"
+@using SchoolHallBooking.Services
+@using SchoolHallBooking.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">جاري التحميل...</span>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-warning text-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>غير مصرح لك بالوصول</strong>
+                    <br>
+                    <small>يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة</small>
+                    <br>
+                    <a href="/school/login" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        تسجيل الدخول
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        @if (activeSlide == 1)
+        {
+            <div class="text-center mb-4">
+                <h3 class="mb-1">سجلات المتابعة</h3>
+                <small class="text-muted">اختر نوع السجل</small>
+            </div>
+            <div class="row g-3 justify-content-center">
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(2)">النظافة</button>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(3)">وسائل النقل</button>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(4)">الصيانة</button>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(7)">الجمعية التعاونية</button>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 2)
+        {
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">متابعة نظافة المبنى المدرسي</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveClean">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintClean">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>رقم المتابعة</th>
+                                    <th>المنفذ</th>
+                                    <th>اليوم</th>
+                                    <th>التاريخ</th>
+                                    <th>المكان</th>
+                                    <th>الملاحظات</th>
+                                    <th>الإجراء المتخذ</th>
+                                    <th>متابعة الإجراءات</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < cleanRows.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@cleanRows[idx].FollowNo" @oninput="(e => cleanRows[idx].FollowNo = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@cleanRows[idx].Executor" @oninput="(e => cleanRows[idx].Executor = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@cleanRows[idx].Day" @oninput="(e => cleanRows[idx].Day = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input type="date" class="form-control form-control-sm" value="@cleanRows[idx].Date" @oninput="(e => cleanRows[idx].Date = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@cleanRows[idx].Place" @oninput="(e => cleanRows[idx].Place = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@cleanRows[idx].Notes" @oninput="(e => cleanRows[idx].Notes = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@cleanRows[idx].ActionTaken" @oninput="(e => cleanRows[idx].ActionTaken = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@cleanRows[idx].ActionFollowup" @oninput="(e => cleanRows[idx].ActionFollowup = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveCleanRow(idx))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddCleanRow">+ إضافة صف</button>
+                </div>
+            </div>
+
+            <!-- جدول أرقام هواتف عمال النظافة -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">أرقام هواتف عمال النظافة</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveWorkers">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintWorkers">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>الاسم</th>
+                                    <th>رقم الهاتف</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < workers.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@workers[idx].Name" @oninput="(e => workers[idx].Name = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@workers[idx].PhoneNumber" @oninput="(e => workers[idx].PhoneNumber = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveWorker(idx))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddWorker">+ إضافة عامل</button>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 3)
+        {
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">كشف بالملاحظات في وسائل النقل المدرسية</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveTransport">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintTransport">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>رقم الحافلة</th>
+                                    <th>المنطقة السكنية</th>
+                                    <th>اسم صاحب الحافلة</th>
+                                    <th>اسم السائق</th>
+                                    <th>الشكوى</th>
+                                    <th>الإجراء المتخذ</th>
+                                    <th>المتابعة</th>
+                                    <th>توقيع السائق</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < transportRows.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].BusNumber" @oninput="(e => transportRows[idx].BusNumber = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].ResidentialArea" @oninput="(e => transportRows[idx].ResidentialArea = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].BusOwnerName" @oninput="(e => transportRows[idx].BusOwnerName = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].DriverName" @oninput="(e => transportRows[idx].DriverName = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].Complaint" @oninput="(e => transportRows[idx].Complaint = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].ActionTaken" @oninput="(e => transportRows[idx].ActionTaken = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].FollowUp" @oninput="(e => transportRows[idx].FollowUp = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@transportRows[idx].DriverSignature" @oninput="(e => transportRows[idx].DriverSignature = e.Value?.ToString() ?? string.Empty)" disabled /></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveTransportRow(idx))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddTransportRow">+ إضافة صف</button>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 4)
+        {
+            <!-- شريحة الصيانة الرئيسية -->
+            <div class="text-center mb-4">
+                <h3 class="mb-1">الصيانة</h3>
+                <small class="text-muted">اختر نوع السجل</small>
+            </div>
+            <div class="row g-3 justify-content-center">
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(5)">أرقام هواتف الصيانة</button>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(6)">استمارة صيانة مدرسية</button>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button class="btn btn-secondary" @onclick="() => OpenSlide(1)">رجوع</button>
+            </div>
+        }
+        else if (activeSlide == 5)
+        {
+            <!-- الشريحة 5: أرقام هواتف الصيانة -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">أرقام هواتف الصيانة</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveMaintenancePhones">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(4)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintMaintenancePhones">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>الفئة</th>
+                                    <th>الاسم</th>
+                                    <th>رقم الهاتف</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < maintenancePhones.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].Category" @oninput="(e => maintenancePhones[idx].Category = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].Name" @oninput="(e => maintenancePhones[idx].Name = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].PhoneNumber" @oninput="(e => maintenancePhones[idx].PhoneNumber = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveMaintenancePhone(idx))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddMaintenancePhone">+ إضافة رقم</button>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 6)
+        {
+            <!-- الشريحة 6: استمارة صيانة مدرسية -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">استمارة صيانة مدرسية</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveMaintenanceForm">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(4)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintMaintenanceForm">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>صيانة رقم</th>
+                                    <th>نوع الصيانة المطلوبة</th>
+                                    <th>نوع الطلب</th>
+                                    <th>وقت إجراء الصيانة</th>
+                                    <th>الإجراء المتخذ</th>
+                                    <th>ما تم تنفيذه</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < maintenanceForms.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@maintenanceForms[idx].MaintenanceNo" @oninput="(e => maintenanceForms[idx].MaintenanceNo = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-1">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" checked="@maintenanceForms[idx].Electricity" @onchange="@((e) => maintenanceForms[idx].Electricity = (bool)e.Value)" />
+                                                    <label class="form-check-label">كهرباء</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" checked="@maintenanceForms[idx].Plumbing" @onchange="@((e) => maintenanceForms[idx].Plumbing = (bool)e.Value)" />
+                                                    <label class="form-check-label">سباكة</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" checked="@maintenanceForms[idx].AC" @onchange="@((e) => maintenanceForms[idx].AC = (bool)e.Value)" />
+                                                    <label class="form-check-label">تكييف</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" checked="@maintenanceForms[idx].Furniture" @onchange="@((e) => maintenanceForms[idx].Furniture = (bool)e.Value)" />
+                                                    <label class="form-check-label">كراسي-طاولات</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" checked="@maintenanceForms[idx].Other" @onchange="@((e) => maintenanceForms[idx].Other = (bool)e.Value)" />
+                                                    <label class="form-check-label">أخرى</label>
+                                                </div>
+                                                <input class="form-control form-control-sm mt-1" placeholder="حدد الأخرى" value="@maintenanceForms[idx].OtherSpecify" @oninput="(e => maintenanceForms[idx].OtherSpecify = e.Value?.ToString() ?? string.Empty)" />
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-1">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="requestType_@idx" checked="@(maintenanceForms[idx].RequestType == "عاجل")" @onchange="@((e) => { maintenanceForms[idx].RequestType = "عاجل"; })" />
+                                                    <label class="form-check-label">عاجل</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="requestType_@idx" checked="@(maintenanceForms[idx].RequestType == "عاجل جدا")" @onchange="@((e) => { maintenanceForms[idx].RequestType = "عاجل جدا"; })" />
+                                                    <label class="form-check-label">عاجل جدا</label>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-1">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="maintenanceTime_@idx" checked="@(maintenanceForms[idx].MaintenanceTime == "صباحا")" @onchange="@((e) => { maintenanceForms[idx].MaintenanceTime = "صباحا"; })" />
+                                                    <label class="form-check-label">صباحا</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="maintenanceTime_@idx" checked="@(maintenanceForms[idx].MaintenanceTime == "مساءا")" @onchange="@((e) => { maintenanceForms[idx].MaintenanceTime = "مساءا"; })" />
+                                                    <label class="form-check-label">مساءا</label>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><textarea class="form-control form-control-sm" rows="3" value="@maintenanceForms[idx].ActionTaken" @oninput="(e => maintenanceForms[idx].ActionTaken = e.Value?.ToString() ?? string.Empty)"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" rows="3" value="@maintenanceForms[idx].WhatWasImplemented" @oninput="(e => maintenanceForms[idx].WhatWasImplemented = e.Value?.ToString() ?? string.Empty)"></textarea></td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="(() => PrintSingleMaintenanceForm(idx))">طباعة</button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveMaintenanceForm(idx))">حذف</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddMaintenanceForm">+ إضافة استمارة</button>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 7)
+        {
+            <!-- الشريحة 7: زيارة للمقصف المدرسي -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">زيارة للمقصف المدرسي</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveCanteenVisits">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintCanteenVisits">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>زيارة رقم</th>
+                                    <th>اليوم</th>
+                                    <th>التاريخ</th>
+                                    <th>الملاحظات</th>
+                                    <th>الإجراء المتخذ</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < canteenVisits.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@canteenVisits[idx].VisitNo" @oninput="(e => canteenVisits[idx].VisitNo = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@canteenVisits[idx].Day" @oninput="(e => canteenVisits[idx].Day = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" type="date" value="@canteenVisits[idx].Date" @oninput="(e => canteenVisits[idx].Date = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><textarea class="form-control form-control-sm" rows="3" value="@canteenVisits[idx].Observations" @oninput="(e => canteenVisits[idx].Observations = e.Value?.ToString() ?? string.Empty)"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" rows="3" value="@canteenVisits[idx].ActionTaken" @oninput="(e => canteenVisits[idx].ActionTaken = e.Value?.ToString() ?? string.Empty)"></textarea></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveCanteenVisit(idx))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddCanteenVisit">+ إضافة زيارة</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private int activeSlide = 1;
+
+    private class CleanRow
+    {
+        public string FollowNo { get; set; } = string.Empty;
+        public string Executor { get; set; } = string.Empty;
+        public string Day { get; set; } = string.Empty;
+        public string Date { get; set; } = string.Empty; // yyyy-MM-dd
+        public string Place { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
+        public string ActionTaken { get; set; } = string.Empty;
+        public string ActionFollowup { get; set; } = string.Empty;
+    }
+
+    private class Worker
+    {
+        public string Name { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+    }
+
+    private class TransportRow
+    {
+        public string BusNumber { get; set; } = string.Empty;
+        public string ResidentialArea { get; set; } = string.Empty;
+        public string BusOwnerName { get; set; } = string.Empty;
+        public string DriverName { get; set; } = string.Empty;
+        public string Complaint { get; set; } = string.Empty;
+        public string ActionTaken { get; set; } = string.Empty;
+        public string FollowUp { get; set; } = string.Empty;
+        public string DriverSignature { get; set; } = string.Empty;
+    }
+
+    private class MaintenancePhone
+    {
+        public string Category { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+    }
+
+    private class MaintenanceForm
+    {
+        public string MaintenanceNo { get; set; } = string.Empty;
+        public bool Electricity { get; set; } = false;
+        public bool Plumbing { get; set; } = false;
+        public bool AC { get; set; } = false;
+        public bool Furniture { get; set; } = false;
+        public bool Other { get; set; } = false;
+        public string OtherSpecify { get; set; } = string.Empty;
+        public string RequestType { get; set; } = string.Empty;
+        public string MaintenanceTime { get; set; } = string.Empty;
+        public string ActionTaken { get; set; } = string.Empty;
+        public string WhatWasImplemented { get; set; } = string.Empty;
+    }
+
+    private class CanteenVisit
+    {
+        public string VisitNo { get; set; } = string.Empty;
+        public string Day { get; set; } = string.Empty;
+        public string Date { get; set; } = string.Empty;
+        public string Observations { get; set; } = string.Empty;
+        public string ActionTaken { get; set; } = string.Empty;
+    }
+
+    private List<CleanRow> cleanRows = new() { new CleanRow() };
+    private List<Worker> workers = new() { new Worker() };
+    private List<TransportRow> transportRows = new() { new TransportRow() };
+    private List<MaintenancePhone> maintenancePhones = new() { new MaintenancePhone() };
+    private List<MaintenanceForm> maintenanceForms = new() { new MaintenanceForm() };
+    private List<CanteenVisit> canteenVisits = new() { new CanteenVisit() };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking authentication: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async void OpenSlide(int slide) 
+    { 
+        activeSlide = slide;
+        if (slide == 2)
+        {
+            await LoadClean();
+            await LoadWorkers();
+        }
+        else if (slide == 3)
+        {
+            await LoadTransport();
+        }
+        else if (slide == 5)
+        {
+            await LoadMaintenancePhones();
+        }
+        else if (slide == 6)
+        {
+            await LoadMaintenanceForm();
+        }
+        else if (slide == 7)
+        {
+            await LoadCanteenVisits();
+        }
+    }
+
+    private void AddCleanRow() => cleanRows.Add(new CleanRow());
+    private void RemoveCleanRow(int index)
+    {
+        if (index >= 0 && index < cleanRows.Count) cleanRows.RemoveAt(index);
+    }
+
+    private void AddWorker() => workers.Add(new Worker());
+    private void RemoveWorker(int index)
+    {
+        if (index >= 0 && index < workers.Count) workers.RemoveAt(index);
+    }
+
+    private void AddTransportRow() => transportRows.Add(new TransportRow());
+    private void RemoveTransportRow(int index)
+    {
+        if (index >= 0 && index < transportRows.Count) transportRows.RemoveAt(index);
+    }
+
+    private void AddMaintenancePhone() => maintenancePhones.Add(new MaintenancePhone());
+    private void RemoveMaintenancePhone(int index)
+    {
+        if (index >= 0 && index < maintenancePhones.Count) maintenancePhones.RemoveAt(index);
+    }
+
+    private void AddMaintenanceForm() => maintenanceForms.Add(new MaintenanceForm());
+    private void RemoveMaintenanceForm(int index)
+    {
+        if (index >= 0 && index < maintenanceForms.Count) maintenanceForms.RemoveAt(index);
+    }
+
+    private void AddCanteenVisit() => canteenVisits.Add(new CanteenVisit());
+    private void RemoveCanteenVisit(int index)
+    {
+        if (index >= 0 && index < canteenVisits.Count) canteenVisits.RemoveAt(index);
+    }
+
+    private async Task SaveClean()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { cleanRows });
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "followup-clean", json);
+    }
+
+    private async Task LoadClean()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "followup-clean");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                cleanRows = System.Text.Json.JsonSerializer.Deserialize<List<CleanRow>>(root.GetProperty("cleanRows").GetRawText()) ?? new();
+                if (cleanRows.Count == 0) cleanRows.Add(new CleanRow());
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintClean()
+    {
+        var html = CreateCleanHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "متابعة النظافة");
+    }
+
+    private string CreateCleanHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;color:#000'>");
+        sb.Append("<h3 style='text-align:center;margin:6px 0 12px'>متابعة نظافة المبنى المدرسي</h3>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px'>");
+        sb.Append("<thead><tr>");
+        string thStyle = "style='border:1px solid #000;padding:6px;background:#f8f9fa'";
+        sb.Append($"<th {thStyle}>م</th><th {thStyle}>رقم المتابعة</th><th {thStyle}>المنفذ</th><th {thStyle}>اليوم</th><th {thStyle}>التاريخ</th><th {thStyle}>المكان</th><th {thStyle}>الملاحظات</th><th {thStyle}>الإجراء المتخذ</th><th {thStyle}>متابعة الإجراءات</th>");
+        sb.Append("</tr></thead><tbody>");
+        string td = "style='border:1px solid #000;padding:6px;text-align:center'";
+        for (int i = 0; i < cleanRows.Count; i++)
+        {
+            var r = cleanRows[i];
+            sb.Append("<tr>");
+            sb.Append($"<td {td}>{i + 1}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.FollowNo)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.Executor)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.Day)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.Date)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.Place)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.Notes)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.ActionTaken)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.ActionFollowup)}</td>");
+            sb.Append("</tr>");
+        }
+        sb.Append("</tbody></table></div>");
+        return sb.ToString();
+    }
+
+    private async Task SaveWorkers()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { workers });
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "followup-workers", json);
+    }
+
+    private async Task LoadWorkers()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "followup-workers");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                workers = System.Text.Json.JsonSerializer.Deserialize<List<Worker>>(root.GetProperty("workers").GetRawText()) ?? new();
+                if (workers.Count == 0) workers.Add(new Worker());
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintWorkers()
+    {
+        var html = CreateWorkersHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "أرقام هواتف عمال النظافة");
+    }
+
+    private string CreateWorkersHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;color:#000'>");
+        sb.Append("<h3 style='text-align:center;margin:6px 0 12px'>أرقام هواتف عمال النظافة</h3>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px'>");
+        sb.Append("<thead><tr>");
+        string thStyle = "style='border:1px solid #000;padding:6px;background:#f8f9fa'";
+        sb.Append($"<th {thStyle}>م</th><th {thStyle}>الاسم</th><th {thStyle}>رقم الهاتف</th>");
+        sb.Append("</tr></thead><tbody>");
+        string td = "style='border:1px solid #000;padding:6px;text-align:center'";
+        for (int i = 0; i < workers.Count; i++)
+        {
+            var w = workers[i];
+            sb.Append("<tr>");
+            sb.Append($"<td {td}>{i + 1}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(w.Name)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(w.PhoneNumber)}</td>");
+            sb.Append("</tr>");
+        }
+        sb.Append("</tbody></table></div>");
+        return sb.ToString();
+    }
+
+    private async Task SaveTransport()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { transportRows });
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "followup-transport", json);
+    }
+
+    private async Task LoadTransport()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "followup-transport");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                transportRows = System.Text.Json.JsonSerializer.Deserialize<List<TransportRow>>(root.GetProperty("transportRows").GetRawText()) ?? new();
+                if (transportRows.Count == 0) transportRows.Add(new TransportRow());
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintTransport()
+    {
+        var html = CreateTransportHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "كشف بالملاحظات في وسائل النقل المدرسية");
+    }
+
+    private string CreateTransportHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;color:#000'>");
+        sb.Append("<h3 style='text-align:center;margin:6px 0 12px'>كشف بالملاحظات في وسائل النقل المدرسية</h3>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px'>");
+        sb.Append("<thead><tr>");
+        string thStyle = "style='border:1px solid #000;padding:6px;background:#f8f9fa'";
+        sb.Append($"<th {thStyle}>م</th><th {thStyle}>رقم الحافلة</th><th {thStyle}>المنطقة السكنية</th><th {thStyle}>اسم صاحب الحافلة</th><th {thStyle}>اسم السائق</th><th {thStyle}>الشكوى</th><th {thStyle}>الإجراء المتخذ</th><th {thStyle}>المتابعة</th><th {thStyle}>توقيع السائق</th>");
+        sb.Append("</tr></thead><tbody>");
+        string td = "style='border:1px solid #000;padding:6px;text-align:center'";
+        for (int i = 0; i < transportRows.Count; i++)
+        {
+            var t = transportRows[i];
+            sb.Append("<tr>");
+            sb.Append($"<td {td}>{i + 1}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.BusNumber)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.ResidentialArea)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.BusOwnerName)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.DriverName)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.Complaint)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.ActionTaken)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.FollowUp)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(t.DriverSignature)}</td>");
+            sb.Append("</tr>");
+        }
+        sb.Append("</tbody></table></div>");
+        return sb.ToString();
+    }
+
+    // دوال الصيانة
+    private async Task SaveMaintenancePhones()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { maintenancePhones });
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "followup-maintenance-phones", json);
+    }
+
+    private async Task LoadMaintenancePhones()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "followup-maintenance-phones");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                maintenancePhones = System.Text.Json.JsonSerializer.Deserialize<List<MaintenancePhone>>(root.GetProperty("maintenancePhones").GetRawText()) ?? new();
+                if (maintenancePhones.Count == 0) maintenancePhones.Add(new MaintenancePhone());
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintMaintenancePhones()
+    {
+        var html = CreateMaintenancePhonesHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "أرقام هواتف الصيانة");
+    }
+
+    private string CreateMaintenancePhonesHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;color:#000'>");
+        sb.Append("<h3 style='text-align:center;margin:6px 0 12px'>أرقام هواتف الصيانة</h3>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px'>");
+        sb.Append("<thead><tr>");
+        string thStyle = "style='border:1px solid #000;padding:6px;background:#f8f9fa'";
+        sb.Append($"<th {thStyle}>م</th><th {thStyle}>الفئة</th><th {thStyle}>الاسم</th><th {thStyle}>رقم الهاتف</th>");
+        sb.Append("</tr></thead><tbody>");
+        string td = "style='border:1px solid #000;padding:6px;text-align:center'";
+        for (int i = 0; i < maintenancePhones.Count; i++)
+        {
+            var mp = maintenancePhones[i];
+            sb.Append("<tr>");
+            sb.Append($"<td {td}>{i + 1}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(mp.Category)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(mp.Name)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(mp.PhoneNumber)}</td>");
+            sb.Append("</tr>");
+        }
+        sb.Append("</tbody></table></div>");
+        return sb.ToString();
+    }
+
+    private async Task SaveMaintenanceForm()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { maintenanceForms });
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "followup-maintenance-form", json);
+    }
+
+    private async Task LoadMaintenanceForm()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "followup-maintenance-form");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                maintenanceForms = System.Text.Json.JsonSerializer.Deserialize<List<MaintenanceForm>>(root.GetProperty("maintenanceForms").GetRawText()) ?? new();
+                if (maintenanceForms.Count == 0) maintenanceForms.Add(new MaintenanceForm());
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintMaintenanceForm()
+    {
+        var html = CreateMaintenanceFormHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "استمارة صيانة مدرسية");
+    }
+
+    private async Task PrintSingleMaintenanceForm(int index)
+    {
+        if (index >= 0 && index < maintenanceForms.Count)
+        {
+            var html = CreateSingleMaintenanceFormHTML(index);
+            await JSRuntime.InvokeVoidAsync("printHTML", html, "استمارة صيانة مدرسية");
+        }
+    }
+
+    private string CreateMaintenanceFormHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;color:#000;padding:20px'>");
+        sb.Append("<h3 style='text-align:center;margin:6px 0 20px'>استمارة صيانة مدرسية</h3>");
+        
+        for (int i = 0; i < maintenanceForms.Count; i++)
+        {
+            var mf = maintenanceForms[i];
+            
+            sb.Append("<div style='margin-bottom:30px;border:1px solid #000;padding:15px'>");
+            
+            // صيانة رقم
+            sb.Append("<div style='margin-bottom:10px'>");
+            sb.Append("<strong>صيانة رقم:</strong> ");
+            sb.Append(System.Net.WebUtility.HtmlEncode(mf.MaintenanceNo));
+            sb.Append("</div>");
+            
+            // نوع الصيانة المطلوبة
+            sb.Append("<div style='margin-bottom:10px'>");
+            sb.Append("<strong>نوع الصيانة المطلوبة:</strong> ");
+            sb.Append($"({(mf.Electricity ? "✓" : " ")} ) كهرباء – ");
+            sb.Append($"({(mf.Plumbing ? "✓" : " ")} ) سباكة – ");
+            sb.Append($"({(mf.AC ? "✓" : " ")} ) تكييف – ");
+            sb.Append($"({(mf.Furniture ? "✓" : " ")} ) صيانة \"كراسي-طاولات\" – ");
+            sb.Append($"({(mf.Other ? "✓" : " ")} ) أخرى");
+            if (mf.Other && !string.IsNullOrEmpty(mf.OtherSpecify))
+            {
+                sb.Append($". حدد: {System.Net.WebUtility.HtmlEncode(mf.OtherSpecify)}");
+            }
+            sb.Append("</div>");
+            
+            // نوع الطلب
+            sb.Append("<div style='margin-bottom:10px'>");
+            sb.Append("<strong>نوع الطلب:</strong> ");
+            sb.Append($"({(mf.RequestType == "عاجل" ? "✓" : " ")} ) عاجل - ");
+            sb.Append($"({(mf.RequestType == "عاجل جدا" ? "✓" : " ")} ) عاجل جدا");
+            sb.Append("</div>");
+            
+            // وقت إجراء الصيانة
+            sb.Append("<div style='margin-bottom:10px'>");
+            sb.Append("<strong>وقت إجراء الصيانة:</strong> ");
+            sb.Append($"({(mf.MaintenanceTime == "صباحا" ? "✓" : " ")} ) صباحا - ");
+            sb.Append($"({(mf.MaintenanceTime == "مساءا" ? "✓" : " ")} ) مساءا");
+            sb.Append("</div>");
+            
+            // الاجراء المتخذ
+            sb.Append("<div style='margin-bottom:10px'>");
+            sb.Append("<strong>الاجراء المتخذ:</strong><br/>");
+            if (!string.IsNullOrEmpty(mf.ActionTaken))
+            {
+                var actionLines = mf.ActionTaken.Split('\n');
+                foreach (var line in actionLines)
+                {
+                    sb.Append($"• {System.Net.WebUtility.HtmlEncode(line)}<br/>");
+                }
+            }
+            else
+            {
+                sb.Append("• <br/>• <br/>• <br/>");
+            }
+            sb.Append("</div>");
+            
+            // ما تم تنفيذه
+            sb.Append("<div style='margin-bottom:10px'>");
+            sb.Append("<strong>ما تم تنفيذه:</strong><br/>");
+            if (!string.IsNullOrEmpty(mf.WhatWasImplemented))
+            {
+                var implementedLines = mf.WhatWasImplemented.Split('\n');
+                foreach (var line in implementedLines)
+                {
+                    sb.Append($"• {System.Net.WebUtility.HtmlEncode(line)}<br/>");
+                }
+            }
+            else
+            {
+                sb.Append("• <br/>• <br/>• <br/>");
+            }
+            sb.Append("</div>");
+            
+            sb.Append("</div>");
+        }
+        
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    // دوال زيارة المقصف المدرسي
+    private async Task SaveCanteenVisits()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new { canteenVisits });
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "followup-canteen-visits", json);
+    }
+
+    private async Task LoadCanteenVisits()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "followup-canteen-visits");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                canteenVisits = System.Text.Json.JsonSerializer.Deserialize<List<CanteenVisit>>(root.GetProperty("canteenVisits").GetRawText()) ?? new();
+                if (canteenVisits.Count == 0) canteenVisits.Add(new CanteenVisit());
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintCanteenVisits()
+    {
+        var html = CreateCanteenVisitsHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "زيارة للمقصف المدرسي");
+    }
+
+    private string CreateSingleMaintenanceFormHTML(int index)
+    {
+        var mf = maintenanceForms[index];
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;color:#000;padding:20px'>");
+        sb.Append("<h3 style='text-align:center;margin:6px 0 20px'>استمارة صيانة مدرسية</h3>");
+        
+        sb.Append("<div style='margin-bottom:30px;border:1px solid #000;padding:15px'>");
+        
+        // صيانة رقم
+        sb.Append("<div style='margin-bottom:10px'>");
+        sb.Append("<strong>صيانة رقم:</strong> ");
+        sb.Append(System.Net.WebUtility.HtmlEncode(mf.MaintenanceNo));
+        sb.Append("</div>");
+        
+        // نوع الصيانة المطلوبة
+        sb.Append("<div style='margin-bottom:10px'>");
+        sb.Append("<strong>نوع الصيانة المطلوبة:</strong> ");
+        sb.Append($"({(mf.Electricity ? "✓" : " ")} ) كهرباء – ");
+        sb.Append($"({(mf.Plumbing ? "✓" : " ")} ) سباكة – ");
+        sb.Append($"({(mf.AC ? "✓" : " ")} ) تكييف – ");
+        sb.Append($"({(mf.Furniture ? "✓" : " ")} ) صيانة \"كراسي-طاولات\" – ");
+        sb.Append($"({(mf.Other ? "✓" : " ")} ) أخرى. حدد: ");
+        sb.Append(System.Net.WebUtility.HtmlEncode(mf.OtherSpecify));
+        sb.Append("</div>");
+        
+        // نوع الطلب
+        sb.Append("<div style='margin-bottom:10px'>");
+        sb.Append("<strong>نوع الطلب:</strong> ");
+        sb.Append($"({(mf.RequestType == "عاجل" ? "✓" : " ")} ) عاجل - ");
+        sb.Append($"({(mf.RequestType == "عاجل جدا" ? "✓" : " ")} ) عاجل جدا");
+        sb.Append("</div>");
+        
+        // وقت إجراء الصيانة
+        sb.Append("<div style='margin-bottom:10px'>");
+        sb.Append("<strong>وقت إجراء الصيانة:</strong> ");
+        sb.Append($"({(mf.MaintenanceTime == "صباحا" ? "✓" : " ")} ) صباحا - ");
+        sb.Append($"({(mf.MaintenanceTime == "مساءا" ? "✓" : " ")} ) مساءا");
+        sb.Append("</div>");
+        
+        // الاجراء المتخذ
+        sb.Append("<div style='margin-bottom:10px'>");
+        sb.Append("<strong>الاجراء المتخذ:</strong>");
+        if (!string.IsNullOrEmpty(mf.ActionTaken))
+        {
+            var lines = mf.ActionTaken.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
+            {
+                sb.Append("<br/>• ");
+                sb.Append(System.Net.WebUtility.HtmlEncode(line.Trim()));
+            }
+        }
+        sb.Append("</div>");
+        
+        // ما تم تنفيذه
+        sb.Append("<div style='margin-bottom:10px'>");
+        sb.Append("<strong>ما تم تنفيذه:</strong>");
+        if (!string.IsNullOrEmpty(mf.WhatWasImplemented))
+        {
+            var lines = mf.WhatWasImplemented.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
+            {
+                sb.Append("<br/>• ");
+                sb.Append(System.Net.WebUtility.HtmlEncode(line.Trim()));
+            }
+        }
+        sb.Append("</div>");
+        
+        sb.Append("</div>");
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    private string CreateCanteenVisitsHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;color:#000'>");
+        sb.Append("<h3 style='text-align:center;margin:6px 0 12px'>زيارة للمقصف المدرسي</h3>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px'>");
+        sb.Append("<thead><tr>");
+        string thStyle = "style='border:1px solid #000;padding:6px;background:#f8f9fa'";
+        sb.Append($"<th {thStyle}>م</th><th {thStyle}>زيارة رقم</th><th {thStyle}>اليوم</th><th {thStyle}>التاريخ</th><th {thStyle}>الملاحظات</th><th {thStyle}>الإجراء المتخذ</th>");
+        sb.Append("</tr></thead><tbody>");
+        string td = "style='border:1px solid #000;padding:6px;text-align:center'";
+        for (int i = 0; i < canteenVisits.Count; i++)
+        {
+            var cv = canteenVisits[i];
+            sb.Append("<tr>");
+            sb.Append($"<td {td}>{i + 1}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(cv.VisitNo)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(cv.Day)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(cv.Date)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(cv.Observations)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(cv.ActionTaken)}</td>");
+            sb.Append("</tr>");
+        }
+        sb.Append("</tbody></table></div>");
+        return sb.ToString();
+    }
+}

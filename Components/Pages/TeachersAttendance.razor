@@ -1,0 +1,485 @@
+@page "/teachers-attendance"
+@using SchoolHallBooking.Services
+@using SchoolHallBooking.Models
+@using System.Linq
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ITeachersAttendanceService AttendanceService
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">جاري التحميل...</span>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-warning text-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>غير مصرح لك بالوصول</strong>
+                    <br>
+                    <small>يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة</small>
+                    <br>
+                    <a href="/school/login" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        تسجيل الدخول
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <h2 class="mb-4">حضور وانصراف الهيئة التعليمية</h2>
+
+        <!-- الشريحة 1: اختيار القسم -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">اختر من الشريحة 1</div>
+            <div class="card-body d-flex gap-3 flex-wrap">
+                <button class="btn btn-info btn-lg" @onclick='@(() => currentView = "workshops")'>الدورات والمشاغل</button>
+                <button class="btn btn-primary btn-lg" @onclick='@(() => currentView = "leaves")'>الاستئذان</button>
+            </div>
+        </div>
+
+        @if (currentView == "workshops")
+        {
+            <!-- الشريحة 2: سجل الدورات والمشاغل -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>(سجل الدورات والمشاغل)</div>
+                    <div>
+                        <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "workshops-table", "سجل_الدورات_والمشاغل"))'>PDF</button>
+                        <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "workshops-table", "سجل_الدورات_والمشاغل"))'>Excel</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-outline-success" @onclick="OpenAddWorkshop">+ إضافة سجل</button>
+                    </div>
+
+                    @if (currentWorkshop != null && (currentWorkshop.Id == 0 || workshops.Contains(currentWorkshop)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4"><InputText class="form-control" @bind-Value="currentWorkshop.TeacherName" /><small class="text-muted">اسم المعلم</small></div>
+                            <div class="col-md-4"><InputText class="form-control" @bind-Value="currentWorkshop.TrainingProgram" /><small class="text-muted">البرنامج التدريبي</small></div>
+                            <div class="col-md-4"><InputText class="form-control" @bind-Value="currentWorkshop.TimePeriod" /><small class="text-muted">الفترة الزمنية</small></div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveWorkshop">حفظ</button>
+                                <button class="btn btn-secondary" @onclick='@(() => { currentWorkshop = new(); StateHasChanged(); })'>إلغاء</button>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="table-responsive">
+                        <table id="workshops-table" class="table table-bordered text-center align-middle">
+                            <thead><tr><th>اسم المعلم</th><th>البرنامج التدريبي</th><th>الفترة الزمنية</th><th>إجراءات</th></tr></thead>
+                            <tbody>
+                            @foreach (var w in workshops)
+                            {
+                                <tr>
+                                    <td>@w.TeacherName</td><td>@w.TrainingProgram</td><td>@w.TimePeriod</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentWorkshop = w; StateHasChanged(); })'>تعديل</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteWorkshop(w.Id))'>حذف</button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (currentView == "leaves")
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>استمارة استئذان معلم</div>
+                    <div>
+                        <button class="btn btn-outline-primary me-2" @onclick="RefreshData">تحديث البيانات</button>
+                        <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "leaves-table", "استمارة_استئذان"))'>PDF</button>
+                        <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "leaves-table", "استمارة_استئذان"))'>Excel</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success mb-3" role="alert">
+                        <strong>ملاحظة:</strong> جميع استمارات الاستئذان المحفوظة من الصفحة العامة تظهر هنا. يمكن طباعة أي استمارة بالنقر على زر "طباعة" بعد إضافة رأي إدارة المدرسة.
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="leaves-table" class="table table-bordered text-center align-middle">
+                            <thead><tr><th>اسم المعلم</th><th>التاريخ</th><th>السبب</th><th>إجراءات</th></tr></thead>
+                            <tbody>
+                                @foreach (var r in leaves)
+                                {
+                                    <tr>
+                                        <td>@r.TeacherName</td><td>@r.LeaveDate.ToString("yyyy-MM-dd")</td><td>@r.Reason</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger me-2" @onclick='@(() => DeleteLeave(r.Id))'>حذف</button>
+                                            <button class="btn btn-sm btn-outline-success" @onclick='@(() => OpenPrintForm(r))'>طباعة</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Modal for Print Form -->
+    @if (showPrintModal && selectedLeaveRecord != null)
+    {
+        <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">استمارة استئذان معلم - @selectedLeaveRecord.TeacherName</h5>
+                        <button type="button" class="btn-close" @onclick="ClosePrintModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>اسم المعلم:</strong></label>
+                                <div class="form-control-plaintext">@selectedLeaveRecord.TeacherName</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>التاريخ:</strong></label>
+                                <div class="form-control-plaintext">@selectedLeaveRecord.LeaveDate.ToString("yyyy-MM-dd")</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><strong>السبب:</strong></label>
+                            <div class="form-control-plaintext">@selectedLeaveRecord.Reason</div>
+                        </div>
+
+                        <!-- Class Distribution Table -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>توزيع الحصص:</strong></label>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>الحصة</th>
+                                            <th>الصف</th>
+                                            <th>اسم المعلم البديل</th>
+                                            <th>التوقيع</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var row in GetLeaveRows(selectedLeaveRecord))
+                                        {
+                                            <tr>
+                                                <td>@row.Lesson</td>
+                                                <td>@row.ClassName</td>
+                                                <td>@row.SubstituteTeacher</td>
+                                                <td>@row.Signature</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Admin Opinion Field -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>رأي إدارة المدرسة:</strong></label>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" id="opinion-allow" name="adminOpinionOptions" value="لا مانع" @onchange="(e => adminOpinion = e.Value?.ToString() ?? string.Empty)" checked="@(string.IsNullOrWhiteSpace(adminOpinion) || adminOpinion == "لا مانع")" />
+                                    <label class="form-check-label" for="opinion-allow">لا مانع</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Teacher Signature -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>توقيع المعلم:</strong></label>
+                            <div class="form-control-plaintext">@GetTeacherSignature(selectedLeaveRecord)</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="ClosePrintModal">إلغاء</button>
+                        <button type="button" class="btn btn-success" @onclick="PrintWithAdminOpinion">طباعة الاستمارة</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private string currentView = string.Empty; // workshops | leaves
+
+    // نموذج وسجل الدورات والمشاغل (شريحة 2)
+    private List<TeacherWorkshopRecordEntity> workshops = new();
+    private TeacherWorkshopRecordEntity currentWorkshop = new();
+    private List<TeacherLeaveRequestEntity> leaves = new();
+
+    // Print modal variables
+    private bool showPrintModal = false;
+    private TeacherLeaveRequestEntity? selectedLeaveRecord = null;
+    private string adminOpinion = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            if (isAuthenticated)
+            {
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking authentication: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadData()
+    {
+        workshops = await AttendanceService.GetWorkshopsAsync();
+        leaves = await AttendanceService.GetLeavesAsync();
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenAddWorkshop()
+    {
+        currentWorkshop = new TeacherWorkshopRecordEntity();
+        workshops.Insert(0, currentWorkshop);
+    }
+
+
+    private async Task SaveWorkshop()
+    {
+        if (currentWorkshop.Id == 0)
+        {
+            await AttendanceService.AddWorkshopAsync(currentWorkshop);
+        }
+        else
+        {
+            await AttendanceService.UpdateWorkshopAsync(currentWorkshop);
+        }
+        workshops = await AttendanceService.GetWorkshopsAsync();
+        currentWorkshop = new();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DeleteWorkshop(int id)
+    {
+        await AttendanceService.DeleteWorkshopAsync(id);
+        workshops = await AttendanceService.GetWorkshopsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    private async Task DeleteLeave(int id)
+    {
+        await AttendanceService.DeleteLeaveAsync(id);
+        await LoadData();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenPrintForm(TeacherLeaveRequestEntity record)
+    {
+        selectedLeaveRecord = record;
+        adminOpinion = GetAdminOpinion(record);
+        showPrintModal = true;
+    }
+
+    private void ClosePrintModal()
+    {
+        showPrintModal = false;
+        selectedLeaveRecord = null;
+        adminOpinion = string.Empty;
+    }
+
+    private void PrintWithAdminOpinion()
+    {
+        if (selectedLeaveRecord != null)
+        {
+            // Update the record with admin opinion before printing
+            var updatedRecord = selectedLeaveRecord;
+            var teacherSignature = GetTeacherSignature(selectedLeaveRecord);
+            
+            updatedRecord.Notes = string.IsNullOrWhiteSpace(adminOpinion) 
+                ? $"لا مانع\nتوقيع المعلم: {teacherSignature}"
+                : $"{adminOpinion}\nتوقيع المعلم: {teacherSignature}";
+
+            // Create HTML for printing
+            var htmlContent = CreateLeaveRecordHTML(updatedRecord);
+            
+            // Print the form
+            JSRuntime.InvokeVoidAsync("printHTML", htmlContent, $"استمارة_استئذان_{selectedLeaveRecord.TeacherName}");
+            
+            // Close modal
+            ClosePrintModal();
+        }
+    }
+
+    private string GetAdminOpinion(TeacherLeaveRequestEntity record)
+    {
+        if (string.IsNullOrWhiteSpace(record.Notes))
+            return string.Empty;
+            
+        var parts = record.Notes.Split("توقيع المعلم:");
+        return parts.Length > 0 ? parts[0].Trim() : string.Empty;
+    }
+
+    private string GetTeacherSignature(TeacherLeaveRequestEntity record)
+    {
+        if (string.IsNullOrWhiteSpace(record.Notes))
+            return string.Empty;
+            
+        var parts = record.Notes.Split("توقيع المعلم:");
+        return parts.Length > 1 ? parts[1].Trim() : string.Empty;
+    }
+
+    private List<LeaveRow> GetLeaveRows(TeacherLeaveRequestEntity record)
+    {
+        var rows = new List<LeaveRow>();
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(record.DistributionJson))
+            {
+                var loaded = System.Text.Json.JsonSerializer.Deserialize<List<LeaveRow>>(record.DistributionJson);
+                if (loaded != null && loaded.Count > 0) 
+                    rows = loaded.Take(6).ToList();
+            }
+        }
+        catch (Exception)
+        {
+            // Handle deserialization errors silently
+        }
+
+        // Ensure we have at least 6 rows for display
+        while (rows.Count < 6)
+        {
+            rows.Add(new LeaveRow());
+        }
+
+        return rows;
+    }
+
+    private string CreateLeaveRecordHTML(TeacherLeaveRequestEntity record)
+    {
+        var rows = GetLeaveRows(record);
+        var adminNotes = GetAdminOpinion(record);
+        var teacherSignature = GetTeacherSignature(record);
+
+        var html = "<div style='direction: rtl; font-family: Arial, sans-serif; padding: 20px; background: white; max-width: 800px; margin: 0 auto; line-height: 1.6;'>";
+        
+        // Header with Ministry Logo and School Info
+        html += "<div style='text-align: center; margin-bottom: 30px;'>";
+        html += "<div style='font-size: 18px; font-weight: bold; margin-bottom: 10px;'>سلطنة عمان</div>";
+        html += "<div style='font-size: 16px; font-weight: bold; margin-bottom: 10px;'>وزارة التربية والتعليم</div>";
+        html += "<div style='font-size: 14px; margin-bottom: 10px;'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>";
+        html += "<div style='font-size: 14px; font-weight: bold; margin-bottom: 20px;'>مدرسة الفضل بن العباس للتعليم الأساسي (8-10)</div>";
+        html += "</div>";
+
+        // Salutation - exactly as in the official form
+        html += "<div style='margin-bottom: 20px;'>";
+        html += "<div style='font-size: 16px; margin-bottom: 10px;'>الفاضل / مدير المدرسة</div>";
+        html += "<div style='font-size: 16px; margin-bottom: 20px;'>المحترم ؛؛؛</div>";
+        html += "</div>";
+
+        // Subject - exactly as in the official form
+        html += "<div style='margin-bottom: 20px;'>";
+        html += "<div style='font-size: 16px; font-weight: bold; text-decoration: underline;'>الموضوع / استمارة استئذان أثناء الدوام الرسمي</div>";
+        html += "</div>";
+
+        // Leave Request Details - exactly as in the official form
+        html += "<div style='margin-bottom: 20px;'>";
+        html += "<div style='font-size: 14px; margin-bottom: 10px;'>التكرم السماح لي بالخروج يوم ................................... الموافق " + record.LeaveDate.ToString("yyyy/MM/dd") + " وذلك للأسباب التالية:</div>";
+        html += "<div style='font-size: 14px; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 5px; min-height: 20px;'>" + record.Reason + "</div>";
+        html += "<div style='font-size: 14px; margin-bottom: 5px; border-bottom: 1px solid #000; padding-bottom: 5px; min-height: 20px;'></div>";
+        html += "<div style='font-size: 14px; margin-bottom: 20px; border-bottom: 1px solid #000; padding-bottom: 5px; min-height: 20px;'></div>";
+        html += "</div>";
+
+        // Class Distribution Section - exactly as in the official form
+        html += "<div style='margin-bottom: 20px;'>";
+        html += "<div style='font-size: 14px; margin-bottom: 10px;'>علما بأنني قمت باستبدال / توزيع الحصص حسب التالي:</div>";
+        
+        // Simple table for class distribution - exactly as in the official form
+        html += "<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;'>";
+        html += "<thead><tr style='background-color: #f0f0f0;'>";
+        html += "<th style='border: 1px solid #000; padding: 8px; text-align: center;'>الحصة</th>";
+        html += "<th style='border: 1px solid #000; padding: 8px; text-align: center;'>الصف</th>";
+        html += "<th style='border: 1px solid #000; padding: 8px; text-align: center;'>اسم المعلم البديل</th>";
+        html += "<th style='border: 1px solid #000; padding: 8px; text-align: center;'>التوقيع</th>";
+        html += "</tr></thead><tbody>";
+        
+        for (int i = 0; i < 6; i++)
+        {
+            var row = i < rows.Count ? rows[i] : new LeaveRow();
+            html += "<tr>";
+            html += "<td style='border: 1px solid #000; padding: 8px; text-align: center;'>" + row.Lesson + "</td>";
+            html += "<td style='border: 1px solid #000; padding: 8px; text-align: center;'>" + row.ClassName + "</td>";
+            html += "<td style='border: 1px solid #000; padding: 8px; text-align: center;'>" + row.SubstituteTeacher + "</td>";
+            html += "<td style='border: 1px solid #000; padding: 8px; text-align: center;'>" + row.Signature + "</td>";
+            html += "</tr>";
+        }
+        
+        html += "</tbody></table>";
+        html += "</div>";
+
+        // Closing - exactly as in the official form
+        html += "<div style='margin-bottom: 30px;'>";
+        html += "<div style='font-size: 14px; text-align: center;'>وتفضلوا بقبول فائق الاحترام والتقدير ...</div>";
+        html += "</div>";
+
+        // Teacher Details (Bottom Left) - exactly as in the official form
+        html += "<div style='display: flex; justify-content: space-between; margin-bottom: 20px;'>";
+        html += "<div style='width: 50%;'>";
+        html += "<div style='font-size: 14px; margin-bottom: 10px;'>اسم المعلم: " + record.TeacherName + "</div>";
+        html += "<div style='font-size: 14px; margin-bottom: 10px;'>التخصص: " + record.Specialization + "</div>";
+        html += "<div style='font-size: 14px; margin-bottom: 10px;'>التوقيع: ...........................................................................................................</div>";
+        html += "</div>";
+        html += "</div>";
+
+        // Admin Opinion Section - inline without borders
+        var opinionText = string.IsNullOrWhiteSpace(adminNotes) ? "لا مانع" : adminNotes;
+        html += "<div style='margin-top: 12px; font-size: 14px;'><span style='font-weight: bold;'>رأي إدارة المدرسة:</span> " + opinionText + "</div>";
+
+        // Final signature section at the very end of the page - exactly as requested
+        html += "<div style='margin-top: 50px; text-align: center;'>";
+        html += "<div style='font-size: 14px; margin-bottom: 5px;'>حمد هلال الغافري</div>";
+        html += "<div style='font-size: 14px; margin-bottom: 20px;'>مدير المدرسة</div>";
+        html += "</div>";
+
+        html += "</div>";
+        
+        return html;
+    }
+
+    private class LeaveRow 
+    { 
+        public string Lesson { get; set; } = string.Empty; 
+        public string ClassName { get; set; } = string.Empty; 
+        public string SubstituteTeacher { get; set; } = string.Empty; 
+        public string Signature { get; set; } = string.Empty; 
+    }
+}

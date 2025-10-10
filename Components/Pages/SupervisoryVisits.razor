@@ -1,0 +1,479 @@
+@page "/supervisory-visits"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject ISupervisoryVisitService SupervisoryVisitService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>الزيارات الإشرافية</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">الزيارات الإشرافية</h2>
+            </div>
+
+            <!-- Alert Messages -->
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @successMessage
+                    <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @errorMessage
+                    <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                </div>
+            }
+
+            <!-- Subject Selection (Slide 1) -->
+            @if (currentStep == 1)
+            {
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">اختيار المادة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var subject in subjects)
+                            {
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="card h-100 subject-card" @onclick="() => SelectSubject(subject)" style="cursor: pointer; transition: all 0.3s;">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title">@subject</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Data Entry Form (Slide 2) -->
+            @if (currentStep == 2)
+            {
+                <div class="card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">بيانات الزيارة الإشرافية - @selectedSubject</h5>
+                        <button class="btn btn-light btn-sm" @onclick="() => GoBackToSubjectSelection()">
+                            <i class="bi bi-arrow-right"></i> العودة
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="@currentVisit" OnValidSubmit="SaveVisit" FormName="visitForm">
+                            <DataAnnotationsValidator />
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="visitorTeacher" class="form-label">اسم المعلم الزائر</label>
+                                    <InputText id="visitorTeacher" class="form-control" @bind-Value="currentVisit.VisitorTeacherName" />
+                                    <ValidationMessage For="@(() => currentVisit.VisitorTeacherName)" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="visitedTeacher" class="form-label">اسم المعلم المزار</label>
+                                    <InputText id="visitedTeacher" class="form-control" @bind-Value="currentVisit.VisitedTeacherName" />
+                                    <ValidationMessage For="@(() => currentVisit.VisitedTeacherName)" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="day" class="form-label">اليوم</label>
+                                    <InputText id="day" class="form-control" @bind-Value="currentVisit.Day" />
+                                    <ValidationMessage For="@(() => currentVisit.Day)" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="date" class="form-label">التاريخ</label>
+                                    <InputDate id="date" class="form-control" @bind-Value="currentVisit.Date" TValue="DateTime" />
+                                    <ValidationMessage For="@(() => currentVisit.Date)" />
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="lessonTitle" class="form-label">عنوان الدرس</label>
+                                    <InputText id="lessonTitle" class="form-control" @bind-Value="currentVisit.LessonTitle" />
+                                    <ValidationMessage For="@(() => currentVisit.LessonTitle)" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <label for="notes" class="form-label">ملاحظات (إن وجدت)</label>
+                                    <InputTextArea id="notes" class="form-control" rows="3" @bind-Value="currentVisit.Notes" />
+                                    <ValidationMessage For="@(() => currentVisit.Notes)" />
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary" @onclick="() => GoBackToSubjectSelection()">إلغاء</button>
+                                <button type="submit" class="btn btn-primary">حفظ الزيارة</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+
+            <!-- General Table (Slide 3) -->
+            @if (currentStep == 3)
+            {
+                <div class="card">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">جدول الزيارات الإشرافية</h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm" @onclick="() => GoToSubjectSelection()">
+                                <i class="bi bi-plus"></i> إضافة زيارة جديدة
+                            </button>
+                            <button class="btn btn-success btn-sm" @onclick="() => ExportToExcel()">
+                                <i class="bi bi-file-excel"></i> Excel
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => ExportToPDF()">
+                                <i class="bi bi-file-pdf"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered align-middle text-center">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="width: 5%;">م</th>
+                                        <th style="width: 15%;">المادة</th>
+                                        <th style="width: 15%;">المعلم الزائر</th>
+                                        <th style="width: 15%;">المعلم المزار</th>
+                                        <th style="width: 10%;">اليوم</th>
+                                        <th style="width: 12%;">التاريخ</th>
+                                        <th style="width: 18%;">عنوان الدرس</th>
+                                        <th style="width: 10%;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (visits == null || !visits.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="8">لا توجد زيارات لعرضها.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        int rowIndex = 1;
+                                        @foreach (var visit in visits.OrderByDescending(v => v.Date).ThenBy(v => v.VisitorTeacherName))
+                                        {
+                                            <tr>
+                                                <td class="text-center fw-bold">@rowIndex</td>
+                                                <td>@visit.Subject</td>
+                                                <td>@visit.VisitorTeacherName</td>
+                                                <td>@visit.VisitedTeacherName</td>
+                                                <td>@visit.Day</td>
+                                                <td>@visit.Date.ToString("yyyy-MM-dd")</td>
+                                                <td>@visit.LessonTitle</td>
+                                                <td>
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <button class="btn btn-warning btn-sm" @onclick="() => EditVisit(visit)" title="تعديل">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteVisit(visit.Id)" title="حذف">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            rowIndex++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Edit Visit Modal -->
+@if (showEditModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">تعديل الزيارة الإشرافية</h5>
+                    <button type="button" class="btn-close" @onclick="() => CloseEditModal()"></button>
+                </div>
+                <EditForm Model="@editingVisit" OnValidSubmit="UpdateVisit" FormName="editVisitForm">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editVisitorTeacher" class="form-label">اسم المعلم الزائر</label>
+                                <InputText id="editVisitorTeacher" class="form-control" @bind-Value="editingVisit.VisitorTeacherName" />
+                                <ValidationMessage For="@(() => editingVisit.VisitorTeacherName)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editVisitedTeacher" class="form-label">اسم المعلم المزار</label>
+                                <InputText id="editVisitedTeacher" class="form-control" @bind-Value="editingVisit.VisitedTeacherName" />
+                                <ValidationMessage For="@(() => editingVisit.VisitedTeacherName)" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="editDay" class="form-label">اليوم</label>
+                                <InputText id="editDay" class="form-control" @bind-Value="editingVisit.Day" />
+                                <ValidationMessage For="@(() => editingVisit.Day)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="editDate" class="form-label">التاريخ</label>
+                                <InputDate id="editDate" class="form-control" @bind-Value="editingVisit.Date" TValue="DateTime" />
+                                <ValidationMessage For="@(() => editingVisit.Date)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="editLessonTitle" class="form-label">عنوان الدرس</label>
+                                <InputText id="editLessonTitle" class="form-control" @bind-Value="editingVisit.LessonTitle" />
+                                <ValidationMessage For="@(() => editingVisit.LessonTitle)" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="editNotes" class="form-label">ملاحظات (إن وجدت)</label>
+                                <InputTextArea id="editNotes" class="form-control" rows="3" @bind-Value="editingVisit.Notes" />
+                                <ValidationMessage For="@(() => editingVisit.Notes)" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => CloseEditModal()">إلغاء</button>
+                        <button type="submit" class="btn btn-warning">تحديث</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private int currentStep = 1;
+    private string selectedSubject = string.Empty;
+    private List<string> subjects = new()
+    {
+        "التربية الإسلامية",
+        "اللغة العربية",
+        "اللغة الإنجليزية",
+        "الرياضيات",
+        "العلوم",
+        "الدراسات الاجتماعية",
+        "تقنية المعلومات",
+        "المهارات الفردية",
+        "الوظائف الإدارية والمساندة"
+    };
+
+    private SupervisoryVisit currentVisit = new();
+    private List<SupervisoryVisit> visits = new();
+    private bool showEditModal = false;
+    private SupervisoryVisit editingVisit = new();
+
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVisits();
+        // Show visits table by default
+        currentStep = 3;
+    }
+
+    private async Task LoadVisits()
+    {
+        try
+        {
+            visits = await SupervisoryVisitService.GetAllVisitsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تحميل الزيارات: " + ex.Message;
+        }
+    }
+
+    private void SelectSubject(string subject)
+    {
+        selectedSubject = subject;
+        currentVisit = new SupervisoryVisit { Subject = subject, Date = DateTime.Now };
+        currentStep = 2;
+    }
+
+    private void GoBackToSubjectSelection()
+    {
+        currentStep = 1;
+        selectedSubject = string.Empty;
+        currentVisit = new();
+    }
+
+
+    private void GoToSubjectSelection()
+    {
+        currentStep = 1;
+    }
+
+    private async Task SaveVisit()
+    {
+        try
+        {
+            if (currentVisit.Id == 0)
+            {
+                await SupervisoryVisitService.AddVisitAsync(currentVisit);
+                successMessage = "تم إضافة الزيارة بنجاح";
+            }
+            else
+            {
+                await SupervisoryVisitService.UpdateVisitAsync(currentVisit);
+                successMessage = "تم تحديث الزيارة بنجاح";
+            }
+
+            await LoadVisits();
+            currentStep = 3;
+            currentVisit = new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حفظ الزيارة: " + ex.Message;
+        }
+    }
+
+    private void EditVisit(SupervisoryVisit visit)
+    {
+        editingVisit = new SupervisoryVisit
+        {
+            Id = visit.Id,
+            VisitorTeacherName = visit.VisitorTeacherName,
+            VisitedTeacherName = visit.VisitedTeacherName,
+            Day = visit.Day,
+            Date = visit.Date,
+            LessonTitle = visit.LessonTitle,
+            Notes = visit.Notes,
+            Subject = visit.Subject
+        };
+        showEditModal = true;
+    }
+
+    private async Task UpdateVisit()
+    {
+        try
+        {
+            await SupervisoryVisitService.UpdateVisitAsync(editingVisit);
+            await LoadVisits();
+            showEditModal = false;
+            successMessage = "تم تحديث الزيارة بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تحديث الزيارة: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteVisit(int id)
+    {
+        try
+        {
+            if (await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذه الزيارة؟"))
+            {
+                await SupervisoryVisitService.DeleteVisitAsync(id);
+                await LoadVisits();
+                successMessage = "تم حذف الزيارة بنجاح";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حذف الزيارة: " + ex.Message;
+        }
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        editingVisit = new();
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var data = visits.Select(v => new
+            {
+                المادة = v.Subject,
+                المعلم_الزائر = v.VisitorTeacherName,
+                المعلم_المزار = v.VisitedTeacherName,
+                اليوم = v.Day,
+                التاريخ = v.Date.ToString("yyyy-MM-dd"),
+                عنوان_الدرس = v.LessonTitle,
+                الملاحظات = v.Notes ?? ""
+            }).ToList();
+
+            await JSRuntime.InvokeVoidAsync("exportToExcel", data, "الزيارات_الإشرافية");
+            successMessage = "تم تصدير البيانات إلى Excel بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير Excel: " + ex.Message;
+        }
+    }
+
+    private async Task ExportToPDF()
+    {
+        try
+        {
+            var tableRows = string.Join("", visits.Select((v, index) => 
+                $"<tr><td>{index + 1}</td><td>{v.Subject}</td><td>{v.VisitorTeacherName}</td><td>{v.VisitedTeacherName}</td><td>{v.Day}</td><td>{v.Date:yyyy-MM-dd}</td><td>{v.LessonTitle}</td><td>{v.Notes ?? ""}</td></tr>"));
+
+            var html = $@"
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>الزيارات الإشرافية</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; direction: rtl; }}
+                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+                        th {{ background-color: #f2f2f2; font-weight: bold; }}
+                        .header {{ text-align: center; margin-bottom: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>الزيارات الإشرافية</h1>
+                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>م</th>
+                                <th>المادة</th>
+                                <th>المعلم الزائر</th>
+                                <th>المعلم المزار</th>
+                                <th>اليوم</th>
+                                <th>التاريخ</th>
+                                <th>عنوان الدرس</th>
+                                <th>الملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tableRows}
+                        </tbody>
+                    </table>
+                </body>
+                </html>";
+
+            await JSRuntime.InvokeVoidAsync("exportToPDF", html, "الزيارات_الإشرافية");
+            successMessage = "تم تصدير البيانات إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+}
+
+<style>
+    .subject-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>

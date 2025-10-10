@@ -1,0 +1,165 @@
+@page "/teachers-leave"
+@using SchoolHallBooking.Services
+@using SchoolHallBooking.Models
+@inject ITeachersAttendanceService AttendanceService
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>استمارة استئذان معلم</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4 class="mb-0">استمارة استئذان معلم</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-3" role="alert">
+                        <strong>ملاحظة:</strong> بعد حفظ الاستمارة، ستظهر في صفحة إدارة المدرسة حيث يمكن طباعتها.
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success">@successMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">اسم المعلم</label>
+                            <InputText class="form-control" @bind-Value="leaveModel.TeacherName" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">التخصص</label>
+                            <InputText class="form-control" @bind-Value="leaveModel.Specialization" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">التاريخ</label>
+                            <InputDate TValue="DateTime" class="form-control" @bind-Value="leaveModel.LeaveDate" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">السبب</label>
+                            <InputText class="form-control" @bind-Value="leaveModel.Reason" />
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center align-middle" id="leave-form-table">
+                            <thead>
+                                <tr>
+                                    <th>الحصة</th>
+                                    <th>الصف</th>
+                                    <th>اسم المعلم البديل</th>
+                                    <th>التوقيع</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < rows.Count; i++)
+                                {
+                                    var index = i; // Capture the index to avoid closure issues
+                                    <tr>
+                                        <td><input class="form-control form-control-sm" value="@rows[index].Lesson" @oninput="@((ChangeEventArgs e) => UpdateRowField(index, nameof(LeaveRow.Lesson), e.Value?.ToString() ?? string.Empty))" /></td>
+                                        <td><input class="form-control form-control-sm" value="@rows[index].ClassName" @oninput="@((ChangeEventArgs e) => UpdateRowField(index, nameof(LeaveRow.ClassName), e.Value?.ToString() ?? string.Empty))" /></td>
+                                        <td><input class="form-control form-control-sm" value="@rows[index].SubstituteTeacher" @oninput="@((ChangeEventArgs e) => UpdateRowField(index, nameof(LeaveRow.SubstituteTeacher), e.Value?.ToString() ?? string.Empty))" /></td>
+                                        <td><input class="form-control form-control-sm" value="@rows[index].Signature" disabled /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex gap-2 mb-3">
+                        <button class="btn btn-sm btn-outline-secondary" disabled="@(rows.Count >= 6)" @onclick="AddRow">+ إضافة صف</button>
+                        <button class="btn btn-sm btn-outline-secondary" disabled="@(rows.Count <= 1)" @onclick="RemoveRow">- حذف صف</button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">توقيع المعلم</label>
+                        <InputText class="form-control form-control-sm" @bind-Value="teacherSignature" placeholder="أدخل توقيع المعلم هنا..." disabled />
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" @onclick="Save">حفظ</button>
+                        <button class="btn btn-secondary" @onclick="ResetForm">تفريغ</button>
+                        <!-- زر الطباعة تم حذفه حسب الطلب -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private class LeaveRow { public string Lesson { get; set; } = string.Empty; public string ClassName { get; set; } = string.Empty; public string SubstituteTeacher { get; set; } = string.Empty; public string Signature { get; set; } = string.Empty; }
+    private List<LeaveRow> rows = new() { new LeaveRow() };
+    private TeacherLeaveRequestEntity leaveModel = new();
+    private string teacherSignature = string.Empty;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    private void AddRow() { if (rows.Count < 6) rows.Add(new LeaveRow()); }
+    private void RemoveRow() { if (rows.Count > 1) rows.RemoveAt(rows.Count - 1); }
+    
+    private void UpdateRowField(int index, string field, string value)
+    {
+        if (index < 0 || index >= rows.Count) return;
+        
+        switch (field)
+        {
+            case nameof(LeaveRow.Lesson):
+                rows[index].Lesson = value;
+                break;
+            case nameof(LeaveRow.ClassName):
+                rows[index].ClassName = value;
+                break;
+            case nameof(LeaveRow.SubstituteTeacher):
+                rows[index].SubstituteTeacher = value;
+                break;
+            case nameof(LeaveRow.Signature):
+                rows[index].Signature = value;
+                break;
+        }
+    }
+
+    private void ResetForm()
+    {
+        leaveModel = new();
+        rows = new() { new LeaveRow() };
+        teacherSignature = string.Empty;
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            successMessage = string.Empty;
+            errorMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(leaveModel.TeacherName)) { errorMessage = "يرجى إدخال اسم المعلم"; return; }
+            if (string.IsNullOrWhiteSpace(leaveModel.Reason)) { errorMessage = "يرجى إدخال السبب"; return; }
+
+            leaveModel.DistributionJson = System.Text.Json.JsonSerializer.Serialize(rows);
+            
+            // Save teacher signature in Notes field
+            if (!string.IsNullOrWhiteSpace(teacherSignature))
+            {
+                leaveModel.Notes = $"توقيع المعلم: {teacherSignature}";
+            }
+
+            await AttendanceService.AddLeaveAsync(leaveModel);
+            successMessage = "تم حفظ الاستمارة بنجاح! يمكن طباعة الاستمارة من صفحة إدارة المدرسة.";
+            ResetForm();
+        }
+        catch (Exception)
+        {
+            errorMessage = "حدث خطأ أثناء الحفظ";
+        }
+    }
+}
+
+

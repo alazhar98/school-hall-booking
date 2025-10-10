@@ -1,0 +1,865 @@
+@page "/school-performance-development"
+@using SchoolHallBooking.Services
+@using SchoolHallBooking.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">جاري التحميل...</span>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-warning text-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>غير مصرح لك بالوصول</strong>
+                    <br>
+                    <small>يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة</small>
+                    <br>
+                    <a href="/school/login" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        تسجيل الدخول
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <h2 class="mb-4">نظام تطوير الأداء المدرسي</h2>
+
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">اختر البرنامج/المجال</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @foreach (var s in subjects)
+                    {
+                        <div class="col-6 col-md-3 d-grid">
+                            <button class="btn btn-outline-primary" @onclick="(() => SelectSubject(s))">@s</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- أزرار فتح الشرائح العامة 10-13 -->
+        <div class="card mb-3">
+            <div class="card-header bg-light">الشرائح العامة</div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "team")'>فريق التحسين والتطوير</button>
+                <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "meetings")'>اجتماعات فريق المتابعة</button>
+                <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "directives")'>التعاميم الخاصة بالنظام</button>
+                <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "spdvisits")'>الزيارات الخاصة بالنظام</button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(selectedSubject))
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-info">خاصة بالمادة الدراسية</div>
+                <div class="card-body d-flex gap-3 flex-wrap">
+                    @if (selectedSubject != "الادارة")
+                    {
+                        <button class="btn btn-primary" @onclick='@(() => SelectSlide2("visit"))'>تحليل الزيارات</button>
+                        <button class="btn btn-primary" @onclick='@(() => SelectSlide2("work"))'>تحليل أعمال الطلبة</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-warning" @onclick='@(() => SelectSlide2("admin"))'>الإدارة</button>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (currentView == "visit")
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        تحليل الزيارة الإشرافية - @selectedSubject
+                    </div>
+                    <div>
+                        <button class="btn btn-success me-2" @onclick="ExportVisitPDF">PDF</button>
+                        <button class="btn btn-info" @onclick="ExportVisitExcel">Excel</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-outline-success" @onclick="OpenAddVisit">+ إضافة سجل</button>
+                    </div>
+                    @if (currentVisit != null && currentVisit.Subject == selectedSubject && (currentVisit.Id == 0 || visitItems.Contains(currentVisit)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.Strengths" />
+                                <small class="text-muted">جوانب القوة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.Enhancements" />
+                                <small class="text-muted">جوانب التعزيز</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.FollowUpActions" />
+                                <small class="text-muted">إجراءات المتابعة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.DevelopmentPriorities" />
+                                <small class="text-muted">أولويات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.DevelopmentActions" />
+                                <small class="text-muted">إجراءات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentVisit.DevelopmentFollowUp" />
+                                <small class="text-muted">إجراءات المتابعة للتطوير</small>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveVisit">حفظ</button>
+                                <button class="btn btn-secondary" @onclick="CancelVisit">إلغاء</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table id="visit-table" class="table table-bordered text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th>جوانب القوة</th>
+                                    <th>جوانب التعزيز</th>
+                                    <th>إجراءات المتابعة</th>
+                                    <th>أولويات التطوير</th>
+                                    <th>إجراءات التطوير</th>
+                                    <th>إجراءات المتابعة للتطوير</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in visitItems)
+                                {
+                                    <tr>
+                                        <td>@item.Strengths</td>
+                                        <td>@item.Enhancements</td>
+                                        <td>@item.FollowUpActions</td>
+                                        <td>@item.DevelopmentPriorities</td>
+                                        <td>@item.DevelopmentActions</td>
+                                        <td>@item.DevelopmentFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="(() => EditVisit(item))">تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteVisit(item.Id))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (currentView == "work")
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        الشريحة 4: تحليل أعمال الطلبة - @selectedSubject
+                    </div>
+                    <div>
+                        <button class="btn btn-success me-2" @onclick="ExportWorkPDF">PDF</button>
+                        <button class="btn btn-info" @onclick="ExportWorkExcel">Excel</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-outline-success" @onclick="OpenAddWork">+ إضافة سجل</button>
+                    </div>
+                    @if (currentWork != null && currentWork.Subject == selectedSubject && (currentWork.Id == 0 || workItems.Contains(currentWork)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.Strengths" />
+                                <small class="text-muted">جوانب القوة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.Enhancements" />
+                                <small class="text-muted">جوانب التعزيز</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.FollowUpActions" />
+                                <small class="text-muted">إجراءات المتابعة</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.DevelopmentPriorities" />
+                                <small class="text-muted">أولويات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.DevelopmentActions" />
+                                <small class="text-muted">إجراءات التطوير</small>
+                            </div>
+                            <div class="col-md-4">
+                                <InputTextArea class="form-control" @bind-Value="currentWork.DevelopmentFollowUp" />
+                                <small class="text-muted">إجراءات المتابعة للتطوير</small>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveWork">حفظ</button>
+                                <button class="btn btn-secondary" @onclick="CancelWork">إلغاء</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table id="work-table" class="table table-bordered text-center align-middle">
+                            <thead>
+                                <tr>
+                                    <th>جوانب القوة</th>
+                                    <th>جوانب التعزيز</th>
+                                    <th>إجراءات المتابعة</th>
+                                    <th>أولويات التطوير</th>
+                                    <th>إجراءات التطوير</th>
+                                    <th>إجراءات المتابعة للتطوير</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in workItems)
+                                {
+                                    <tr>
+                                        <td>@item.Strengths</td>
+                                        <td>@item.Enhancements</td>
+                                        <td>@item.FollowUpActions</td>
+                                        <td>@item.DevelopmentPriorities</td>
+                                        <td>@item.DevelopmentActions</td>
+                                        <td>@item.DevelopmentFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="(() => EditWork(item))">تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteWork(item.Id))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (currentView == "admin")
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">الشريحة 5: خاصة بالإدارة</div>
+                <div class="card-body d-flex gap-3 flex-wrap">
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "jobs")'>الوظائف الإدارية</button>
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "students")'>آراء الطلبة</button>
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "staff")'>آراء الهيئة</button>
+                    <button class="btn btn-outline-primary" @onclick='@(() => adminView = "parents")'>آراء أولياء الأمور</button>
+                </div>
+            </div>
+
+            @if (adminView == "jobs")
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>تحليل الزيارة (الوظائف الإدارية والمساندة)</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "adminjobs-table", "تحليل_زيارة_الوظائف"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "adminjobs-table", "تحليل_زيارة_الوظائف"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentJob = new AdminJobVisitAnalysis(); adminJobs.Insert(0,currentJob); })'>+ إضافة سجل</button></div>
+                        @if (currentJob != null && (currentJob.Id == 0 || adminJobs.Contains(currentJob)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3"><InputText class="form-control" @bind-Value="currentJob.JobTitle" /><small class="text-muted">الوظيفة</small></div>
+                                <div class="col-md-3"><InputTextArea class="form-control" @bind-Value="currentJob.Strengths" /><small class="text-muted">جوانب القوة</small></div>
+                                <div class="col-md-3"><InputTextArea class="form-control" @bind-Value="currentJob.Enhancements" /><small class="text-muted">جوانب التعزيز</small></div>
+                                <div class="col-md-3"><InputTextArea class="form-control" @bind-Value="currentJob.FollowUpActions" /><small class="text-muted">إجراءات المتابعة</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentJob.DevelopmentPriorities" /><small class="text-muted">أولويات التطوير</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentJob.DevelopmentActions" /><small class="text-muted">إجراءات التطوير</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentJob.DevelopmentFollowUp" /><small class="text-muted">إجراءات المتابعة للتطوير</small></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveAdminJob">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentJob = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="adminjobs-table" class="table table-bordered text-center align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>الوظيفة</th><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أولويات التطوير</th><th>إجراءات التطوير</th><th>إجراءات المتابعة للتطوير</th><th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var j in adminJobs)
+                                {
+                                    <tr>
+                                        <td>@j.JobTitle</td><td>@j.Strengths</td><td>@j.Enhancements</td><td>@j.FollowUpActions</td><td>@j.DevelopmentPriorities</td><td>@j.DevelopmentActions</td><td>@j.DevelopmentFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentJob = j; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteAdminJob(j.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (adminView == "students")
+            {
+                @* Slide 7 *@
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>تحليل استمارة آراء الطلبة</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "stopinions-table", "اراء_الطلبة"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "stopinions-table", "اراء_الطلبة"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentStud = new StudentOpinionAnalysis(); studentOpinions.Insert(0,currentStud); })'>+ إضافة سجل</button></div>
+                        @if (currentStud != null && (currentStud.Id == 0 || studentOpinions.Contains(currentStud)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStud.Strengths" /><small class="text-muted">جوانب القوة</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStud.Enhancements" /><small class="text-muted">جوانب التعزيز</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStud.FollowUpActions" /><small class="text-muted">إجراءات المتابعة</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStud.SummarySuggestions" /><small class="text-muted">أهم المقترحات</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStud.SummaryFollowUp" /><small class="text-muted">جوانب المتابعة</small></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveStudentOpinion">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentStud = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="stopinions-table" class="table table-bordered text-center align-middle">
+                                <thead><tr><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أهم المقترحات</th><th>جوانب المتابعة</th><th>إجراءات</th></tr></thead>
+                                <tbody>
+                                @foreach (var r in studentOpinions)
+                                {
+                                    <tr>
+                                        <td>@r.Strengths</td><td>@r.Enhancements</td><td>@r.FollowUpActions</td><td>@r.SummarySuggestions</td><td>@r.SummaryFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentStud = r; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteStudentOpinion(r.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (adminView == "staff")
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>تحليل آراء الهيئة التعليمية</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "staffopinions-table", "اراء_الهيئة"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "staffopinions-table", "اراء_الهيئة"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentStaff = new StaffOpinionAnalysis(); staffOpinions.Insert(0,currentStaff); })'>+ إضافة سجل</button></div>
+                        @if (currentStaff != null && (currentStaff.Id == 0 || staffOpinions.Contains(currentStaff)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStaff.Strengths" /><small class="text-muted">جوانب القوة</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStaff.Enhancements" /><small class="text-muted">جوانب التعزيز</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentStaff.FollowUpActions" /><small class="text-muted">إجراءات المتابعة</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStaff.SummarySuggestions" /><small class="text-muted">أهم المقترحات</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentStaff.SummaryFollowUp" /><small class="text-muted">جوانب المتابعة</small></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveStaffOpinion">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentStaff = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="staffopinions-table" class="table table-bordered text-center align-middle">
+                                <thead><tr><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أهم المقترحات</th><th>جوانب المتابعة</th><th>إجراءات</th></tr></thead>
+                                <tbody>
+                                @foreach (var r in staffOpinions)
+                                {
+                                    <tr>
+                                        <td>@r.Strengths</td><td>@r.Enhancements</td><td>@r.FollowUpActions</td><td>@r.SummarySuggestions</td><td>@r.SummaryFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentStaff = r; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteStaffOpinion(r.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (adminView == "parents")
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>تحليل آراء أولياء الأمور</div>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "parentsopinions-table", "اراء_اولياء_الامور"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "parentsopinions-table", "اراء_اولياء_الامور"))'>Excel</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2"><button class="btn btn-outline-success" @onclick='@(() => { currentParent = new ParentsOpinionAnalysis(); parentsOpinions.Insert(0,currentParent); })'>+ إضافة سجل</button></div>
+                        @if (currentParent != null && (currentParent.Id == 0 || parentsOpinions.Contains(currentParent)))
+                        {
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentParent.Strengths" /><small class="text-muted">جوانب القوة</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentParent.Enhancements" /><small class="text-muted">جوانب التعزيز</small></div>
+                                <div class="col-md-4"><InputTextArea class="form-control" @bind-Value="currentParent.FollowUpActions" /><small class="text-muted">إجراءات المتابعة</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentParent.SummarySuggestions" /><small class="text-muted">أهم المقترحات</small></div>
+                                <div class="col-md-6"><InputTextArea class="form-control" @bind-Value="currentParent.SummaryFollowUp" /><small class="text-muted">جوانب المتابعة</small></div>
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" @onclick="SaveParentsOpinion">حفظ</button>
+                                    <button class="btn btn-secondary" @onclick='@(() => { currentParent = new(); StateHasChanged(); })'>إلغاء</button>
+                                </div>
+                            </div>
+                        }
+                        <div class="table-responsive">
+                            <table id="parentsopinions-table" class="table table-bordered text-center align-middle">
+                                <thead><tr><th>جوانب القوة</th><th>جوانب التعزيز</th><th>إجراءات المتابعة</th><th>أهم المقترحات</th><th>جوانب المتابعة</th><th>إجراءات</th></tr></thead>
+                                <tbody>
+                                @foreach (var r in parentsOpinions)
+                                {
+                                    <tr>
+                                        <td>@r.Strengths</td><td>@r.Enhancements</td><td>@r.FollowUpActions</td><td>@r.SummarySuggestions</td><td>@r.SummaryFollowUp</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentParent = r; StateHasChanged(); })'>تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteParentsOpinion(r.Id))'>حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+
+        @* Slides 10/11/12/13 under Slide 1 — تظهر دائماً *@
+        @if (currentView == "team")
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-light">فريق التحسين والتطوير</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <button class="btn btn-outline-success" @onclick='@(() => { currentTeam = new SPDImprovementTeamMember { Subject = GlobalSubject }; improvementTeam.Insert(0, currentTeam); })'>+ إضافة عضو</button>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "team-table", "فريق_التحسين"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "team-table", "فريق_التحسين"))'>Excel</button>
+                        </div>
+                    </div>
+                    @if (currentTeam != null && (currentTeam.Id == 0 || improvementTeam.Contains(currentTeam)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3"><InputText class="form-control" @bind-Value="currentTeam.Name" /><small class="text-muted">الاسم</small></div>
+                            <div class="col-md-3"><InputText class="form-control" @bind-Value="currentTeam.JobTitle" /><small class="text-muted">الوظيفة</small></div>
+                            <div class="col-md-3"><InputText class="form-control" @bind-Value="currentTeam.Role" /><small class="text-muted">المهمة/الدور</small></div>
+                            <div class="col-md-3"><InputText class="form-control" @bind-Value="currentTeam.Notes" /><small class="text-muted">الملاحظات</small></div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveTeamMember">حفظ</button>
+                                <button class="btn btn-secondary" @onclick='@(() => { currentTeam = new(); StateHasChanged(); })'>إلغاء</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table id="team-table" class="table table-bordered text-center align-middle">
+                            <thead><tr><th>الاسم</th><th>الوظيفة</th><th>الدور</th><th>الملاحظات</th><th>إجراءات</th></tr></thead>
+                            <tbody>
+                            @foreach (var m in improvementTeam)
+                            {
+                                <tr>
+                                    <td>@m.Name</td><td>@m.JobTitle</td><td>@m.Role</td><td>@m.Notes</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentTeam = m; StateHasChanged(); })'>تعديل</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteTeamMember(m.Id))'>حذف</button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+            </div>
+        </div>
+        }
+
+        @if (currentView == "meetings")
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-light">كشاف اجتماعات فريق المتابعة</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <button class="btn btn-outline-success" @onclick='@(() => { currentMeeting = new SPDFollowupMeeting { Subject = GlobalSubject }; followupMeetings.Insert(0, currentMeeting); })'>+ إضافة اجتماع</button>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "meetings-table", "اجتماعات_المتابعة"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "meetings-table", "اجتماعات_المتابعة"))'>Excel</button>
+                        </div>
+                    </div>
+                    @if (currentMeeting != null && (currentMeeting.Id == 0 || followupMeetings.Contains(currentMeeting)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3"><InputText class="form-control" @bind-Value="currentMeeting.MeetingNumber" /><small class="text-muted">رقم الاجتماع</small></div>
+                            <div class="col-md-3"><InputDate TValue="DateTime?" class="form-control" @bind-Value="currentMeeting.MeetingDate" /><small class="text-muted">التاريخ</small></div>
+                            <div class="col-md-2"><InputText class="form-control" @bind-Value="currentMeeting.Day" /><small class="text-muted">اليوم</small></div>
+                            <div class="col-md-2"><InputText class="form-control" @bind-Value="currentMeeting.Agenda" /><small class="text-muted">جدول الأعمال</small></div>
+                            <div class="col-md-2"><InputText class="form-control" @bind-Value="currentMeeting.Notes" /><small class="text-muted">الملاحظات</small></div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveMeeting">حفظ</button>
+                                <button class="btn btn-secondary" @onclick='@(() => { currentMeeting = new(); StateHasChanged(); })'>إلغاء</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table id="meetings-table" class="table table-bordered text-center align-middle">
+                            <thead><tr><th>رقم الاجتماع</th><th>التاريخ</th><th>اليوم</th><th>جدول الأعمال</th><th>الملاحظات</th><th>إجراءات</th></tr></thead>
+                            <tbody>
+                            @foreach (var m in followupMeetings)
+                            {
+                                <tr>
+                                    <td>@m.MeetingNumber</td><td>@m.MeetingDate?.ToString("yyyy-MM-dd")</td><td>@m.Day</td><td>@m.Agenda</td><td>@m.Notes</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentMeeting = m; StateHasChanged(); })'>تعديل</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteMeeting(m.Id))'>حذف</button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+            </div>
+        </div>
+        }
+
+        @if (currentView == "directives")
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-light">كشاف بالتعاميم الخاصة بالنظام</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <button class="btn btn-outline-success" @onclick='@(() => { currentDirective = new SPDDirectiveRecord { Subject = GlobalSubject }; directives.Insert(0, currentDirective); })'>+ إضافة تعميم</button>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "directives-table", "التعاميم"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "directives-table", "التعاميم"))'>Excel</button>
+                        </div>
+                    </div>
+                    @if (currentDirective != null && (currentDirective.Id == 0 || directives.Contains(currentDirective)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-2"><InputText class="form-control" @bind-Value="currentDirective.DirectiveNumber" /><small class="text-muted">رقم التعميم</small></div>
+                            <div class="col-md-2"><InputDate TValue="DateTime?" class="form-control" @bind-Value="currentDirective.DirectiveDate" /><small class="text-muted">التاريخ</small></div>
+                            <div class="col-md-4"><InputText class="form-control" @bind-Value="currentDirective.Title" /><small class="text-muted">عنوان التعميم</small></div>
+                            <div class="col-md-4"><InputText class="form-control" @bind-Value="currentDirective.Issuer" /><small class="text-muted">الجهة الصادرة</small></div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveDirective">حفظ</button>
+                                <button class="btn btn-secondary" @onclick='@(() => { currentDirective = new(); StateHasChanged(); })'>إلغاء</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table id="directives-table" class="table table-bordered text-center align-middle">
+                            <thead><tr><th>رقم</th><th>التاريخ</th><th>العنوان</th><th>الجهة</th><th>إجراءات</th></tr></thead>
+                            <tbody>
+                            @foreach (var d in directives)
+                            {
+                                <tr>
+                                    <td>@d.DirectiveNumber</td><td>@d.DirectiveDate?.ToString("yyyy-MM-dd")</td><td>@d.Title</td><td>@d.Issuer</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentDirective = d; StateHasChanged(); })'>تعديل</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteDirective(d.Id))'>حذف</button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+            </div>
+        </div>
+        }
+
+        @if (currentView == "spdvisits")
+        {
+        <div class="card mb-4">
+            <div class="card-header bg-light">كشاف الزيارات الخاصة بالنظام</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <button class="btn btn-outline-success" @onclick='@(() => { currentSPDVisit = new SPDVisitRecord { Subject = GlobalSubject }; spdVisits.Insert(0, currentSPDVisit); })'>+ إضافة زيارة</button>
+                        <div>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "spdvisits-table", "زيارات_النظام"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "spdvisits-table", "زيارات_النظام"))'>Excel</button>
+                        </div>
+                    </div>
+                    @if (currentSPDVisit != null && (currentSPDVisit.Id == 0 || spdVisits.Contains(currentSPDVisit)))
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3"><InputText class="form-control" @bind-Value="currentSPDVisit.VisitorName" /><small class="text-muted">اسم الزائر</small></div>
+                            <div class="col-md-2"><InputText class="form-control" @bind-Value="currentSPDVisit.VisitorJob" /><small class="text-muted">الوظيفة</small></div>
+                            <div class="col-md-3"><InputText class="form-control" @bind-Value="currentSPDVisit.Organization" /><small class="text-muted">جهة العمل</small></div>
+                            <div class="col-md-2"><InputDate TValue="DateTime?" class="form-control" @bind-Value="currentSPDVisit.VisitDate" /><small class="text-muted">تاريخ الزيارة</small></div>
+                            <div class="col-md-2"><InputText class="form-control" @bind-Value="currentSPDVisit.Target" /><small class="text-muted">المستهدف</small></div>
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-success" @onclick="SaveSPDVisit">حفظ</button>
+                                <button class="btn btn-secondary" @onclick='@(() => { currentSPDVisit = new(); StateHasChanged(); })'>إلغاء</button>
+                            </div>
+                        </div>
+                    }
+                    <div class="table-responsive">
+                        <table id="spdvisits-table" class="table table-bordered text-center align-middle">
+                            <thead><tr><th>اسم الزائر</th><th>الوظيفة</th><th>جهة العمل</th><th>تاريخ الزيارة</th><th>المستهدف</th><th>إجراءات</th></tr></thead>
+                            <tbody>
+                            @foreach (var v in spdVisits)
+                            {
+                                <tr>
+                                    <td>@v.VisitorName</td><td>@v.VisitorJob</td><td>@v.Organization</td><td>@v.VisitDate?.ToString("yyyy-MM-dd")</td><td>@v.Target</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentSPDVisit = v; StateHasChanged(); })'>تعديل</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteSPDVisit(v.Id))'>حذف</button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+            </div>
+        </div>
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private readonly string[] subjects = new[] { "التربية الاسلامية", "اللغة العربية", "اللغة الانجليزية", "الرياضيات", "العلوم", "الدراسات الاجتماعية", "تقنية المعلومات والمهارات القربية", "الادارة" };
+    private string selectedSubject = string.Empty;
+    private string currentView = string.Empty; // "visit" or "work"
+    private string adminView = string.Empty;   // jobs/students/staff/parents
+
+    private List<SupervisoryVisitAnalysis> visitItems = new();
+    private SupervisoryVisitAnalysis currentVisit = new();
+    private List<StudentWorkAnalysis> workItems = new();
+    private StudentWorkAnalysis currentWork = new();
+    private List<AdminJobVisitAnalysis> adminJobs = new();
+    private AdminJobVisitAnalysis currentJob = new();
+    private List<StudentOpinionAnalysis> studentOpinions = new();
+    private StudentOpinionAnalysis currentStud = new();
+    private List<StaffOpinionAnalysis> staffOpinions = new();
+    private StaffOpinionAnalysis currentStaff = new();
+    private List<ParentsOpinionAnalysis> parentsOpinions = new();
+    private ParentsOpinionAnalysis currentParent = new();
+
+    private List<SPDImprovementTeamMember> improvementTeam = new();
+    private SPDImprovementTeamMember currentTeam = new();
+    private List<SPDFollowupMeeting> followupMeetings = new();
+    private SPDFollowupMeeting currentMeeting = new();
+    private List<SPDDirectiveRecord> directives = new();
+    private SPDDirectiveRecord currentDirective = new();
+    private List<SPDVisitRecord> spdVisits = new();
+    private SPDVisitRecord currentSPDVisit = new();
+
+    private const string GlobalSubject = "عام";
+    private bool isSubjectEmpty => string.IsNullOrWhiteSpace(selectedSubject);
+    private string DisplaySubject => string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            if (isAuthenticated)
+            {
+                await LoadSlidesDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking authentication: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async void SelectSubject(string subject)
+    {
+        selectedSubject = subject;
+        currentView = string.Empty;
+    }
+
+    private void SelectSlide2(string view)
+    {
+        currentView = view;
+        _ = LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        if (string.IsNullOrEmpty(selectedSubject)) return;
+        if (currentView == "visit")
+        {
+            visitItems = await Service.GetVisitAnalysesBySubjectAsync(selectedSubject);
+        }
+        else if (currentView == "work")
+        {
+            workItems = await Service.GetStudentWorkAnalysesBySubjectAsync(selectedSubject);
+        }
+        else if (currentView == "admin")
+        {
+            if (adminView == "jobs") adminJobs = await Service.GetAdminJobVisitsAsync();
+            if (adminView == "students") studentOpinions = await Service.GetStudentOpinionsAsync();
+            if (adminView == "staff") staffOpinions = await Service.GetStaffOpinionsAsync();
+            if (adminView == "parents") parentsOpinions = await Service.GetParentsOpinionsAsync();
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadSlidesDataAsync()
+    {
+        // تحميل بيانات الشرائح 10-13 العامة دائماً
+        improvementTeam = await Service.GetImprovementTeamAsync(GlobalSubject);
+        followupMeetings = await Service.GetFollowupMeetingsAsync(GlobalSubject);
+        directives = await Service.GetDirectiveRecordsAsync(GlobalSubject);
+        spdVisits = await Service.GetSPDVisitRecordsAsync(GlobalSubject);
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [Inject]
+    private ISchoolPerformanceDevelopmentService Service { get; set; } = default!;
+
+    private void OpenAddVisit()
+    {
+        currentVisit = new SupervisoryVisitAnalysis { Subject = selectedSubject };
+        visitItems.Insert(0, currentVisit);
+    }
+    private async Task SaveVisit()
+    {
+        if (currentVisit.Id == 0)
+            await Service.AddVisitAnalysisAsync(currentVisit);
+        else
+            await Service.UpdateVisitAnalysisAsync(currentVisit);
+        await LoadDataAsync();
+        currentVisit = new SupervisoryVisitAnalysis();
+    }
+    private Task CancelVisit()
+    {
+        currentVisit = new SupervisoryVisitAnalysis();
+        return InvokeAsync(StateHasChanged);
+    }
+    private async Task EditVisit(SupervisoryVisitAnalysis item)
+    {
+        currentVisit = item;
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task DeleteVisit(int id)
+    {
+        await Service.DeleteVisitAnalysisAsync(id);
+        await LoadDataAsync();
+    }
+
+    private void OpenAddWork()
+    {
+        currentWork = new StudentWorkAnalysis { Subject = selectedSubject };
+        workItems.Insert(0, currentWork);
+    }
+    private async Task SaveWork()
+    {
+        if (currentWork.Id == 0)
+            await Service.AddStudentWorkAnalysisAsync(currentWork);
+        else
+            await Service.UpdateStudentWorkAnalysisAsync(currentWork);
+        await LoadDataAsync();
+        currentWork = new StudentWorkAnalysis();
+    }
+    private Task CancelWork()
+    {
+        currentWork = new StudentWorkAnalysis();
+        return InvokeAsync(StateHasChanged);
+    }
+    private async Task EditWork(StudentWorkAnalysis item)
+    {
+        currentWork = item;
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task DeleteWork(int id)
+    {
+        await Service.DeleteStudentWorkAnalysisAsync(id);
+        await LoadDataAsync();
+    }
+
+    private Task ExportVisitPDF() => JSRuntime.InvokeVoidAsync("exportToPDF", "visit-table", "تحليل_الزيارات").AsTask();
+    private Task ExportVisitExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "visit-table", "تحليل_الزيارات").AsTask();
+    private Task ExportWorkPDF() => JSRuntime.InvokeVoidAsync("exportToPDF", "work-table", "تحليل_اعمال_الطلبة").AsTask();
+    private Task ExportWorkExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "work-table", "تحليل_اعمال_الطلبة").AsTask();
+
+    private async Task SaveAdminJob()
+    {
+        if (currentJob.Id == 0) await Service.AddAdminJobVisitAsync(currentJob); else await Service.UpdateAdminJobVisitAsync(currentJob);
+        adminJobs = await Service.GetAdminJobVisitsAsync(); currentJob = new(); await InvokeAsync(StateHasChanged);
+    }
+    private async Task DeleteAdminJob(int id)
+    { await Service.DeleteAdminJobVisitAsync(id); adminJobs = await Service.GetAdminJobVisitsAsync(); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveStudentOpinion()
+    { if (currentStud.Id == 0) await Service.AddStudentOpinionAsync(currentStud); else await Service.UpdateStudentOpinionAsync(currentStud); studentOpinions = await Service.GetStudentOpinionsAsync(); currentStud = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteStudentOpinion(int id)
+    { await Service.DeleteStudentOpinionAsync(id); studentOpinions = await Service.GetStudentOpinionsAsync(); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveStaffOpinion()
+    { if (currentStaff.Id == 0) await Service.AddStaffOpinionAsync(currentStaff); else await Service.UpdateStaffOpinionAsync(currentStaff); staffOpinions = await Service.GetStaffOpinionsAsync(); currentStaff = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteStaffOpinion(int id)
+    { await Service.DeleteStaffOpinionAsync(id); staffOpinions = await Service.GetStaffOpinionsAsync(); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveParentsOpinion()
+    { if (currentParent.Id == 0) await Service.AddParentsOpinionAsync(currentParent); else await Service.UpdateParentsOpinionAsync(currentParent); parentsOpinions = await Service.GetParentsOpinionsAsync(); currentParent = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteParentsOpinion(int id)
+    { await Service.DeleteParentsOpinionAsync(id); parentsOpinions = await Service.GetParentsOpinionsAsync(); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveTeamMember()
+    {
+        if (currentTeam.Id == 0) await Service.AddImprovementTeamMemberAsync(currentTeam); else await Service.UpdateImprovementTeamMemberAsync(currentTeam);
+        improvementTeam = await Service.GetImprovementTeamAsync(selectedSubject);
+        currentTeam = new();
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task DeleteTeamMember(int id)
+    { await Service.DeleteImprovementTeamMemberAsync(id); improvementTeam = await Service.GetImprovementTeamAsync(selectedSubject); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveMeeting()
+    { if (currentMeeting.Id == 0) await Service.AddFollowupMeetingAsync(currentMeeting); else await Service.UpdateFollowupMeetingAsync(currentMeeting); followupMeetings = await Service.GetFollowupMeetingsAsync(selectedSubject); currentMeeting = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteMeeting(int id)
+    { await Service.DeleteFollowupMeetingAsync(id); followupMeetings = await Service.GetFollowupMeetingsAsync(selectedSubject); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveDirective()
+    { if (currentDirective.Id == 0) await Service.AddDirectiveRecordAsync(currentDirective); else await Service.UpdateDirectiveRecordAsync(currentDirective); directives = await Service.GetDirectiveRecordsAsync(selectedSubject); currentDirective = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteDirective(int id)
+    { await Service.DeleteDirectiveRecordAsync(id); directives = await Service.GetDirectiveRecordsAsync(selectedSubject); await InvokeAsync(StateHasChanged); }
+
+    private async Task SaveSPDVisit()
+    { if (currentSPDVisit.Id == 0) await Service.AddSPDVisitRecordAsync(currentSPDVisit); else await Service.UpdateSPDVisitRecordAsync(currentSPDVisit); spdVisits = await Service.GetSPDVisitRecordsAsync(GlobalSubject); currentSPDVisit = new(); await InvokeAsync(StateHasChanged); }
+    private async Task DeleteSPDVisit(int id)
+    { await Service.DeleteSPDVisitRecordAsync(id); spdVisits = await Service.GetSPDVisitRecordsAsync(GlobalSubject); await InvokeAsync(StateHasChanged); }
+    }
+}
