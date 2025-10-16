@@ -1,0 +1,2122 @@
+@page "/final-exams"
+@page "/finalexams"
+@using SchoolHallBooking.Services
+@using SchoolHallBooking.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">جاري التحميل...</span>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-warning text-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>غير مصرح لك بالوصول</strong>
+                    <br>
+                    <small>يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة</small>
+                    <br>
+                    <a href="/school/login" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        تسجيل الدخول
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h2 class="mb-3">الامتحانات النهائية</h2>
+            </div>
+        </div>
+
+        @if (activeSlide == 0)
+        {
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card">
+                        <div class="card-header text-center">
+                            <h4 class="mb-0">اختر الفصل الدراسي</h4>
+                        </div>
+                        <div class="card-body text-center">
+                            <p class="mb-4">يرجى اختيار الفصل الدراسي الذي تريد العمل عليه:</p>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <button class="btn btn-primary btn-lg w-100 py-4" @onclick="@(() => SelectSemester("الأول"))">
+                                        <i class="bi bi-1-circle me-2"></i>
+                                        الفصل الأول
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-success btn-lg w-100 py-4" @onclick="@(() => SelectSemester("الثاني"))">
+                                        <i class="bi bi-2-circle me-2"></i>
+                                        الفصل الثاني
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 1)
+        {
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-calendar-check me-2"></i>
+                            <strong>الفصل الدراسي المختار: @selectedSemester</strong>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenSlide(0)">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            تغيير الفصل
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4 col-lg-3">
+                    <button class="btn btn-info w-100 py-3" @onclick="() => OpenSlide(2)">قرار تشكيل اللجنة</button>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(4)">التقرير اليومي</button>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <button class="btn btn-warning w-100 py-3" @onclick="() => OpenSlide(3)">فتح مغلفات</button>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <button class="btn btn-outline-primary w-100 py-3" @onclick="() => OpenSlide(7)">كشف متابعة الغياب</button>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <button class="btn btn-outline-info w-100 py-3" @onclick="() => OpenSlide(6)">كشف درجات</button>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <button class="btn btn-outline-secondary w-100 py-3" @onclick="() => OpenSlide(5)">كشف استلام أوراق</button>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 2)
+        {
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">قرار تشكيل لجنة الامتحانات</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveForm">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintCommitteeDecision">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">العام الدراسي</label>
+                            <InputText class="form-control" @bind-Value="academicYear" placeholder="مثال: 2024/2025" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">الفصل الدراسي</label>
+                            <InputText class="form-control" @bind-Value="semester" placeholder="الأول / الثاني" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">مدير المدرسة</label>
+                            <InputText class="form-control" @bind-Value="principalName" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">أعضاء اللجنة</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:90px;">م</th>
+                                        <th>الاسم</th>
+                                        <th style="width:180px;">الصفة</th>
+                                        <th style="width:120px;">التوقيع</th>
+                                        <th style="width:120px;">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < committeeMembers.Count; i++)
+                                    {
+                                        var idx = i;
+                                        <tr>
+                                            <td>@(idx + 1)</td>
+                                            <td>
+                                                <input class="form-control form-control-sm" value="@committeeMembers[idx].Name" @oninput="(e => committeeMembers[idx].Name = e.Value?.ToString() ?? string.Empty)" />
+                                            </td>
+                                            <td>
+                                                <select class="form-select form-select-sm" @onchange="(e => committeeMembers[idx].Role = e.Value?.ToString() ?? string.Empty)" value="@committeeMembers[idx].Role">
+                                                    <option>رئيس اللجنة</option>
+                                                    <option>نائب الرئيس</option>
+                                                    <option>عضو</option>
+                                                    <option>الأشراف</option>
+                                                    <option>الأمور الادارية</option>
+                                                    <option>الصف التاسع</option>
+                                                    <option>الصف الثامن</option>
+                                                    <option>الصف العاشر</option>
+                                                </select>
+                                            </td>
+                                            <td><input class="form-control form-control-sm" disabled /></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveMember(idx))">حذف</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="AddMember">+ إضافة عضو</button>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">لجنة فرعية: متابعة البوابة التعليمية</label>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                        <th style="width:70px;">م</th>
+                                        <th>الاسم</th>
+                                        <th style="width:120px;">التوقيع</th>
+                                        <th style="width:120px;">إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < portalSubcommittee.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <tr>
+                                                <td>@(idx + 1)</td>
+                                                <td><input class="form-control form-control-sm" value="@portalSubcommittee[idx]" @oninput="(e => portalSubcommittee[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
+                                                <td><input class="form-control form-control-sm" disabled /></td>
+                                                <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveFromList(portalSubcommittee, idx))">حذف</button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => portalSubcommittee.Add(string.Empty)">+ إضافة</button>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">لجنة فرعية: متابعة حافلات الطلبة</label>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                        <th style="width:70px;">م</th>
+                                        <th>الاسم</th>
+                                        <th style="width:120px;">التوقيع</th>
+                                        <th style="width:120px;">إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < busesSubcommittee.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <tr>
+                                                <td>@(idx + 1)</td>
+                                                <td><input class="form-control form-control-sm" value="@busesSubcommittee[idx]" @oninput="(e => busesSubcommittee[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
+                                                <td><input class="form-control form-control-sm" disabled /></td>
+                                                <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveFromList(busesSubcommittee, idx))">حذف</button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => busesSubcommittee.Add(string.Empty)">+ إضافة</button>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">لجنة فرعية: متابعة انتظام الطلبة</label>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th style="width:70px;">م</th>
+                                        <th>الاسم</th>
+                                        <th style="width:120px;">التوقيع</th>
+                                        <th style="width:120px;">إجراءات</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < regularitySubcommittee.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <tr>
+                                                <td>@(idx + 1)</td>
+                                                <td><input class="form-control form-control-sm" value="@regularitySubcommittee[idx]" @oninput="(e => regularitySubcommittee[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
+                                                <td><input class="form-control form-control-sm" disabled /></td>
+                                                <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveFromList(regularitySubcommittee, idx))">حذف</button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => regularitySubcommittee.Add(string.Empty)">+ إضافة</button>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">جدول طلبة الدمج السمعي</label>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th style="width:70px;">م</th>
+                                        <th>الاسم</th>
+                                        <th style="width:120px;">إجراءات</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < hearingStudents.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <tr>
+                                                <td>@(idx + 1)</td>
+                                                <td><input class="form-control form-control-sm" value="@hearingStudents[idx]" @oninput="(e => hearingStudents[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
+                                                <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveFromList(hearingStudents, idx))">حذف</button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => hearingStudents.Add(string.Empty)">+ إضافة</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        }
+        else if (activeSlide == 3)
+        {
+            <div class="card mt-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">فتح مغلفات الامتحانات</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveEnvelopes">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintOpenEnvelopes">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">العام الدراسي</label>
+                            <InputText class="form-control" @bind-Value="envelopesAcademicYear" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">الفصل الدراسي</label>
+                            <InputText class="form-control" @bind-Value="envelopesSemester" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">الدور</label>
+                            <InputText class="form-control" @bind-Value="envelopesRound" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">اليوم</label>
+                            <InputText class="form-control" @bind-Value="envelopesDay" />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">التاريخ</label>
+                            <InputDate TValue="DateTime" class="form-control" @bind-Value="envelopesDate" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">الساعة</label>
+                            <InputText class="form-control" @bind-Value="envelopesTime" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">الموقع</label>
+                            <InputText class="form-control" @bind-Value="envelopesLocation" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">مواد وجداول الامتحان</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:140px;">الصف</th>
+                                        <th>المادة</th>
+                                        <th style="width:160px;">زمن الامتحان</th>
+                                        <th style="width:120px;">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < envelopeRows.Count; i++)
+                                    {
+                                        var idx = i;
+                                        <tr>
+                                            <td>
+                                                <select class="form-select form-select-sm" @onchange="(e => envelopeRows[idx].Grade = e.Value?.ToString() ?? string.Empty)" value="@envelopeRows[idx].Grade">
+                                                    <option>الثامن</option>
+                                                    <option>التاسع</option>
+                                                    <option>العاشر</option>
+                                                </select>
+                                            </td>
+                                            <td><input class="form-control form-control-sm" value="@envelopeRows[idx].Subject" @oninput="(e => envelopeRows[idx].Subject = e.Value?.ToString() ?? string.Empty)" /></td>
+                                            <td><input class="form-control form-control-sm" value="@envelopeRows[idx].Duration" @oninput="(e => envelopeRows[idx].Duration = e.Value?.ToString() ?? string.Empty)" /></td>
+                                            <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveEnvelopeRow(idx))">حذف</button></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="AddEnvelopeRow">+ إضافة صف</button>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">أسماء الحضور</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:70px;">م</th>
+                                        <th>الاسم</th>
+                                        <th style="width:140px;">التوقيع</th>
+                                        <th style="width:120px;">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < envelopeAttendees.Count; i++)
+                                    {
+                                        var idx = i;
+                                        <tr>
+                                            <td>@(idx + 1)</td>
+                                            <td><input class="form-control form-control-sm" value="@envelopeAttendees[idx]" @oninput="(e => envelopeAttendees[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
+                                            <td><input class="form-control form-control-sm" disabled /></td>
+                                            <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveFromList(envelopeAttendees, idx))">حذف</button></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => envelopeAttendees.Add(string.Empty)">+ إضافة</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 4)
+        {
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">التقرير اليومي عن سير أعمال امتحانات نهاية الفصل الدراسي</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveDaily">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintDaily">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><label class="form-label">العام الدراسي</label><InputText class="form-control" @bind-Value="dailyAcademicYear" /></div>
+                        <div class="col-md-4"><label class="form-label">الفصل</label><InputText class="form-control" @bind-Value="dailySemester" /></div>
+                        <div class="col-md-4"><label class="form-label">الدور</label><InputText class="form-control" @bind-Value="dailyRound" /></div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><label class="form-label">اليوم</label><InputText class="form-control" @bind-Value="dailyDay" /></div>
+                        <div class="col-md-4"><label class="form-label">التاريخ</label><InputDate TValue="DateTime" class="form-control" @bind-Value="dailyDate" /></div>
+                    </div>
+
+                    <h6 class="mt-2">أولاً: إعداد المتقدمين والناجحين</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الصفوف</th>
+                                    <th>الثامن</th>
+                                    <th>التاسع</th>
+                                    <th>العاشر</th>
+                                    <th style="width:140px;">الإجمالي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>إجمالي المتقدمين (نظامي)</strong></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@regularApplicantsG8" @oninput="@((ChangeEventArgs e) => { regularApplicantsG8 = e.Value?.ToString() ?? "0"; OnTotalChanged("RegularApplicantsG8", regularApplicantsG8); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@regularApplicantsG9" @oninput="@((ChangeEventArgs e) => { regularApplicantsG9 = e.Value?.ToString() ?? "0"; OnTotalChanged("RegularApplicantsG9", regularApplicantsG9); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@regularApplicantsG10" @oninput="@((ChangeEventArgs e) => { regularApplicantsG10 = e.Value?.ToString() ?? "0"; OnTotalChanged("RegularApplicantsG10", regularApplicantsG10); })" /></td>
+                                    <td><input class="form-control form-control-sm" value="@ComputeRegularApplicants()" disabled /></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>إجمالي المتقدمين (دارس)</strong></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@darisApplicantsG8" @oninput="@((ChangeEventArgs e) => { darisApplicantsG8 = e.Value?.ToString() ?? "0"; OnTotalChanged("DarisApplicantsG8", darisApplicantsG8); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@darisApplicantsG9" @oninput="@((ChangeEventArgs e) => { darisApplicantsG9 = e.Value?.ToString() ?? "0"; OnTotalChanged("DarisApplicantsG9", darisApplicantsG9); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@darisApplicantsG10" @oninput="@((ChangeEventArgs e) => { darisApplicantsG10 = e.Value?.ToString() ?? "0"; OnTotalChanged("DarisApplicantsG10", darisApplicantsG10); })" /></td>
+                                    <td><input class="form-control form-control-sm" value="@ComputeDarisApplicants()" disabled /></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>المتغيبين (نظامي)</strong></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@regularAbsentG8" @oninput="@((ChangeEventArgs e) => { regularAbsentG8 = e.Value?.ToString() ?? "0"; OnTotalChanged("RegularAbsentG8", regularAbsentG8); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@regularAbsentG9" @oninput="@((ChangeEventArgs e) => { regularAbsentG9 = e.Value?.ToString() ?? "0"; OnTotalChanged("RegularAbsentG9", regularAbsentG9); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@regularAbsentG10" @oninput="@((ChangeEventArgs e) => { regularAbsentG10 = e.Value?.ToString() ?? "0"; OnTotalChanged("RegularAbsentG10", regularAbsentG10); })" /></td>
+                                    <td><input class="form-control form-control-sm" value="@ComputeRegularAbsent()" disabled /></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>المتغيبين (دارس)</strong></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@darisAbsentG8" @oninput="@((ChangeEventArgs e) => { darisAbsentG8 = e.Value?.ToString() ?? "0"; OnTotalChanged("DarisAbsentG8", darisAbsentG8); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@darisAbsentG9" @oninput="@((ChangeEventArgs e) => { darisAbsentG9 = e.Value?.ToString() ?? "0"; OnTotalChanged("DarisAbsentG9", darisAbsentG9); })" /></td>
+                                    <td><input type="number" class="form-control form-control-sm" value="@darisAbsentG10" @oninput="@((ChangeEventArgs e) => { darisAbsentG10 = e.Value?.ToString() ?? "0"; OnTotalChanged("DarisAbsentG10", darisAbsentG10); })" /></td>
+                                    <td><input class="form-control form-control-sm" value="@ComputeDarisAbsent()" disabled /></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6>التعليم المدمج</h6>
+                    <div class="table-responsive mb-2">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:160px;">الصف</th>
+                                    <th>إجمالي المتقدمين (نظامي)</th>
+                                    <th>المتغيبين (نظامي)</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < blendedEntries.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td><input class="form-control form-control-sm" value="@blendedEntries[idx].Grade" @oninput="@((ChangeEventArgs e) => { blendedEntries[idx].Grade = e.Value?.ToString() ?? string.Empty; })" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" value="@blendedEntries[idx].Applicants" @oninput="@((ChangeEventArgs e) => { blendedEntries[idx].Applicants = e.Value?.ToString() ?? "0"; })" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" value="@blendedEntries[idx].Absent" @oninput="@((ChangeEventArgs e) => { blendedEntries[idx].Absent = e.Value?.ToString() ?? "0"; })" /></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveBlendedEntry(idx))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th>الإجمالي</th>
+                                    <th><input class="form-control form-control-sm" value="@ComputeBlendedApplicants()" disabled /></th>
+                                    <th><input class="form-control form-control-sm" value="@ComputeBlendedAbsentTotal()" disabled /></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="mb-3">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="AddBlendedEntry">+ إضافة صف</button>
+                    </div>
+
+                    <h6>ثانياً: أسماء المتغيبين</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>الاسم</th>
+                                    <th style="width:120px;">الصف</th>
+                                    <th style="width:160px;">المادة</th>
+                                    <th style="width:140px;">نظامي/دارس</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < dailyAbsent.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@dailyAbsent[idx].Name" @oninput="(e => dailyAbsent[idx].Name = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@dailyAbsent[idx].Class" @oninput="(e => dailyAbsent[idx].Class = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@dailyAbsent[idx].Subject" @oninput="(e => dailyAbsent[idx].Subject = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td>
+                                            <InputRadioGroup TValue="string" @bind-Value="dailyAbsent[idx].Type">
+                                                <div class="d-flex gap-3 justify-content-center">
+                                                    <div class="form-check d-flex align-items-center gap-1">
+                                                        <InputRadio TValue="string" class="form-check-input" Value="@ValueTypeRegular" />
+                                                        <span class="form-check-label">نظامي</span>
+                                                    </div>
+                                                    <div class="form-check d-flex align-items-center gap-1">
+                                                        <InputRadio TValue="string" class="form-check-input" Value="@ValueTypeDaris" />
+                                                        <span class="form-check-label">دارس</span>
+                                                    </div>
+                                                </div>
+                                            </InputRadioGroup>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div class="d-flex gap-2 mb-3">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => dailyAbsent.Add(new DailyAbsent())">+ إضافة</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => { if (dailyAbsent.Count>0) dailyAbsent.RemoveAt(dailyAbsent.Count-1);} ">- حذف</button>
+                        </div>
+                    </div>
+
+                    <h6>ثالثاً: الملاحظات على الامتحان</h6>
+                    <div class="mb-3">
+                        <div class="form-text mb-2">اكتمال الأوراق</div>
+                        <InputRadioGroup TValue="string" @bind-Value="dailyNotes.Papers">
+                            <div class="d-flex gap-3">
+                                <div class="form-check d-flex align-items-center gap-1">
+                                    <InputRadio TValue="string" class="form-check-input" Value="@ValuePapersComplete" />
+                                    <span class="form-check-label">مكتملة</span>
+                                </div>
+                                <div class="form-check d-flex align-items-center gap-1">
+                                    <InputRadio TValue="string" class="form-check-input" Value="@ValuePapersIncomplete" />
+                                    <span class="form-check-label">غير مكتملة</span>
+                                </div>
+                            </div>
+                        </InputRadioGroup>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-text mb-2">وضوح التصوير</div>
+                        <InputRadioGroup TValue="string" @bind-Value="dailyNotes.Printing">
+                            <div class="d-flex gap-3">
+                                <div class="form-check d-flex align-items-center gap-1">
+                                    <InputRadio TValue="string" class="form-check-input" Value="@ValuePrintingClear" />
+                                    <span class="form-check-label">واضحة</span>
+                                </div>
+                                <div class="form-check d-flex align-items-center gap-1">
+                                    <InputRadio TValue="string" class="form-check-input" Value="@ValuePrintingNotClear" />
+                                    <span class="form-check-label">غير واضحة</span>
+                                </div>
+                            </div>
+                        </InputRadioGroup>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-text">ملاحظات على أسئلة الامتحان</div>
+                        <InputTextArea class="form-control" Rows="3" @bind-Value="dailyNotes.Questions" />
+                    </div>
+
+                    <h6>رابعاً: الزوار</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>اسم الزائر</th>
+                                    <th style="width:200px;">الوظيفة</th>
+                                    <th>الملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < dailyVisitors.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@dailyVisitors[idx].Name" @oninput="(e => dailyVisitors[idx].Name = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@dailyVisitors[idx].JobTitle" @oninput="(e => dailyVisitors[idx].JobTitle = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@dailyVisitors[idx].Notes" @oninput="(e => dailyVisitors[idx].Notes = e.Value?.ToString() ?? string.Empty)" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => dailyVisitors.Add(new DailyVisitor())">+ إضافة</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => { if (dailyVisitors.Count>0) dailyVisitors.RemoveAt(dailyVisitors.Count-1);} ">- حذف</button>
+                        </div>
+                    </div>
+
+                    <h6>خامساً: ملاحظات الزائر</h6>
+                    <InputTextArea class="form-control mb-3" Rows="3" @bind-Value="dailyNotes.VisitorNotes" />
+
+                    <h6>سادساً: ملاحظات أخرى</h6>
+                    <InputTextArea class="form-control mb-3" Rows="3" @bind-Value="dailyNotes.Other" />
+
+                    <div class="d-flex gap-2 mb-3">
+                        <button class="btn btn-primary" @onclick="SaveDailyForm">حفظ البيانات</button>
+                        <button class="btn btn-success" @onclick="PrintDailyReport">طباعة PDF</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 5)
+        {
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">كشف استلام أوراق الإجابات</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveReceive">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="LoadReceive">استرجاع</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintReceive">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3"><label class="form-label">العام الدراسي</label><InputText class="form-control" @bind-Value="receiveAcademicYear" /></div>
+                        <div class="col-md-3"><label class="form-label">الفصل</label><InputText class="form-control" @bind-Value="receiveSemester" /></div>
+                        <div class="col-md-3"><label class="form-label">الدور</label><InputText class="form-control" @bind-Value="receiveRound" /></div>
+                        <div class="col-md-3"><label class="form-label">اليوم</label><InputText class="form-control" @bind-Value="receiveDay" /></div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3"><label class="form-label">التاريخ</label><InputDate TValue="DateTime" class="form-control" @bind-Value="receiveDate" /></div>
+                        <div class="col-md-9"><label class="form-label">ملاحظة</label><InputText class="form-control" @bind-Value="receiveNote" /></div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:90px;">الصف</th>
+                                    <th>المادة</th>
+                                    <th colspan="2">عدد الممتحنين</th>
+                                    <th colspan="2">عدد المتغيبين</th>
+                                    <th style="width:200px;">اسم المعلم</th>
+                                    <th style="width:140px;">التوقيع</th>
+                                    <th style="width:110px;">إجراءات</th>
+                                </tr>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th>نظامي</th>
+                                    <th>دارس</th>
+                                    <th>نظامي</th>
+                                    <th>دارس</th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < receiveRows.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td><input class="form-control form-control-sm" value="@receiveRows[idx].Grade" @oninput="(e => receiveRows[idx].Grade = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@receiveRows[idx].Subject" @oninput="(e => receiveRows[idx].Subject = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" @bind-Value="receiveRows[idx].ExamineesRegular" @bind-Value:event="oninput" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" @bind-Value="receiveRows[idx].ExamineesDaris" @bind-Value:event="oninput" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" @bind-Value="receiveRows[idx].AbsentsRegular" @bind-Value:event="oninput" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" @bind-Value="receiveRows[idx].AbsentsDaris" @bind-Value:event="oninput" /></td>
+                                        <td><input class="form-control form-control-sm" value="@receiveRows[idx].TeacherName" @oninput="(e => receiveRows[idx].TeacherName = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" disabled /></td>
+                                        <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveReceiveRow(idx))">حذف</button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="AddReceiveRow">+ إضافة صف</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 6)
+        {
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">كشف درجات الدارسين</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveGrades">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintGrades">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @for (int s = 0; s < gradeStudents.Count; s++)
+                    {
+                        var sidx = s;
+                        <div class="border rounded p-2 mb-3">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-3"><label class="form-label">اسم الدارس</label><input class="form-control" value="@gradeStudents[sidx].Name" @oninput="(e => gradeStudents[sidx].Name = e.Value?.ToString() ?? string.Empty)" /></div>
+                                <div class="col-md-2"><label class="form-label">الصف</label><input class="form-control" value="@gradeStudents[sidx].Class" @oninput="(e => gradeStudents[sidx].Class = e.Value?.ToString() ?? string.Empty)" /></div>
+                                <div class="col-md-3 d-flex align-items-end"><button class="btn btn-outline-danger" @onclick="(() => RemoveStudent(sidx))">حذف الدارس</button></div>
+                                <div class="col-md-2 d-flex align-items-end"><button class="btn btn-outline-success" @onclick="(() => PrintSingleStudent(sidx))">طباعة</button></div>
+                            </div>
+
+                            <div class="table-responsive mb-2">
+                                <table class="table table-bordered text-center align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:70px;">م</th>
+                                            <th>المادة</th>
+                                            <th style="width:140px;">الدرجة</th>
+                                            <th style="width:120px;">إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < gradeStudents[sidx].Grades.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <tr>
+                                                <td>@(idx + 1)</td>
+                                                <td><input class="form-control form-control-sm" value="@gradeStudents[sidx].Grades[idx].Subject" @oninput="(e => gradeStudents[sidx].Grades[idx].Subject = e.Value?.ToString() ?? string.Empty)" /></td>
+                                                <td><input type="number" class="form-control form-control-sm" @bind-Value="gradeStudents[sidx].Grades[idx].Mark" @bind-Value:event="oninput" /></td>
+                                                <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveGradeRow(sidx, idx))">حذف</button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="(() => AddGradeRow(sidx))">+ إضافة مادة</button>
+                        </div>
+                    }
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddStudent">+ إضافة دارس</button>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 7)
+        {
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">كشف متابعة الغياب</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveAbsence">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="LoadAbsence">استرجاع</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintAbsence">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">اليوم</label>
+                            <InputText class="form-control" @bind-Value="absenceDay" placeholder="مثال: الاثنين" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">التاريخ</label>
+                            <InputDate class="form-control" @bind-Value="absenceDate" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">الصف</label>
+                            <InputText class="form-control" @bind-Value="absenceClass" placeholder="مثال: ثامن 1" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">المادة</label>
+                            <InputText class="form-control" @bind-Value="absenceSubject" placeholder="مثال: الرياضيات" />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">إجمالي عدد الطلبة في الصف</label>
+                            <InputNumber class="form-control" @bind-Value="totalStudents" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">الغياب</label>
+                            <InputNumber class="form-control" @bind-Value="absentStudents" />
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:70px;">م</th>
+                                    <th>اسم الطالب</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < absenceStudents.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@absenceStudents[idx]" @oninput="(e => absenceStudents[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveAbsenceStudent(idx))">حذف</button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary mb-3" @onclick="AddAbsenceStudent">+ إضافة طالب</button>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">التوقيع</label>
+                            <InputText class="form-control" @bind-Value="absenceSignature" placeholder="توقيع المعلم" disabled />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private const string ValueTypeRegular = "نظامي";
+    private const string ValueTypeDaris = "دارس";
+    private const string ValuePapersComplete = "مكتملة";
+    private const string ValuePapersIncomplete = "غير مكتملة";
+    private const string ValuePrintingClear = "واضحة";
+    private const string ValuePrintingNotClear = "غير واضحة";
+    private bool isLoading = true;
+    private bool hasLoadedDailyOnce = false;
+    private bool isAuthenticated = false;
+    private int activeSlide = 0; // 0 = اختيار الفصل، 1 = القائمة الرئيسية
+
+    private string academicYear = string.Empty;
+    private string semester = "الأول";
+    private string principalName = "حمد بن هلال الغافري";
+
+    private class CommitteeMember
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Role { get; set; } = "عضو";
+    }
+
+    private List<CommitteeMember> committeeMembers = new() {
+        new CommitteeMember { Role = "رئيس اللجنة" },
+        new CommitteeMember { Role = "نائب الرئيس" },
+        new CommitteeMember { Role = "عضو" }
+    };
+
+    private List<string> portalSubcommittee = new() { string.Empty, string.Empty };
+    private List<string> busesSubcommittee = new() { string.Empty, string.Empty };
+    private List<string> regularitySubcommittee = new() { string.Empty, string.Empty };
+    private List<string> hearingStudents = new() { string.Empty, string.Empty };
+
+    // Open Envelopes state
+    private class EnvelopeRow { public string Grade { get; set; } = "الثامن"; public string Subject { get; set; } = string.Empty; public string Duration { get; set; } = string.Empty; }
+    private List<EnvelopeRow> envelopeRows = new() { new EnvelopeRow() };
+    private List<string> envelopeAttendees = new() { string.Empty, string.Empty, string.Empty };
+    private string envelopesAcademicYear = string.Empty;
+    private string envelopesSemester = "الأول";
+    private string envelopesRound = string.Empty;
+    private string envelopesDay = string.Empty;
+    private DateTime envelopesDate = DateTime.Today;
+    private string envelopesTime = string.Empty;
+    private string envelopesLocation = string.Empty;
+
+    // Daily report state
+    private string dailyAcademicYear = string.Empty;
+    private string dailySemester = "الأول";
+    private string dailyRound = string.Empty;
+    private string dailyDay = string.Empty;
+    private DateTime dailyDate = DateTime.Today;
+
+    // Daily counts variables
+    private string totalApplicantsG8 = string.Empty;
+    private string totalApplicantsG9 = string.Empty;
+    private string totalApplicantsG10 = string.Empty;
+    private string regularApplicantsG8 = string.Empty;
+    private string regularApplicantsG9 = string.Empty;
+    private string regularApplicantsG10 = string.Empty;
+    private string darisApplicantsG8 = string.Empty;
+    private string darisApplicantsG9 = string.Empty;
+    private string darisApplicantsG10 = string.Empty;
+    private string totalAbsentG8 = string.Empty;
+    private string totalAbsentG9 = string.Empty;
+    private string totalAbsentG10 = string.Empty;
+    private string regularAbsentG8 = string.Empty;
+    private string regularAbsentG9 = string.Empty;
+    private string regularAbsentG10 = string.Empty;
+    private string darisAbsentG8 = string.Empty;
+    private string darisAbsentG9 = string.Empty;
+    private string darisAbsentG10 = string.Empty;
+    private string blendedApplicantsG6 = string.Empty;
+    private string blendedApplicantsG8 = string.Empty;
+    private string blendedApplicantsG11 = string.Empty;
+    private string blendedAbsentG6 = string.Empty;
+    private string blendedAbsentG8 = string.Empty;
+    private string blendedAbsentG11 = string.Empty;
+    private List<DailyCountRow> dailyCountsRows = new() {
+        new DailyCountRow { Title = "إجمالي المتقدمين" },
+        new DailyCountRow { Title = "الناجحين" },
+        new DailyCountRow { Title = "التعليم المدمج - إجمالي المتقدمين" },
+        new DailyCountRow { Title = "التعليم المدمج - الناجحين" },
+    };
+    private List<DailyAbsent> dailyAbsent = new() { new DailyAbsent() };
+    private DailyNotes dailyNotes = new();
+    private List<DailyVisitor> dailyVisitors = new() { new DailyVisitor(), new DailyVisitor() };
+
+    private class DailyCountRow { public string Title { get; set; } = string.Empty; public string G8 { get; set; } = string.Empty; public string G9 { get; set; } = string.Empty; public string G10 { get; set; } = string.Empty; public string Total { get; set; } = string.Empty; }
+    private class DailyAbsent { public string Name { get; set; } = string.Empty; public string Class { get; set; } = string.Empty; public string Subject { get; set; } = string.Empty; public string Type { get; set; } = string.Empty; }
+    private class DailyVisitor { public string Name { get; set; } = string.Empty; public string JobTitle { get; set; } = string.Empty; public string Notes { get; set; } = string.Empty; }
+    private class DailyNotes { public string Papers { get; set; } = string.Empty; public string Printing { get; set; } = string.Empty; public string Questions { get; set; } = string.Empty; public string VisitorNotes { get; set; } = string.Empty; public string Other { get; set; } = string.Empty; }
+
+    // Receive Answers state (Slide 5)
+    private string receiveAcademicYear = string.Empty;
+    private string receiveSemester = "الأول";
+    private string receiveRound = string.Empty;
+    private string receiveDay = string.Empty;
+    private DateTime receiveDate = DateTime.Today;
+    private string receiveNote = string.Empty;
+    private class ReceiveRow
+    {
+        public string Grade { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public string ExamineesRegular { get; set; } = "0";
+        public string ExamineesDaris { get; set; } = "0";
+        public string AbsentsRegular { get; set; } = "0";
+        public string AbsentsDaris { get; set; } = "0";
+        public string TeacherName { get; set; } = string.Empty;
+    }
+    private List<ReceiveRow> receiveRows = new() { new ReceiveRow { Grade = "8/1" } };
+
+    // Grades state (Slide 6)
+    private class GradeRow { public string Subject { get; set; } = string.Empty; public string Mark { get; set; } = "0"; }
+    private class GradeStudent { public string Name { get; set; } = string.Empty; public string Class { get; set; } = string.Empty; public List<GradeRow> Grades { get; set; } = new(); }
+    private List<GradeStudent> gradeStudents = new() { new GradeStudent { Grades = new List<GradeRow> { new GradeRow() } } };
+
+    // Absence state (Slide 7)
+    private string absenceDay = string.Empty;
+    private DateTime? absenceDate;
+    private string absenceClass = string.Empty;
+    private string absenceSubject = string.Empty;
+    private string absenceSemester = "الأول";
+    private int totalStudents = 0;
+    private int absentStudents = 0;
+    private List<string> absenceStudents = new();
+    private string absenceSignature = string.Empty;
+
+    // Grades state variables
+    private string gradesSemester = "الأول";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking authentication: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async void OpenSlide(int slide) 
+    {
+        // التأكد من اختيار الفصل قبل فتح أي نموذج
+        if (slide > 1 && string.IsNullOrEmpty(selectedSemester))
+        {
+            activeSlide = 0;
+            return;
+        }
+        
+        activeSlide = slide;
+        
+        // Auto-load data only for grades slide (slide 6)
+        if (slide == 6)
+        {
+            await LoadGrades();
+        }
+        else if (slide == 4)
+        {
+            if (!hasLoadedDailyOnce)
+            {
+                await LoadDaily();
+                hasLoadedDailyOnce = true;
+            }
+        }
+    }
+
+    private void AddMember()
+    {
+        committeeMembers.Add(new CommitteeMember());
+    }
+
+    private void RemoveMember(int index)
+    {
+        if (index >= 0 && index < committeeMembers.Count)
+        {
+            committeeMembers.RemoveAt(index);
+        }
+    }
+
+    private void RemoveFromList(List<string> list, int index)
+    {
+        if (index >= 0 && index < list.Count)
+        {
+            list.RemoveAt(index);
+        }
+    }
+
+    private async Task PrintCommitteeDecision()
+    {
+        var html = CreateCommitteeDecisionHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "قرار تشكيل لجنة الامتحانات");
+    }
+
+    private void AddEnvelopeRow()
+    {
+        envelopeRows.Add(new EnvelopeRow());
+    }
+
+    private void RemoveEnvelopeRow(int index)
+    {
+        if (index >= 0 && index < envelopeRows.Count)
+        {
+            envelopeRows.RemoveAt(index);
+        }
+    }
+
+    private async Task SaveForm()
+    {
+        var payload = new
+        {
+            academicYear,
+            semester,
+            principalName,
+            committee = committeeMembers,
+            portal = portalSubcommittee,
+            buses = busesSubcommittee,
+            regularity = regularitySubcommittee,
+            hearing = hearingStudents
+        };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "finalExamsCommitteeForm", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadForm()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "finalExamsCommitteeForm");
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            academicYear = root.GetProperty("academicYear").GetString() ?? string.Empty;
+            semester = root.GetProperty("semester").GetString() ?? "الأول";
+            principalName = root.GetProperty("principalName").GetString() ?? principalName;
+
+            committeeMembers = new();
+            foreach (var el in root.GetProperty("committee").EnumerateArray())
+            {
+                committeeMembers.Add(new CommitteeMember
+                {
+                    Name = el.GetProperty("Name").GetString() ?? string.Empty,
+                    Role = el.GetProperty("Role").GetString() ?? "عضو"
+                });
+            }
+
+            portalSubcommittee = root.GetProperty("portal").EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList();
+            busesSubcommittee = root.GetProperty("buses").EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList();
+            regularitySubcommittee = root.GetProperty("regularity").EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList();
+            hearingStudents = root.GetProperty("hearing").EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList();
+        }
+        catch { }
+    }
+
+    private string CreateCommitteeDecisionHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        // Header with logo and titles
+        sb.Append("<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;'>");
+        sb.Append("<div style='line-height:1.4'>");
+        sb.Append("<div style='font-weight:bold'>سلطنة عمان</div>");
+        sb.Append("<div>وزارة التربية والتعليم</div>");
+        sb.Append("<div>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div>");
+        sb.Append("</div>");
+        sb.Append("<img src='/images/logo.png' style='height:150px' onerror=\"this.style.display='none'\"/>");
+        sb.Append("</div>");
+
+        sb.Append("<h3 style='text-align:center;margin:10px 0 18px 0;'>قرار تشكيل لجنة إدارة الامتحانات</h3>");
+        // Intro paragraphs with a little extra spacing
+        sb.Append($"<div style='margin:0 0 6px 0;line-height:1.9;'>بداية يطيب لنا تهنئتكم قرب نهاية الفصل الدراسي <span style='font-weight:bold'>{System.Net.WebUtility.HtmlEncode(semester)}</span> للعام الدراسي <span style='font-weight:bold'>{System.Net.WebUtility.HtmlEncode(academicYear)}</span> ، متمنين للجميع دوام التوفيق والنجاح.</div>");
+        sb.Append($"<div style='margin:0 0 10px 0;line-height:1.9;'>ونوجه عنايتكم بأنه تقرر تشكيل لجنة إدارة امتحانات للفصل الدراسي الأول للدور الأول للعام الدراسي 2025، برئاسة الفاضل/<span style='font-weight:bold'>حمد بن هلال الغافري \"مدير المدرسة\"</span> وعضوية كل من</div>");
+
+        // Committee table (group by role and merge role cell)
+        sb.Append("<table style='width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:40px;'>م</th><th style='border:1px solid #000;padding:6px;'>الاسم</th><th style='border:1px solid #000;padding:6px;width:160px;'>الصفة</th><th style='border:1px solid #000;padding:6px;width:120px;'>التوقيع</th></tr></thead><tbody>");
+
+        // Group by role across the whole list (not just consecutive) preserving first-occurrence order
+        int rowNumber = 1;
+        var roleToMembers = new Dictionary<string, List<CommitteeMember>>();
+        var roleOrder = new List<string>();
+        foreach (var member in committeeMembers)
+        {
+            var role = member.Role ?? string.Empty;
+            if (!roleToMembers.TryGetValue(role, out var list))
+            {
+                list = new List<CommitteeMember>();
+                roleToMembers[role] = list;
+                roleOrder.Add(role);
+            }
+            list.Add(member);
+        }
+
+        foreach (var role in roleOrder)
+        {
+            var list = roleToMembers[role];
+            int groupCount = list.Count;
+            // First row with role cell
+            sb.Append("<tr>");
+            sb.Append($"<td style='border:1px solid #000;padding:6px;text-align:center'>{rowNumber}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(list[0].Name)}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:6px;text-align:center' rowspan='{groupCount}'>");
+            sb.Append(System.Net.WebUtility.HtmlEncode(role));
+            sb.Append("</td>");
+            sb.Append("<td style='border:1px solid #000;padding:6px'></td>");
+            sb.Append("</tr>");
+            rowNumber++;
+
+            for (int k = 1; k < groupCount; k++)
+            {
+                var m = list[k];
+                sb.Append("<tr>");
+                sb.Append($"<td style='border:1px solid #000;padding:6px;text-align:center'>{rowNumber}</td>");
+                sb.Append($"<td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(m.Name)}</td>");
+                sb.Append("<td style='border:1px solid #000;padding:6px'></td>");
+                sb.Append("</tr>");
+                rowNumber++;
+            }
+        }
+        sb.Append("</tbody></table>");
+
+        // Responsibilities (placed immediately under the main table)
+        sb.Append("<div style='margin-top:12px;margin-bottom:6px;font-weight:bold;font-size:14px;'>وتختص اللجنة بالآتي:</div>");
+        sb.Append("<div style='font-size:13px;line-height:1.9'>");
+        sb.Append("<div>1- متابعة حضور وانصراف المراقبين للقاعات.</div>");
+        sb.Append("<div>2- متابعة حضور وغياب الطلاب يوميا.</div>");
+        sb.Append("<div>3- متابعة النظام داخل المدرسة أثناء تأدية الاختبارات.</div>");
+        sb.Append("<div>4- مراجعة أوراق الإجابة بعد تسلمها من معلمي المواد من حيث التصحيح وجمع الدرجات وإدخال الدرجات في البوابة.</div>");
+        sb.Append("<div>5- متابعة إدخال المعلمين لدرجات التقويم المستمر ودرجات الاختبار في البوابة التعليمية.</div>");
+        sb.Append("<div>6- اعتماد النتائج النهائية وإصدارها.</div>");
+        sb.Append("<div>7- ما يستجد من أعمال.</div>");
+        sb.Append("</div>");
+
+        // Subcommittees
+        sb.Append("<div style='margin-top:16px;margin-bottom:6px;font-weight:bold'>لجان فرعية:</div>");
+        string RenderSimpleTable(string title, List<string> names)
+        {
+            var t = new System.Text.StringBuilder();
+            t.Append($"<div style='margin-top:18px;'><div style='font-weight:bold;margin-bottom:6px'># {System.Net.WebUtility.HtmlEncode(title)}:</div>");
+            t.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;'><thead><tr><th style='border:1px solid #000;padding:6px;width:40px;'>م</th><th style='border:1px solid #000;padding:6px;'>الاسم</th><th style='border:1px solid #000;padding:6px;width:120px;'>التوقيع</th></tr></thead><tbody>");
+            for (int i = 0; i < names.Count; i++)
+            {
+                var name = names[i];
+                t.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{i + 1}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(name)}</td><td style='border:1px solid #000;padding:6px'></td></tr>");
+            }
+            t.Append("</tbody></table></div>");
+            return t.ToString();
+        }
+
+        sb.Append(RenderSimpleTable("متابعة البوابة التعليمية", portalSubcommittee));
+        sb.Append(RenderSimpleTable("متابعة حافلات الطلبة", busesSubcommittee));
+        sb.Append(RenderSimpleTable("متابعة انتظام الطلبة", regularitySubcommittee));
+
+        // Hearing impaired students table
+        sb.Append("<div style='margin-top:18px;'>");
+        sb.Append("<div style='font-weight:bold;margin-bottom:6px'>طلبة الدمج السمعي:</div>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:40px;'>م</th><th style='border:1px solid #000;padding:6px;'>الاسم</th></tr></thead><tbody>");
+        for (int i = 0; i < hearingStudents.Count; i++)
+        {
+            var s = hearingStudents[i];
+            sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{i + 1}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(s)}</td></tr>");
+        }
+        sb.Append("</tbody></table></div>");
+
+        sb.Append("<div style='text-align:center;margin-top:36px;'>");
+        sb.Append("<div style='font-weight:bold;font-size:14px;'>حمد بن هلال الغافري</div>");
+        sb.Append("<div style='font-size:13px;'>مدير المدرسة</div>");
+        sb.Append("</div>");
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    private async Task PrintOpenEnvelopes()
+    {
+        var html = CreateOpenEnvelopesHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "فتح مغلفات الامتحانات");
+    }
+
+    private async Task SaveEnvelopes()
+    {
+        var payload = new
+        {
+            envelopesAcademicYear,
+            envelopesSemester,
+            envelopesRound,
+            envelopesDay,
+            envelopesDate,
+            envelopesTime,
+            envelopesLocation,
+            envelopeRows,
+            envelopeAttendees
+        };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "finalExamsOpenEnvelopesForm", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadEnvelopes()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "finalExamsOpenEnvelopesForm");
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var model = System.Text.Json.JsonSerializer.Deserialize<OpenEnvelopesStorage>(json, opts);
+            if (model is null) return;
+            envelopesAcademicYear = model.envelopesAcademicYear ?? string.Empty;
+            envelopesSemester = model.envelopesSemester ?? "الأول";
+            envelopesRound = model.envelopesRound ?? string.Empty;
+            envelopesDay = model.envelopesDay ?? string.Empty;
+            envelopesDate = model.envelopesDate == default ? DateTime.Today : model.envelopesDate;
+            envelopesTime = model.envelopesTime ?? string.Empty;
+            envelopesLocation = model.envelopesLocation ?? string.Empty;
+            envelopeRows = model.envelopeRows ?? new List<EnvelopeRow> { new EnvelopeRow() };
+            envelopeAttendees = model.envelopeAttendees ?? new List<string>();
+        }
+        catch { }
+    }
+
+    // ملاحظة: التحميل التلقائي يُدار في دالة OnAfterRenderAsync بالأسفل
+
+    private class OpenEnvelopesStorage
+    {
+        public string? envelopesAcademicYear { get; set; }
+        public string? envelopesSemester { get; set; }
+        public string? envelopesRound { get; set; }
+        public string? envelopesDay { get; set; }
+        public DateTime envelopesDate { get; set; }
+        public string? envelopesTime { get; set; }
+        public string? envelopesLocation { get; set; }
+        public List<EnvelopeRow>? envelopeRows { get; set; }
+        public List<string>? envelopeAttendees { get; set; }
+    }
+
+    private string CreateOpenEnvelopesHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;'>");
+        sb.Append("<div style='text-align:center;line-height:1.5'>");
+        sb.Append("<div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div>");
+        sb.Append("</div>");
+        sb.Append("<img src='/images/logo.png' style='height:140px' onerror=\"this.style.display='none'\"/>");
+        sb.Append("</div>");
+
+        var sem = System.Net.WebUtility.HtmlEncode(envelopesSemester);
+        var acy = System.Net.WebUtility.HtmlEncode(envelopesAcademicYear);
+        var rnd = System.Net.WebUtility.HtmlEncode(envelopesRound);
+        sb.Append($"<h3 style='text-align:center;margin:10px 0 14px 0;'>فتح مغلفات امتحانات نهاية الفصل الدراسي {sem} - العام الدراسي {acy} - الدور {rnd}</h3>");
+        sb.Append($"<div style='margin-bottom:6px;'>إنه في يوم: <span style='min-width:120px;display:inline-block'>{System.Net.WebUtility.HtmlEncode(envelopesDay)}</span> الموافق: <span style='min-width:140px;display:inline-block'>{envelopesDate:yyyy/MM/dd}</span> الساعة: <span style='min-width:100px;display:inline-block'>{System.Net.WebUtility.HtmlEncode(envelopesTime)}</span> &nbsp; الموقع: <span style='min-width:160px;display:inline-block'>{System.Net.WebUtility.HtmlEncode(envelopesLocation)}</span></div>");
+
+        // Table subjects
+        sb.Append("<div class='table-wrap'>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin:8px 0'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:120px'>الصف</th><th style='border:1px solid #000;padding:6px'>المادة</th><th style='border:1px solid #000;padding:6px;width:160px'>زمن الامتحان</th></tr></thead><tbody>");
+        foreach (var r in envelopeRows)
+        {
+            sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(r.Grade)}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(r.Subject)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(r.Duration)}</td></tr>");
+        }
+        sb.Append("</tbody></table></div>");
+
+        sb.Append("<div style='margin:10px 0'>وذلك بعد التأكد من سلامة الأختام والأكياس الخارجية، وأن المادة خاصة بورقة الامتحانات حسب جدول الامتحانات المعتمد وحضور الأعضاء التالية أسماؤهم:</div>");
+        // attendees table
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin:8px 0'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:50px'>م</th><th style='border:1px solid #000;padding:6px'>الاسم</th><th style='border:1px solid #000;padding:6px;width:140px'>التوقيع</th></tr></thead><tbody>");
+        for (int i = 0; i < envelopeAttendees.Count; i++)
+        {
+            sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{i + 1}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(envelopeAttendees[i])}</td><td style='border:1px solid #000;padding:6px'></td></tr>");
+        }
+        sb.Append("</tbody></table>");
+
+        sb.Append("<div style='margin-top:24px;font-weight:bold'>يعتمد،</div>");
+        sb.Append("<div style='text-align:center;margin-top:36px;'>");
+        sb.Append("<div style='font-weight:bold;font-size:14px;'>رئيس لجنة إدارة الامتحانات</div>");
+        sb.Append("<div style='font-size:13px;'>بالمدرسة</div>");
+        sb.Append("</div>");
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    // Daily report save/load/print
+    private async Task SaveDaily()
+    {
+        var payload = new { dailyAcademicYear, dailySemester, dailyRound, dailyDay, dailyDate, dailyCountsRows, dailyAbsent, dailyNotes, dailyVisitors, blendedEntries };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "finalExamsDailyReportForm", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadDaily()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "finalExamsDailyReportForm");
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            dailyAcademicYear = root.GetProperty("dailyAcademicYear").GetString() ?? string.Empty;
+            dailySemester = root.GetProperty("dailySemester").GetString() ?? "الأول";
+            dailyRound = root.GetProperty("dailyRound").GetString() ?? string.Empty;
+            dailyDay = root.GetProperty("dailyDay").GetString() ?? string.Empty;
+            dailyDate = root.GetProperty("dailyDate").GetDateTime();
+            dailyCountsRows = System.Text.Json.JsonSerializer.Deserialize<List<DailyCountRow>>(root.GetProperty("dailyCountsRows").GetRawText()) ?? new();
+            dailyAbsent = System.Text.Json.JsonSerializer.Deserialize<List<DailyAbsent>>(root.GetProperty("dailyAbsent").GetRawText()) ?? new();
+            dailyNotes = System.Text.Json.JsonSerializer.Deserialize<DailyNotes>(root.GetProperty("dailyNotes").GetRawText()) ?? new();
+            dailyVisitors = System.Text.Json.JsonSerializer.Deserialize<List<DailyVisitor>>(root.GetProperty("dailyVisitors").GetRawText()) ?? new();
+            blendedEntries = root.TryGetProperty("blendedEntries", out var be)
+                ? System.Text.Json.JsonSerializer.Deserialize<List<BlendedEntry>>(be.GetRawText()) ?? new()
+                : new();
+        }
+        catch { }
+    }
+
+    private async Task PrintDaily()
+    {
+        var html = CreateDailyHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "التقرير اليومي");
+    }
+
+    private void OnCountsChanged(int index, string field, string newValue)
+    {
+        if (index < 0 || index >= dailyCountsRows.Count) return;
+        var row = dailyCountsRows[index];
+        switch (field)
+        {
+            case nameof(DailyCountRow.G8): row.G8 = newValue; break;
+            case nameof(DailyCountRow.G9): row.G9 = newValue; break;
+            case nameof(DailyCountRow.G10): row.G10 = newValue; break;
+        }
+        // keep stored Total in sync for saving, though UI uses computed
+        row.Total = ComputeRowTotalString(row);
+        StateHasChanged();
+    }
+
+    private static int ToInt(string? s)
+    {
+        return int.TryParse(s, out var v) ? v : 0;
+    }
+
+    private static string ComputeRowTotalString(DailyCountRow r)
+    {
+        var sum = ToInt(r.G8) + ToInt(r.G9) + ToInt(r.G10);
+        return sum.ToString();
+    }
+
+    // New calculation methods for the updated tables
+    private void OnTotalChanged(string fieldName, string value)
+    {
+        switch (fieldName)
+        {
+            case "TotalApplicantsG8": totalApplicantsG8 = value; break;
+            case "TotalApplicantsG9": totalApplicantsG9 = value; break;
+            case "TotalApplicantsG10": totalApplicantsG10 = value; break;
+            case "RegularApplicantsG8": regularApplicantsG8 = value; break;
+            case "RegularApplicantsG9": regularApplicantsG9 = value; break;
+            case "RegularApplicantsG10": regularApplicantsG10 = value; break;
+            case "DarisApplicantsG8": darisApplicantsG8 = value; break;
+            case "DarisApplicantsG9": darisApplicantsG9 = value; break;
+            case "DarisApplicantsG10": darisApplicantsG10 = value; break;
+            case "TotalAbsentG8": totalAbsentG8 = value; break;
+            case "TotalAbsentG9": totalAbsentG9 = value; break;
+            case "TotalAbsentG10": totalAbsentG10 = value; break;
+            case "RegularAbsentG8": regularAbsentG8 = value; break;
+            case "RegularAbsentG9": regularAbsentG9 = value; break;
+            case "RegularAbsentG10": regularAbsentG10 = value; break;
+            case "DarisAbsentG8": darisAbsentG8 = value; break;
+            case "DarisAbsentG9": darisAbsentG9 = value; break;
+            case "DarisAbsentG10": darisAbsentG10 = value; break;
+            case "BlendedApplicantsG6": blendedApplicantsG6 = value; break;
+            case "BlendedApplicantsG8": blendedApplicantsG8 = value; break;
+            case "BlendedApplicantsG11": blendedApplicantsG11 = value; break;
+            case "BlendedAbsentG6": blendedAbsentG6 = value; break;
+            case "BlendedAbsentG8": blendedAbsentG8 = value; break;
+            case "BlendedAbsentG11": blendedAbsentG11 = value; break;
+        }
+        StateHasChanged();
+    }
+
+    private string ComputeTotalApplicants()
+    {
+        return (ToInt(totalApplicantsG8) + ToInt(totalApplicantsG9) + ToInt(totalApplicantsG10)).ToString();
+    }
+
+    private string ComputeApplicantsTotalG8()
+    {
+        return (ToInt(regularApplicantsG8) + ToInt(darisApplicantsG8)).ToString();
+    }
+
+    private string ComputeApplicantsTotalG9()
+    {
+        return (ToInt(regularApplicantsG9) + ToInt(darisApplicantsG9)).ToString();
+    }
+
+    private string ComputeApplicantsTotalG10()
+    {
+        return (ToInt(regularApplicantsG10) + ToInt(darisApplicantsG10)).ToString();
+    }
+
+    private string ComputeRegularApplicants()
+    {
+        return (ToInt(regularApplicantsG8) + ToInt(regularApplicantsG9) + ToInt(regularApplicantsG10)).ToString();
+    }
+
+    private string ComputeDarisApplicants()
+    {
+        return (ToInt(darisApplicantsG8) + ToInt(darisApplicantsG9) + ToInt(darisApplicantsG10)).ToString();
+    }
+
+    private string ComputeTotalAbsent()
+    {
+        return (ToInt(totalAbsentG8) + ToInt(totalAbsentG9) + ToInt(totalAbsentG10)).ToString();
+    }
+
+    private string ComputeRegularAbsent()
+    {
+        return (ToInt(regularAbsentG8) + ToInt(regularAbsentG9) + ToInt(regularAbsentG10)).ToString();
+    }
+
+    private string ComputeDarisAbsent()
+    {
+        return (ToInt(darisAbsentG8) + ToInt(darisAbsentG9) + ToInt(darisAbsentG10)).ToString();
+    }
+
+    private string ComputeAbsentTotalG8()
+    {
+        return (ToInt(regularAbsentG8) + ToInt(darisAbsentG8)).ToString();
+    }
+
+    private string ComputeAbsentTotalG9()
+    {
+        return (ToInt(regularAbsentG9) + ToInt(darisAbsentG9)).ToString();
+    }
+
+    private string ComputeAbsentTotalG10()
+    {
+        return (ToInt(regularAbsentG10) + ToInt(darisAbsentG10)).ToString();
+    }
+
+    private string ComputeAbsentGrandTotal()
+    {
+        return (ToInt(ComputeAbsentTotalG8()) + ToInt(ComputeAbsentTotalG9()) + ToInt(ComputeAbsentTotalG10())).ToString();
+    }
+
+    private string ComputeBlendedApplicants()
+    {
+        return blendedEntries.Sum(e => ToInt(e.Applicants)).ToString();
+    }
+
+    private string ComputeBlendedAbsentG6()
+    {
+        // For blended education, absentees are calculated from the main absentees list
+        var g6Absent = dailyAbsent.Count(a => a.Class == "السادس");
+        return g6Absent.ToString();
+    }
+
+    private string ComputeBlendedAbsentG8()
+    {
+        var g8Absent = dailyAbsent.Count(a => a.Class == "الثامن");
+        return g8Absent.ToString();
+    }
+
+    private string ComputeBlendedAbsentG11()
+    {
+        var g11Absent = dailyAbsent.Count(a => a.Class == "الحادي عشر");
+        return g11Absent.ToString();
+    }
+
+    private string ComputeBlendedAbsentTotal() => blendedEntries.Sum(e => ToInt(e.Absent)).ToString();
+
+    private void AddBlendedEntry() => blendedEntries.Add(new BlendedEntry());
+    private void RemoveBlendedEntry(int index)
+    {
+        if (index >= 0 && index < blendedEntries.Count) blendedEntries.RemoveAt(index);
+    }
+
+    private async Task SaveDailyForm()
+    {
+        var payload = new
+        {
+            dailyAcademicYear,
+            dailySemester,
+            dailyRound,
+            dailyDay,
+            dailyDate,
+            regularApplicantsG8,
+            regularApplicantsG9,
+            regularApplicantsG10,
+            darisApplicantsG8,
+            darisApplicantsG9,
+            darisApplicantsG10,
+            regularAbsentG8,
+            regularAbsentG9,
+            regularAbsentG10,
+            darisAbsentG8,
+            darisAbsentG9,
+            darisAbsentG10,
+            blendedEntries,
+            dailyAbsent,
+            dailyVisitors,
+            dailyNotes
+        };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "finalExamsDailyForm", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadDailyForm()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "finalExamsDailyForm");
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            dailyAcademicYear = root.GetProperty("dailyAcademicYear").GetString() ?? string.Empty;
+            dailySemester = root.GetProperty("dailySemester").GetString() ?? "الأول";
+            dailyRound = root.GetProperty("dailyRound").GetString() ?? string.Empty;
+            dailyDay = root.GetProperty("dailyDay").GetString() ?? string.Empty;
+            if (root.TryGetProperty("dailyDate", out var dateEl) && DateTime.TryParse(dateEl.GetString(), out var date))
+                dailyDate = date;
+
+            regularApplicantsG8 = root.GetProperty("regularApplicantsG8").GetString() ?? "0";
+            regularApplicantsG9 = root.GetProperty("regularApplicantsG9").GetString() ?? "0";
+            regularApplicantsG10 = root.GetProperty("regularApplicantsG10").GetString() ?? "0";
+            darisApplicantsG8 = root.GetProperty("darisApplicantsG8").GetString() ?? "0";
+            darisApplicantsG9 = root.GetProperty("darisApplicantsG9").GetString() ?? "0";
+            darisApplicantsG10 = root.GetProperty("darisApplicantsG10").GetString() ?? "0";
+            regularAbsentG8 = root.GetProperty("regularAbsentG8").GetString() ?? "0";
+            regularAbsentG9 = root.GetProperty("regularAbsentG9").GetString() ?? "0";
+            regularAbsentG10 = root.GetProperty("regularAbsentG10").GetString() ?? "0";
+            darisAbsentG8 = root.GetProperty("darisAbsentG8").GetString() ?? "0";
+            darisAbsentG9 = root.GetProperty("darisAbsentG9").GetString() ?? "0";
+            darisAbsentG10 = root.GetProperty("darisAbsentG10").GetString() ?? "0";
+            blendedEntries = new();
+            if (root.TryGetProperty("blendedEntries", out var blendEl))
+            {
+                foreach (var el in blendEl.EnumerateArray())
+                {
+                    blendedEntries.Add(new BlendedEntry
+                    {
+                        Grade = el.GetProperty("Grade").GetString() ?? string.Empty,
+                        Applicants = el.GetProperty("Applicants").GetString() ?? "0",
+                        Absent = el.GetProperty("Absent").GetString() ?? "0"
+                    });
+                }
+            }
+
+            dailyAbsent = new();
+            foreach (var el in root.GetProperty("dailyAbsent").EnumerateArray())
+            {
+                dailyAbsent.Add(new DailyAbsent
+                {
+                    Name = el.GetProperty("Name").GetString() ?? string.Empty,
+                    Class = el.GetProperty("Class").GetString() ?? string.Empty,
+                    Subject = el.GetProperty("Subject").GetString() ?? string.Empty,
+                    Type = el.GetProperty("Type").GetString() ?? string.Empty
+                });
+            }
+
+            dailyVisitors = new();
+            foreach (var el in root.GetProperty("dailyVisitors").EnumerateArray())
+            {
+                dailyVisitors.Add(new DailyVisitor
+                {
+                    Name = el.GetProperty("Name").GetString() ?? string.Empty,
+                    JobTitle = el.GetProperty("JobTitle").GetString() ?? string.Empty,
+                    Notes = el.GetProperty("Notes").GetString() ?? string.Empty
+                });
+            }
+
+            var notesEl = root.GetProperty("dailyNotes");
+            dailyNotes = new DailyNotes
+            {
+                Papers = notesEl.GetProperty("Papers").GetString() ?? string.Empty,
+                Printing = notesEl.GetProperty("Printing").GetString() ?? string.Empty,
+                Questions = notesEl.GetProperty("Questions").GetString() ?? string.Empty,
+                VisitorNotes = notesEl.GetProperty("VisitorNotes").GetString() ?? string.Empty,
+                Other = notesEl.GetProperty("Other").GetString() ?? string.Empty
+            };
+            StateHasChanged();
+        }
+        catch { }
+    }
+
+    private async Task PrintDailyReport()
+    {
+        var html = CreateDailyHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "التقرير اليومي");
+    }
+
+    // Dynamic blended education rows
+    private class BlendedEntry
+    {
+        public string Grade { get; set; } = string.Empty;
+        public string Applicants { get; set; } = "0";
+        public string Absent { get; set; } = "0";
+    }
+
+    // Receive Answers: actions
+    private void AddReceiveRow() => receiveRows.Add(new ReceiveRow());
+    private void RemoveReceiveRow(int index) { if (index >= 0 && index < receiveRows.Count) receiveRows.RemoveAt(index); }
+
+    private async Task SaveReceive()
+    {
+        var payload = new
+        {
+            receiveAcademicYear,
+            receiveSemester,
+            receiveRound,
+            receiveDay,
+            receiveDate,
+            receiveNote,
+            receiveRows
+        };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "finalExamsReceiveAnswersForm", json);
+        StateHasChanged();
+    }
+
+    private class ReceiveStorage
+    {
+        public string? receiveAcademicYear { get; set; }
+        public string? receiveSemester { get; set; }
+        public string? receiveRound { get; set; }
+        public string? receiveDay { get; set; }
+        public DateTime receiveDate { get; set; }
+        public string? receiveNote { get; set; }
+        public List<ReceiveRow>? receiveRows { get; set; }
+    }
+
+    private async Task LoadReceive()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "finalExamsReceiveAnswersForm");
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            var model = System.Text.Json.JsonSerializer.Deserialize<ReceiveStorage>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (model is null) return;
+            receiveAcademicYear = model.receiveAcademicYear ?? string.Empty;
+            receiveSemester = model.receiveSemester ?? "الأول";
+            receiveRound = model.receiveRound ?? string.Empty;
+            receiveDay = model.receiveDay ?? string.Empty;
+            receiveDate = model.receiveDate == default ? DateTime.Today : model.receiveDate;
+            receiveNote = model.receiveNote ?? string.Empty;
+            receiveRows = model.receiveRows ?? new List<ReceiveRow> { new ReceiveRow() };
+            StateHasChanged();
+        }
+        catch { }
+    }
+
+    private async Task PrintReceive()
+    {
+        var html = CreateReceiveHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "كشف استلام أوراق الإجابات");
+    }
+
+    // Grades actions
+    private void AddStudent() => gradeStudents.Add(new GradeStudent { Grades = new List<GradeRow> { new GradeRow() } });
+    private void RemoveStudent(int index) { if (index >= 0 && index < gradeStudents.Count) gradeStudents.RemoveAt(index); }
+    private void AddGradeRow(int studentIndex)
+    {
+        if (studentIndex >= 0 && studentIndex < gradeStudents.Count)
+        {
+            gradeStudents[studentIndex].Grades.Add(new GradeRow());
+        }
+    }
+    private void RemoveGradeRow(int studentIndex, int index)
+    {
+        if (studentIndex >= 0 && studentIndex < gradeStudents.Count)
+        {
+            var rows = gradeStudents[studentIndex].Grades;
+            if (index >= 0 && index < rows.Count) rows.RemoveAt(index);
+        }
+    }
+
+    // Absence actions
+    private void AddAbsenceStudent() => absenceStudents.Add(string.Empty);
+    private void RemoveAbsenceStudent(int index) { if (index >= 0 && index < absenceStudents.Count) absenceStudents.RemoveAt(index); }
+
+    private async Task SaveAbsence()
+    {
+        var payload = new { absenceDay, absenceDate, absenceClass, absenceSubject, totalStudents, absentStudents, absenceStudents, absenceSignature };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "absenceData", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadAbsence()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "absenceData");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                absenceDay = root.GetProperty("absenceDay").GetString() ?? string.Empty;
+                if (root.TryGetProperty("absenceDate", out var dateElement) && dateElement.ValueKind != System.Text.Json.JsonValueKind.Null)
+                {
+                    absenceDate = dateElement.GetDateTime();
+                }
+                absenceClass = root.GetProperty("absenceClass").GetString() ?? string.Empty;
+                absenceSubject = root.GetProperty("absenceSubject").GetString() ?? string.Empty;
+                totalStudents = root.GetProperty("totalStudents").GetInt32();
+                absentStudents = root.GetProperty("absentStudents").GetInt32();
+                absenceStudents = System.Text.Json.JsonSerializer.Deserialize<List<string>>(root.GetProperty("absenceStudents").GetRawText()) ?? new();
+                absenceSignature = root.GetProperty("absenceSignature").GetString() ?? string.Empty;
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private async Task PrintAbsence()
+    {
+        var html = CreateAbsenceHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "كشف متابعة الغياب");
+    }
+
+    private async Task SaveGrades()
+    {
+        var payload = new { gradeStudents };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "finalExamsGrades", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadGrades()
+    {
+        var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "finalExamsGrades");
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            gradeStudents = System.Text.Json.JsonSerializer.Deserialize<List<GradeStudent>>(root.GetProperty("gradeStudents").GetRawText()) ?? new();
+            StateHasChanged();
+        }
+        catch { }
+    }
+
+    private async Task PrintGrades()
+    {
+        var html = CreateGradesHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "كشف درجات");
+    }
+
+    private async Task PrintSingleStudent(int studentIndex)
+    {
+        if (studentIndex >= 0 && studentIndex < gradeStudents.Count)
+        {
+            var html = CreateSingleStudentHTML(studentIndex);
+            await JSRuntime.InvokeVoidAsync("printHTML", html, $"كشف درجات - {gradeStudents[studentIndex].Name}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try { await LoadDailyForm(); } catch { }
+            try { await LoadForm(); } catch { }
+            try { await LoadEnvelopes(); } catch { }
+            try { await LoadReceive(); } catch { }
+            try { await LoadGrades(); } catch { }
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private string CreateDailyHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;'><div style='text-align:center;line-height:1.5'><div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div></div><img src='/images/logo.png' style='height:110px' onerror=\"this.style.display='none'\"/></div>");
+        sb.Append($"<h3 style='text-align:center;margin:10px 0;'>التقرير اليومي عن سير أعمال امتحانات نهاية الفصل الدراسي {System.Net.WebUtility.HtmlEncode(dailySemester)}</h3>");
+        sb.Append($"<div style='margin-bottom:6px;'>العام الدراسي: {System.Net.WebUtility.HtmlEncode(dailyAcademicYear)} &nbsp;&nbsp; الدور: {System.Net.WebUtility.HtmlEncode(dailyRound)} &nbsp;&nbsp; اليوم: {System.Net.WebUtility.HtmlEncode(dailyDay)} &nbsp;&nbsp; التاريخ: {dailyDate:yyyy/MM/dd}</div>");
+
+        // Part 1 - counts (reflect latest UI rows and calculations)
+        sb.Append("<h4 style='margin:10px 0 6px 0'>أولاً: إعداد المتقدمين والناجحين:</h4>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px'>الصفوف</th><th style='border:1px solid #000;padding:6px'>الثامن</th><th style='border:1px solid #000;padding:6px'>التاسع</th><th style='border:1px solid #000;padding:6px'>العاشر</th><th style='border:1px solid #000;padding:6px'>الإجمالي</th></tr></thead><tbody>");
+        // إجمالي المتقدمين (نظامي)
+        var regG8 = ToInt(regularApplicantsG8);
+        var regG9 = ToInt(regularApplicantsG9);
+        var regG10 = ToInt(regularApplicantsG10);
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px;font-weight:bold'>إجمالي المتقدمين (نظامي)</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regG8}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regG9}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regG10}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regG8 + regG9 + regG10}</td></tr>");
+        // إجمالي المتقدمين (دارس)
+        var darG8 = ToInt(darisApplicantsG8);
+        var darG9 = ToInt(darisApplicantsG9);
+        var darG10 = ToInt(darisApplicantsG10);
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px;font-weight:bold'>إجمالي المتقدمين (دارس)</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darG8}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darG9}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darG10}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darG8 + darG9 + darG10}</td></tr>");
+        // المتغيبين (نظامي)
+        var regAbsG8 = ToInt(regularAbsentG8);
+        var regAbsG9 = ToInt(regularAbsentG9);
+        var regAbsG10 = ToInt(regularAbsentG10);
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px;font-weight:bold'>المتغيبين (نظامي)</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regAbsG8}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regAbsG9}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regAbsG10}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{regAbsG8 + regAbsG9 + regAbsG10}</td></tr>");
+        // المتغيبين (دارس)
+        var darAbsG8 = ToInt(darisAbsentG8);
+        var darAbsG9 = ToInt(darisAbsentG9);
+        var darAbsG10 = ToInt(darisAbsentG10);
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px;font-weight:bold'>المتغيبين (دارس)</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darAbsG8}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darAbsG9}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darAbsG10}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{darAbsG8 + darAbsG9 + darAbsG10}</td></tr>");
+        sb.Append("</tbody></table>");
+
+        // التعليم المدمج table
+        sb.Append("<h4 style='margin:10px 0 6px 0'>التعليم المدمج:</h4>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px'>الصفوف</th><th style='border:1px solid #000;padding:6px'>السادس</th><th style='border:1px solid #000;padding:6px'>الثامن</th><th style='border:1px solid #000;padding:6px'>الحادي عشر</th><th style='border:1px solid #000;padding:6px'>الإجمالي</th></tr></thead><tbody>");
+        // إجمالي المتقدمين (نظامي)
+        var blendG6 = ToInt(blendedApplicantsG6);
+        var blendG8 = ToInt(blendedApplicantsG8);
+        var blendG11 = ToInt(blendedApplicantsG11);
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px;font-weight:bold'>إجمالي المتقدمين (نظامي)</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendG6}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendG8}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendG11}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendG6 + blendG8 + blendG11}</td></tr>");
+        // المتغيبين (نظامي)
+        var blendAbsG6 = ToInt(blendedAbsentG6);
+        var blendAbsG8 = ToInt(blendedAbsentG8);
+        var blendAbsG11 = ToInt(blendedAbsentG11);
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px;font-weight:bold'>المتغيبين (نظامي)</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendAbsG6}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendAbsG8}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendAbsG11}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{blendAbsG6 + blendAbsG8 + blendAbsG11}</td></tr>");
+        sb.Append("</tbody></table>");
+
+        // Summary below counts: absentees by type (نظامي/دارس) per grade with totals
+        int g8Regular = 0, g9Regular = 0, g10Regular = 0;
+        int g8Daris = 0, g9Daris = 0, g10Daris = 0;
+        foreach (var a in dailyAbsent)
+        {
+            var type = (a.Type ?? string.Empty).Trim();
+            var cls = (a.Class ?? string.Empty).Trim();
+            bool isRegular = type.Contains("نظام", StringComparison.OrdinalIgnoreCase);
+            bool isDaris = type.Contains("دار", StringComparison.OrdinalIgnoreCase);
+            if (cls.Contains("الثامن")) { if (isRegular) g8Regular++; if (isDaris) g8Daris++; }
+            else if (cls.Contains("التاسع")) { if (isRegular) g9Regular++; if (isDaris) g9Daris++; }
+            else if (cls.Contains("العاشر")) { if (isRegular) g10Regular++; if (isDaris) g10Daris++; }
+        }
+        int totalRegular = g8Regular + g9Regular + g10Regular;
+        int totalDaris = g8Daris + g9Daris + g10Daris;
+        int totalAllAbsent = totalRegular + totalDaris;
+
+        sb.Append("<div style='margin:6px 0 10px 0'>");
+        sb.Append("<div style='font-weight:bold;margin-bottom:4px'>ملخص المتغيبين (نظامي/دارس):</div>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px'>الصفوف</th><th style='border:1px solid #000;padding:6px'>الثامن</th><th style='border:1px solid #000;padding:6px'>التاسع</th><th style='border:1px solid #000;padding:6px'>العاشر</th><th style='border:1px solid #000;padding:6px'>الإجمالي</th></tr></thead><tbody>");
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px'>المتغيبون - نظامي</td><td style='border:1px solid #000;padding:6px;text-align:center'>{g8Regular}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{g9Regular}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{g10Regular}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{totalRegular}</td></tr>");
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px'>المتغيبون - دارس</td><td style='border:1px solid #000;padding:6px;text-align:center'>{g8Daris}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{g9Daris}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{g10Daris}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{totalDaris}</td></tr>");
+        sb.Append($"<tr><td style='border:1px solid #000;padding:6px;font-weight:bold'>إجمالي المتغيبين</td><td style='border:1px solid #000;padding:6px;text-align:center;font-weight:bold'>{g8Regular + g8Daris}</td><td style='border:1px solid #000;padding:6px;text-align:center;font-weight:bold'>{g9Regular + g9Daris}</td><td style='border:1px solid #000;padding:6px;text-align:center;font-weight:bold'>{g10Regular + g10Daris}</td><td style='border:1px solid #000;padding:6px;text-align:center;font-weight:bold'>{totalAllAbsent}</td></tr>");
+        sb.Append("</tbody></table>");
+        sb.Append("</div>");
+
+        // Part 2 - absentees
+        sb.Append("<h4 style='margin:10px 0 6px 0'>ثانياً : أسماء المتغيبين:</h4>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:50px'>م</th><th style='border:1px solid #000;padding:6px'>الاسم</th><th style='border:1px solid #000;padding:6px;width:120px'>الصف</th><th style='border:1px solid #000;padding:6px;width:160px'>المادة</th><th style='border:1px solid #000;padding:6px;width:140px'>نظامي/دارس</th></tr></thead><tbody>");
+        for (int i = 0; i < dailyAbsent.Count; i++)
+        {
+            var a = dailyAbsent[i];
+            sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{i + 1}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(a.Name)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(a.Class)}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(a.Subject)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(a.Type)}</td></tr>");
+        }
+        // Footer totals for the absentees table (by grade and overall)
+        sb.Append("</tbody>");
+        sb.Append("<tfoot>");
+        sb.Append($"<tr><td colspan='2' style='border:1px solid #000;padding:6px;font-weight:bold;text-align:right'>الإجمالي (الثامن)</td><td style='border:1px solid #000;padding:6px;text-align:center'>الثامن</td><td style='border:1px solid #000;padding:6px' colspan='2'>{g8Regular + g8Daris}</td></tr>");
+        sb.Append($"<tr><td colspan='2' style='border:1px solid #000;padding:6px;font-weight:bold;text-align:right'>الإجمالي (التاسع)</td><td style='border:1px solid #000;padding:6px;text-align:center'>التاسع</td><td style='border:1px solid #000;padding:6px' colspan='2'>{g9Regular + g9Daris}</td></tr>");
+        sb.Append($"<tr><td colspan='2' style='border:1px solid #000;padding:6px;font-weight:bold;text-align:right'>الإجمالي (العاشر)</td><td style='border:1px solid #000;padding:6px;text-align:center'>العاشر</td><td style='border:1px solid #000;padding:6px' colspan='2'>{g10Regular + g10Daris}</td></tr>");
+        sb.Append($"<tr><td colspan='3' style='border:1px solid #000;padding:6px;font-weight:bold;text-align:right'>الإجمالي الكلي للمتغيبين</td><td style='border:1px solid #000;padding:6px' colspan='2'>{totalAllAbsent}</td></tr>");
+        sb.Append("</tfoot></table>");
+
+        // Part 3 - notes
+        sb.Append("<h4 style='margin:10px 0 6px 0'>ثالثاً: الملاحظات على الامتحان:</h4>");
+        sb.Append($"<div>اكتمال الأوراق: {System.Net.WebUtility.HtmlEncode(dailyNotes.Papers)}</div>");
+        sb.Append($"<div>وضوح التصوير: {System.Net.WebUtility.HtmlEncode(dailyNotes.Printing)}</div>");
+        sb.Append($"<div>ملاحظات على أسئلة الامتحان:</div><div style='min-height:48px;border:1px dotted #999;margin:4px 0;padding:6px'>{System.Net.WebUtility.HtmlEncode(dailyNotes.Questions)}</div>");
+
+        // Part 4 - visitors
+        sb.Append("<h4 style='margin:10px 0 6px 0'>رابعاً: الزوار:</h4>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:50px'>م</th><th style='border:1px solid #000;padding:6px'>اسم الزائر</th><th style='border:1px solid #000;padding:6px;width:200px'>الوظيفة</th><th style='border:1px solid #000;padding:6px'>الملاحظات</th></tr></thead><tbody>");
+        for (int i = 0; i < dailyVisitors.Count; i++)
+        {
+            var v = dailyVisitors[i];
+            sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{i + 1}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(v.Name)}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(v.JobTitle)}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(v.Notes)}</td></tr>");
+        }
+        sb.Append("</tbody></table>");
+
+        // Part 5 - visitor notes
+        sb.Append("<h4 style='margin:10px 0 6px 0'>خامساً: ملاحظات الزائر:</h4>");
+        sb.Append($"<div style='min-height:48px;border:1px dotted #999;margin:4px 0;padding:6px'>{System.Net.WebUtility.HtmlEncode(dailyNotes.VisitorNotes)}</div>");
+
+        // Part 6 - other notes
+        sb.Append("<h4 style='margin:10px 0 6px 0'>سادساً: ملاحظات أخرى:</h4>");
+        sb.Append($"<div style='min-height:60px;border:1px dotted #999;margin:4px 0;padding:6px'>{System.Net.WebUtility.HtmlEncode(dailyNotes.Other)}</div>");
+
+        sb.Append("<div style='text-align:center;margin-top:28px;font-weight:bold'>يعتمد،،،</div>");
+        sb.Append("<div style='text-align:center;margin-top:18px;'><div style='font-weight:bold'>رئيس لجنة إدارة الامتحانات</div><div>بالمدرسة</div></div>");
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    private string CreateReceiveHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;'><div style='text-align:center;line-height:1.5'><div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div></div><img src='/images/logo.png' style='height:110px' onerror=\"this.style.display='none'\"/></div>");
+
+        sb.Append("<h3 style='text-align:center;margin:10px 0;'>كشف استلام أوراق الإجابات من المراقبين</h3>");
+        sb.Append($"<div style='margin-bottom:6px;'>الفصل الدراسي: {System.Net.WebUtility.HtmlEncode(receiveSemester)} &nbsp;&nbsp; العام الدراسي: {System.Net.WebUtility.HtmlEncode(receiveAcademicYear)} &nbsp;&nbsp; الدور: {System.Net.WebUtility.HtmlEncode(receiveRound)}</div>");
+        sb.Append($"<div style='margin-bottom:10px;'>اليوم: {System.Net.WebUtility.HtmlEncode(receiveDay)} &nbsp;&nbsp; التاريخ: {receiveDate:yyyy/MM/dd}</div>");
+
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:80px'>الصف</th><th style='border:1px solid #000;padding:6px'>المادة</th><th style='border:1px solid #000;padding:6px;width:70px'>عدد الممتحنين (نظامي)</th><th style='border:1px solid #000;padding:6px;width:70px'>عدد الممتحنين (دارس)</th><th style='border:1px solid #000;padding:6px;width:70px'>عدد المتغيبين (نظامي)</th><th style='border:1px solid #000;padding:6px;width:70px'>عدد المتغيبين (دارس)</th><th style='border:1px solid #000;padding:6px;width:200px'>اسم المعلم</th><th style='border:1px solid #000;padding:6px;width:120px'>التوقيع</th></tr></thead><tbody>");
+        foreach (var r in receiveRows)
+        {
+            sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(r.Grade)}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(r.Subject)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(r.ExamineesRegular)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(r.ExamineesDaris)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(r.AbsentsRegular)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(r.AbsentsDaris)}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(r.TeacherName)}</td><td style='border:1px solid #000;padding:6px'></td></tr>");
+        }
+        sb.Append("</tbody></table>");
+
+        if (!string.IsNullOrWhiteSpace(receiveNote))
+        {
+            sb.Append($"<div style='margin-top:6px'>ملاحظة: {System.Net.WebUtility.HtmlEncode(receiveNote)}</div>");
+        }
+
+        sb.Append("<div style='text-align:center;margin-top:28px;font-weight:bold'>يعتمد،،،</div>");
+        sb.Append("<div style='text-align:center;margin-top:18px;font-weight:bold'>مدير المدرسة</div>");
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    private string CreateGradesHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;'><div style='text-align:center;line-height:1.5'><div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div></div><img src='/images/logo.png' style='height:110px' onerror=\"this.style.display='none'\"/></div>");
+        sb.Append("<h3 style='text-align:center;margin:10px 0;'>كشف درجات الدارسين</h3>");
+        for (int s = 0; s < gradeStudents.Count; s++)
+        {
+            var st = gradeStudents[s];
+            sb.Append($"<div style='margin:8px 0 4px 0;font-weight:bold'>اسم الدارس: {System.Net.WebUtility.HtmlEncode(st.Name)} &nbsp;&nbsp; الصف: {System.Net.WebUtility.HtmlEncode(st.Class)}</div>");
+            sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+            sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:50px'>م</th><th style='border:1px solid #000;padding:6px'>المادة</th><th style='border:1px solid #000;padding:6px;width:120px'>الدرجة</th></tr></thead><tbody>");
+            for (int i = 0; i < st.Grades.Count; i++)
+            {
+                var gr = st.Grades[i];
+                sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{i + 1}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(gr.Subject)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(gr.Mark)}</td></tr>");
+            }
+            sb.Append("</tbody></table>");
+        }
+        sb.Append("<div style='text-align:center;margin-top:28px;font-weight:bold'>يعتمد،،،</div>");
+        sb.Append("<div style='text-align:center;margin-top:18px;font-weight:bold'>مدير المدرسة</div>");
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    private string CreateSingleStudentHTML(int studentIndex)
+    {
+        if (studentIndex < 0 || studentIndex >= gradeStudents.Count) return string.Empty;
+        
+        var student = gradeStudents[studentIndex];
+        var sb = new System.Text.StringBuilder();
+        
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;'><div style='text-align:center;line-height:1.5'><div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div></div><img src='/images/logo.png' style='height:110px' onerror=\"this.style.display='none'\"/></div>");
+        sb.Append("<h3 style='text-align:center;margin:10px 0;'>كشف درجات الدارسين</h3>");
+        
+        sb.Append($"<div style='margin:8px 0 4px 0;font-weight:bold'>اسم الدارس: {System.Net.WebUtility.HtmlEncode(student.Name)} &nbsp;&nbsp; الصف: {System.Net.WebUtility.HtmlEncode(student.Class)}</div>");
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead><tr><th style='border:1px solid #000;padding:6px;width:50px'>م</th><th style='border:1px solid #000;padding:6px'>المادة</th><th style='border:1px solid #000;padding:6px;width:120px'>الدرجة</th></tr></thead><tbody>");
+        
+        for (int i = 0; i < student.Grades.Count; i++)
+        {
+            var gr = student.Grades[i];
+            sb.Append($"<tr><td style='border:1px solid #000;padding:6px;text-align:center'>{i + 1}</td><td style='border:1px solid #000;padding:6px'>{System.Net.WebUtility.HtmlEncode(gr.Subject)}</td><td style='border:1px solid #000;padding:6px;text-align:center'>{System.Net.WebUtility.HtmlEncode(gr.Mark)}</td></tr>");
+        }
+        
+        sb.Append("</tbody></table>");
+        sb.Append("<div style='text-align:center;margin-top:28px;font-weight:bold'>يعتمد،،،</div>");
+        sb.Append("<div style='text-align:center;margin-top:18px;font-weight:bold'>مدير المدرسة</div>");
+        sb.Append("</div>");
+        
+        return sb.ToString();
+    }
+
+    private string CreateAbsenceHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;'><div style='text-align:center;line-height:1.5'><div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div></div><img src='/images/logo.png' style='height:110px' onerror=\"this.style.display='none'\"/></div>");
+        
+        sb.Append("<h3 style='text-align:center;margin:10px 0;'>كشف متابعة الغياب</h3>");
+        
+        // Date and Day
+        sb.Append("<div style='margin-bottom:15px;'>");
+        sb.Append($"<span style='margin-left:20px;'>اليوم: {System.Net.WebUtility.HtmlEncode(absenceDay)}</span>");
+        sb.Append($"<span style='margin-right:20px;'>التاريخ: {(absenceDate?.ToString("yyyy/MM/dd") ?? "")}</span>");
+        sb.Append("</div>");
+        
+        // Main table
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead>");
+        sb.Append("<tr style='background-color:#f8f9fa;'>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:15%;text-align:center'>الصف</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:10%;text-align:center'>العدد</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:8%;text-align:center'>الحضور</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:8%;text-align:center'>الغياب</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:35%;text-align:center'>أسماء الطلاب</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:12%;text-align:center'>التوقيع</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:12%;text-align:center'>ملاحظات</th>");
+        sb.Append("</tr>");
+        sb.Append("</thead>");
+        sb.Append("<tbody>");
+        
+        // Single row for the class
+        sb.Append("<tr>");
+        sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(absenceClass)}</td>");
+        sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{totalStudents}</td>");
+        sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'></td>");
+        sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{absentStudents}</td>");
+        
+        // Student names
+        sb.Append("<td style='border:1px solid #000;padding:8px;vertical-align:top'>");
+        for (int i = 0; i < absenceStudents.Count; i++)
+        {
+            if (!string.IsNullOrEmpty(absenceStudents[i]))
+            {
+                sb.Append($"<div style='margin-bottom:4px;'>( ) {System.Net.WebUtility.HtmlEncode(absenceStudents[i])}</div>");
+            }
+        }
+        sb.Append("</td>");
+        
+        sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'></td>");
+        sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'></td>");
+        sb.Append("</tr>");
+        
+        sb.Append("</tbody>");
+        sb.Append("</table>");
+        
+        // Footer
+        sb.Append("<div style='text-align:center;margin-top:20px;'>");
+        sb.Append($"تم إدخال الغياب: ( ) {System.Net.WebUtility.HtmlEncode(absenceSignature)}");
+        sb.Append("</div>");
+        
+        sb.Append("</div>");
+        
+        return sb.ToString();
+    }
+
+    // متغيرات اختيار الفصل الدراسي
+    private string selectedSemester = string.Empty;
+    private List<BlendedEntry> blendedEntries = new() { new BlendedEntry { Grade = "السادس" }, new BlendedEntry { Grade = "الثامن" }, new BlendedEntry { Grade = "الحادي عشر" } };
+
+    // دالة اختيار الفصل الدراسي
+    private void SelectSemester(string semester)
+    {
+        selectedSemester = semester;
+        
+        // تعيين الفصل المختار في جميع النماذج
+        this.semester = semester;
+        envelopesSemester = semester;
+        dailySemester = semester;
+        gradesSemester = semester;
+        absenceSemester = semester;
+        receiveSemester = semester;
+        
+        // الانتقال إلى القائمة الرئيسية
+        activeSlide = 1;
+    }
+}

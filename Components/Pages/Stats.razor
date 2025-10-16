@@ -1,0 +1,1518 @@
+@page "/stats"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@using iTextSharp.text
+@using iTextSharp.text.pdf
+@using System.IO
+@inject SchoolHallBooking.Services.IStatsService StatsService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JS
+@rendermode InteractiveServer
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">جاري التحميل...</span>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-warning text-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>غير مصرح لك بالوصول</strong>
+                    <br>
+                    <small>يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة</small>
+                    <br>
+                    <a href="/school/login" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        تسجيل الدخول
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="me-3">
+                        <i class="bi bi-graph-up text-primary" style="font-size: 2rem;"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-0 text-primary">الإحصائية العامة</h1>
+                        <p class="text-muted mb-0">نظام إدارة البيانات الإحصائية للمدرسة</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Alert Messages -->
+    @if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>@loadError</div>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(saveMessage))
+    {
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <div>@saveMessage</div>
+        </div>
+    }
+
+    <!-- Staff Statistics Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm stats-card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex align-items-center flex-wrap">
+                        <i class="bi bi-people-fill me-2"></i>
+                        <h4 class="mb-0">الإحصائية العامة للمدرسة - الموظفين</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-3 stats-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-bold">
+                                        <i class="bi bi-briefcase me-1"></i>
+                                        الوظيفة
+                                    </th>
+                                    <th class="fw-bold text-center" style="width: 200px;">
+                                        <i class="bi bi-hash me-1"></i>
+                                        العدد
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in staffRows)
+                                {
+                                    <tr>
+                                        <td class="fw-medium">@GetRoleLabel(row.Role)</td>
+                                        <td class="text-center">
+                                            <InputNumber TValue="int" @bind-Value="row.Count"
+                                                       autocomplete="off" min="0" step="1"
+                                                       class="form-control text-center fw-bold"
+                                                       style="max-width: 120px;" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-success">
+                                <tr>
+                                    <th class="fw-bold">
+                                        <i class="bi bi-calculator me-1"></i>
+                                        المجموع الكلي
+                                    </th>
+                                    <th class="text-center fw-bold fs-5">@staffRows.Sum(x => x.Count)</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-primary btn-lg" disabled="@isSavingStaff" @onclick="OnClickSaveStaff">
+                            @if (isSavingStaff)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>جارٍ الحفظ...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-save me-2"></i>
+                                <span>حفظ البيانات</span>
+                            }
+                        </button>
+                        <div class="d-flex gap-2">
+                        <a class="btn btn-success btn-lg" href="/export/stats/staff" target="_blank">
+                            <i class="bi bi-file-earmark-excel me-2"></i>
+                            تصدير Excel
+                        </a>
+                            <button class="btn btn-danger btn-lg" @onclick="ExportStaffToPDF">
+                                <i class="bi bi-file-earmark-pdf me-2"></i>
+                                تصدير PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Regular Students Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-mortarboard-fill me-2"></i>
+                        <h4 class="mb-0">الطلبة النظاميين</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Grade Selection -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-book me-1"></i>
+                                الصف الدراسي
+                            </label>
+                            <InputSelect class="form-select form-select-lg" @bind-Value="selectedGrade" TValue="string">
+                                @foreach (var g in grades)
+                                {
+                                    <option value="@g">@g</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <!-- Add New Division Form -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary mb-3">
+                                        <i class="bi bi-plus-circle me-1"></i>
+                                        إضافة شعبة جديدة
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-medium">اسم الشعبة</label>
+                                            <InputText @bind-Value="regularForm.Division" class="form-control" placeholder="مثال: أ، ب، ج..." />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-medium">عدد الطلاب</label>
+                                            <InputNumber TValue="int" @bind-Value="regularForm.Count"
+                                                       autocomplete="off" min="0" step="1"
+                                                       class="form-control text-center fw-bold" />
+                                        </div>
+                                        <div class="col-md-5 d-flex align-items-end gap-2">
+                                            <button type="button" class="btn btn-primary" disabled="@isSavingRegular" @onclick="OnClickSaveRegular">
+                                                @if (isSavingRegular)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                    <span>جارٍ الحفظ...</span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-save me-1"></i>
+                                                    <span>حفظ</span>
+                                                }
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetRegular">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                إلغاء
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Students Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-3">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-bold">
+                                        <i class="bi bi-bookmark me-1"></i>
+                                        الشعبة
+                                    </th>
+                                    <th class="fw-bold text-center">
+                                        <i class="bi bi-hash me-1"></i>
+                                        عدد الطلاب
+                                    </th>
+                                    <th class="fw-bold text-center" style="width: 200px;">
+                                        <i class="bi bi-gear me-1"></i>
+                                        الإجراءات
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in regular.Where(r => (r.Division ?? string.Empty).StartsWith(selectedGrade)))
+                                {
+                                    <tr>
+                                        <td class="fw-medium">@(TrimGradePrefix(r.Division))</td>
+                                        <td class="text-center fw-bold">@r.Count</td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-info" @onclick="() => EditRegular(r)" title="تعديل">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRegular(r.Id)" title="حذف">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-info">
+                                <tr>
+                                    <th class="fw-bold">
+                                        <i class="bi bi-calculator me-1"></i>
+                                        المجموع الكلي للصف @selectedGrade
+                                    </th>
+                                    <th class="text-center fw-bold fs-5">@GetRegularProjectedTotal()</th>
+                                </tr>
+                                <tr>
+                                    <th class="fw-bold">
+                                        <i class="bi bi-collection me-1"></i>
+                                        المجموع الكلي لجميع الصفوف
+                                    </th>
+                                    <th class="text-center fw-bold fs-5">@GetRegularOverallProjectedTotal()</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a class="btn btn-success btn-lg" href="/export/stats/regular" target="_blank">
+                            <i class="bi bi-file-earmark-excel me-2"></i>
+                            تصدير Excel (الطلبة النظاميون)
+                        </a>
+                        <button class="btn btn-danger btn-lg" @onclick="ExportRegularToPDF">
+                            <i class="bi bi-file-earmark-pdf me-2"></i>
+                            تصدير PDF (الطلبة النظاميون)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hearing Impaired Students Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-ear me-2"></i>
+                        <h4 class="mb-0">طلبة الدمج السمعي</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Add New Grade Form -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title text-warning mb-3">
+                                        <i class="bi bi-plus-circle me-1"></i>
+                                        إضافة صف جديد
+                                    </h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-medium">اسم الصف</label>
+                                            <InputText @bind-Value="hearingForm.Grade" class="form-control" placeholder="مثال: الأول، الثاني، الثالث..." />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-medium">عدد الطلاب</label>
+                                            <InputNumber TValue="int" @bind-Value="hearingForm.Count"
+                                                       autocomplete="off" min="0" step="1"
+                                                       class="form-control text-center fw-bold" />
+                                        </div>
+                                        <div class="col-md-5 d-flex align-items-end gap-2">
+                                            <button type="button" class="btn btn-warning" disabled="@isSavingHearing" @onclick="OnClickSaveHearing">
+                                                @if (isSavingHearing)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                    <span>جارٍ الحفظ...</span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-save me-1"></i>
+                                                    <span>حفظ</span>
+                                                }
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetHearing">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                إلغاء
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hearing Impaired Students Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-3">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-bold">
+                                        <i class="bi bi-book me-1"></i>
+                                        الصف الدراسي
+                                    </th>
+                                    <th class="fw-bold text-center">
+                                        <i class="bi bi-hash me-1"></i>
+                                        عدد الطلاب
+                                    </th>
+                                    <th class="fw-bold text-center" style="width: 200px;">
+                                        <i class="bi bi-gear me-1"></i>
+                                        الإجراءات
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var h in hearing)
+                                {
+                                    <tr>
+                                        <td class="fw-medium">@h.Grade</td>
+                                        <td class="text-center fw-bold">@h.Count</td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-warning" @onclick="() => EditHearing(h)" title="تعديل">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteHearing(h.Id)" title="حذف">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-warning">
+                                <tr>
+                                    <th class="fw-bold">
+                                        <i class="bi bi-calculator me-1"></i>
+                                        المجموع الكلي
+                                    </th>
+                                    <th class="text-center fw-bold fs-5">@GetHearingProjectedTotal()</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a class="btn btn-success btn-lg" href="/export/stats/hearing" target="_blank">
+                            <i class="bi bi-file-earmark-excel me-2"></i>
+                            تصدير Excel (طلبة الدمج السمعي)
+                        </a>
+                        <button class="btn btn-danger btn-lg" @onclick="ExportHearingToPDF">
+                            <i class="bi bi-file-earmark-pdf me-2"></i>
+                            تصدير PDF (طلبة الدمج السمعي)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combined Export Button -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body text-center py-4">
+                    <h5 class="card-title text-primary mb-3">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        تصدير شامل للطلبة
+                    </h5>
+                    <p class="text-muted mb-3">تصدير جدولي الطلبة النظاميين وطلبة الدمج السمعي معاً في ملف PDF واحد</p>
+                    <button class="btn btn-primary btn-lg px-5" @onclick="ExportBothStudentsToPDF">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        تصدير PDF (الطلبة النظاميين + الدمج السمعي)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<StaffStatistic> staff = new();
+    private List<StaffStatistic> staffRows = new();
+    private List<RegularStudentStatistic> regular = new();
+    private List<HearingImpairedStudentStatistic> hearing = new();
+    
+    // دالة مساعدة لإنشاء خطوط تدعم العربية
+    private Font CreateArabicFont(int style, int size, BaseColor color)
+    {
+        try
+        {
+            // استخدام خط يدعم العربية مع ترميز UTF-8
+            var baseFont = BaseFont.CreateFont(BaseFont.TIMES_ROMAN, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            return new Font(baseFont, size, style, color);
+        }
+        catch
+        {
+            try
+            {
+                // محاولة ثانية مع ترميز مختلف
+                var baseFont = BaseFont.CreateFont(BaseFont.TIMES_ROMAN, BaseFont.CP1252, BaseFont.EMBEDDED);
+                return new Font(baseFont, size, style, color);
+            }
+            catch
+            {
+                try
+                {
+                    // محاولة ثالثة مع خط مختلف
+                    var baseFont = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                    return new Font(baseFont, size, style, color);
+                }
+                catch
+                {
+                    try
+                    {
+                        // محاولة رابعة مع خط مختلف
+                        var baseFont = BaseFont.CreateFont(BaseFont.COURIER, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                        return new Font(baseFont, size, style, color);
+                    }
+                    catch
+                    {
+                        // في حالة الفشل، استخدم الخط الافتراضي
+                        return FontFactory.GetFont(FontFactory.HELVETICA, size, color);
+                    }
+                }
+            }
+        }
+    }
+
+    // دالة مساعدة لإنشاء نص عربي مع دعم أفضل
+    private Phrase CreateArabicPhrase(string text, Font font)
+    {
+        try
+        {
+            // محاولة إنشاء النص مع ترميز UTF-8
+            return new Phrase(text, font);
+        }
+        catch
+        {
+            try
+            {
+                // محاولة ثانية مع ترميز مختلف
+                var encodedText = System.Text.Encoding.UTF8.GetString(System.Text.Encoding.GetEncoding("windows-1256").GetBytes(text));
+                return new Phrase(encodedText, font);
+            }
+            catch
+            {
+                // في حالة الفشل، استخدم النص كما هو
+                return new Phrase(text, font);
+            }
+        }
+    }
+
+    private StaffStatistic staffForm = new();
+    private RegularStudentStatistic regularForm = new();
+    private readonly string[] grades = new[] { "الثامن", "التاسع", "العاشر" };
+    private string selectedGrade = "الثامن";
+    private HearingImpairedStudentStatistic hearingForm = new();
+    
+    // Authentication variables
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            if (isAuthenticated)
+            {
+                await LoadAll();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking authentication: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string? loadError;
+    private string? saveMessage;
+    private bool isSavingStaff;
+    private bool isSavingRegular;
+    private bool isSavingHearing;
+    
+    private async Task LoadAll()
+    {
+        try
+        {
+            Console.WriteLine("[Stats] Loading all data...");
+            staff = await StatsService.GetStaffAsync();
+            regular = await StatsService.GetRegularStudentsAsync();
+            hearing = await StatsService.GetHearingImpairedAsync();
+            loadError = null;
+
+            Console.WriteLine($"[Stats] Loaded: Staff={staff.Count}, Regular={regular.Count}, Hearing={hearing.Count}");
+
+            // Build fixed staff rows to avoid scrolling and always show all roles
+            staffRows = Enum.GetValues<StaffRole>()
+                .Select(role =>
+                {
+                    var existing = staff.FirstOrDefault(s => s.Role == role);
+                    var result = existing != null
+                        ? new StaffStatistic { Id = existing.Id, Role = role, Count = existing.Count }
+                        : new StaffStatistic { Role = role, Count = 0 };
+                    Console.WriteLine($"[Stats] Building staff row: Role={role}, Count={result.Count}, Label={GetRoleLabel(role)}");
+                    return result;
+                })
+                .ToList();
+                
+            // إضافة بيانات تجريبية إذا كانت البيانات فارغة
+            if (staffRows.All(s => s.Count == 0))
+            {
+                Console.WriteLine("[Stats] Adding sample data for testing...");
+                staffRows[0].Count = 5;  // الوظائف الإدارية
+                staffRows[1].Count = 3;  // الوظائف المساندة
+                staffRows[2].Count = 25; // الهيئة التعليمية
+                staffRows[3].Count = 8;  // معلمي الأجر اليومي
+                staffRows[4].Count = 4;  // العمال
+            }
+            else
+            {
+                Console.WriteLine("[Stats] Using existing staff data from database");
+            }
+            
+            if (regular.Count == 0)
+            {
+                Console.WriteLine("[Stats] Adding sample regular students data...");
+                regular.Add(new RegularStudentStatistic { Division = "الثامن - أ", Count = 30 });
+                regular.Add(new RegularStudentStatistic { Division = "الثامن - ب", Count = 28 });
+                regular.Add(new RegularStudentStatistic { Division = "التاسع - أ", Count = 32 });
+                regular.Add(new RegularStudentStatistic { Division = "التاسع - ب", Count = 29 });
+                regular.Add(new RegularStudentStatistic { Division = "العاشر - أ", Count = 35 });
+                regular.Add(new RegularStudentStatistic { Division = "العاشر - ب", Count = 31 });
+            }
+            else
+            {
+                Console.WriteLine("[Stats] Using existing regular students data from database");
+            }
+            
+            if (hearing.Count == 0)
+            {
+                Console.WriteLine("[Stats] Adding sample hearing impaired students data...");
+                hearing.Add(new HearingImpairedStudentStatistic { Grade = "الثامن", Count = 5 });
+                hearing.Add(new HearingImpairedStudentStatistic { Grade = "التاسع", Count = 7 });
+                hearing.Add(new HearingImpairedStudentStatistic { Grade = "العاشر", Count = 6 });
+            }
+            else
+            {
+                Console.WriteLine("[Stats] Using existing hearing impaired students data from database");
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = "تعذر الاتصال بقاعدة البيانات. تأكد من إعدادات قاعدة البيانات.";
+            Console.WriteLine($"[Stats] Load error: {ex.Message}");
+            Console.WriteLine($"[Stats] Stack trace: {ex.StackTrace}");
+        }
+        StateHasChanged();
+    }
+
+    private string GetRoleLabel(StaffRole role) => role switch
+    {
+        StaffRole.Administrative => "الوظائف الإدارية",
+        StaffRole.Support => "الوظائف المساندة",
+        StaffRole.Teaching => "الهيئة التعليمية",
+        StaffRole.DailyWageTeachers => "معلمي الأجر اليومي",
+        StaffRole.Workers => "العمال",
+        StaffRole.Guards => "الحراس",
+        StaffRole.SchoolBusDrivers => "سائقي النقل المدرسي",
+        _ => role.ToString()
+    };
+
+    private void OnStaffInput(StaffStatistic row, ChangeEventArgs e)
+    {
+        if (int.TryParse(Convert.ToString(e.Value), out var v))
+        {
+            row.Count = Math.Max(0, v);
+        }
+        StateHasChanged();
+    }
+
+    private void OnRegularCountInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(Convert.ToString(e.Value), out var v))
+        {
+            regularForm.Count = Math.Max(0, v);
+        }
+        StateHasChanged();
+    }
+
+    private void OnHearingCountInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(Convert.ToString(e.Value), out var v))
+        {
+            hearingForm.Count = Math.Max(0, v);
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveAllStaff()
+    {
+        isSavingStaff = true;
+        saveMessage = null;
+        try
+        {
+            Console.WriteLine("[Stats] Starting staff bulk save...");
+            
+            // Clamp negatives to zero before save
+            foreach (var s in staffRows)
+            {
+                if (s.Count < 0) s.Count = 0;
+            }
+            
+            var staffToSave = staffRows.Select(s => new StaffStatistic
+            {
+                Role = s.Role,
+                Count = s.Count,
+                Id = s.Id
+            }).ToList();
+            
+            Console.WriteLine($"[Stats] Saving {staffToSave.Count} staff records...");
+            foreach (var s in staffToSave)
+            {
+                Console.WriteLine($"[Stats] Saving: {s.Role} = {s.Count} (Id: {s.Id})");
+            }
+            
+            // Save to database
+            await StatsService.UpsertStaffBulkAsync(staffToSave);
+            
+            Console.WriteLine("[Stats] Staff save completed successfully");
+            
+            // Reload data to confirm it was saved
+            await LoadAll();
+            
+            saveMessage = $"تم حفظ بيانات الموظفين بنجاح! ({staffToSave.Count} سجل)";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Staff save error: {ex.Message}");
+            Console.WriteLine($"[Stats] Stack trace: {ex.StackTrace}");
+            saveMessage = $"فشل حفظ بيانات الموظفين: {ex.Message}";
+        }
+        finally
+        {
+            isSavingStaff = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveRegular()
+    {
+        isSavingRegular = true;
+        saveMessage = null;
+        try
+        {
+            Console.WriteLine("[Stats] Starting regular student save...");
+            
+            // Validate input
+            if (string.IsNullOrWhiteSpace(regularForm.Division))
+            {
+                saveMessage = "يرجى إدخال اسم الشعبة";
+                return;
+            }
+            
+            // ضم الصف مع الشعبة في حقل واحد بصيغة: "الصف - الشعبة"
+            var core = TrimGradePrefix(regularForm.Division);
+            regularForm.Division = $"{selectedGrade} - {core}";
+            
+            if (regularForm.Count < 0) regularForm.Count = 0;
+            
+            Console.WriteLine($"[Stats] Saving regular student: {regularForm.Division}, Count: {regularForm.Count}");
+            
+            if (regularForm.Id == 0)
+            {
+                await StatsService.AddRegularStudentAsync(regularForm);
+                Console.WriteLine("[Stats] Regular student added successfully");
+            }
+            else
+            {
+                await StatsService.UpdateRegularStudentAsync(regularForm);
+                Console.WriteLine("[Stats] Regular student updated successfully");
+            }
+            
+            regularForm = new();
+            await LoadAll();
+            saveMessage = "تم حفظ بيانات الطلبة النظاميين بنجاح!";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Regular student save error: {ex.Message}");
+            Console.WriteLine($"[Stats] Stack trace: {ex.StackTrace}");
+            saveMessage = $"فشل حفظ بيانات الطلبة النظاميين: {ex.Message}";
+        }
+        finally
+        {
+            isSavingRegular = false;
+            StateHasChanged();
+        }
+    }
+    private void ResetRegular() => regularForm = new();
+    private void EditRegular(RegularStudentStatistic r)
+    {
+        // استعادة الصف والشعبة إلى الحقول
+        selectedGrade = ExtractGrade(r.Division) ?? selectedGrade;
+        regularForm = new RegularStudentStatistic { Id = r.Id, Division = TrimGradePrefix(r.Division), Count = r.Count };
+    }
+    private async Task DeleteRegular(int id)
+    {
+        await StatsService.DeleteRegularStudentAsync(id);
+        await LoadAll();
+    }
+
+    private async Task SaveHearing()
+    {
+        isSavingHearing = true;
+        saveMessage = null;
+        try
+        {
+            Console.WriteLine("[Stats] Starting hearing-impaired student save...");
+            
+            // Validate input
+            if (string.IsNullOrWhiteSpace(hearingForm.Grade))
+            {
+                saveMessage = "يرجى إدخال اسم الصف";
+                return;
+            }
+            
+            if (hearingForm.Count < 0) hearingForm.Count = 0;
+            
+            Console.WriteLine($"[Stats] Saving hearing-impaired student: {hearingForm.Grade}, Count: {hearingForm.Count}");
+            
+            if (hearingForm.Id == 0)
+            {
+                await StatsService.AddHearingImpairedAsync(hearingForm);
+                Console.WriteLine("[Stats] Hearing-impaired student added successfully");
+            }
+            else
+            {
+                await StatsService.UpdateHearingImpairedAsync(hearingForm);
+                Console.WriteLine("[Stats] Hearing-impaired student updated successfully");
+            }
+            
+            hearingForm = new();
+            await LoadAll();
+            saveMessage = "تم حفظ بيانات الدمج السمعي بنجاح!";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Hearing-impaired student save error: {ex.Message}");
+            Console.WriteLine($"[Stats] Stack trace: {ex.StackTrace}");
+            saveMessage = $"فشل حفظ بيانات الدمج السمعي: {ex.Message}";
+        }
+        finally
+        {
+            isSavingHearing = false;
+            StateHasChanged();
+        }
+    }
+    private void ResetHearing() => hearingForm = new();
+    private void EditHearing(HearingImpairedStudentStatistic h) => hearingForm = new HearingImpairedStudentStatistic { Id = h.Id, Grade = h.Grade, Count = h.Count };
+    private async Task DeleteHearing(int id)
+    {
+        await StatsService.DeleteHearingImpairedAsync(id);
+        await LoadAll();
+    }
+
+    private int GetRegularProjectedTotal()
+    {
+        var total = regular.Where(r => (r.Division ?? string.Empty).StartsWith(selectedGrade)).Sum(x => x.Count);
+        if (regularForm is not null)
+        {
+            if (regularForm.Id == 0)
+            {
+                // Include the form count only if the form grade matches the selected grade
+                var core = TrimGradePrefix(regularForm.Division);
+                var formWithGrade = string.IsNullOrWhiteSpace(core) ? null : $"{selectedGrade} - {core}";
+                if (!string.IsNullOrWhiteSpace(formWithGrade) && formWithGrade.StartsWith(selectedGrade))
+                {
+                    total += regularForm.Count;
+                }
+            }
+            else
+            {
+                var existing = regular.FirstOrDefault(x => x.Id == regularForm.Id);
+                if (existing != null && (existing.Division ?? string.Empty).StartsWith(selectedGrade))
+                {
+                    total += (regularForm.Count - existing.Count);
+                }
+            }
+        }
+        return total;
+    }
+
+    private int GetRegularOverallProjectedTotal()
+    {
+        var total = regular.Sum(x => x.Count);
+        if (regularForm is not null)
+        {
+            if (regularForm.Id == 0)
+            {
+                if (!string.IsNullOrWhiteSpace(regularForm.Division))
+                {
+                    total += Math.Max(0, regularForm.Count);
+                }
+            }
+            else
+            {
+                var existing = regular.FirstOrDefault(x => x.Id == regularForm.Id);
+                if (existing != null)
+                {
+                    total += (Math.Max(0, regularForm.Count) - existing.Count);
+                }
+            }
+        }
+        return total;
+    }
+
+    private static string TrimGradePrefix(string? division)
+    {
+        if (string.IsNullOrWhiteSpace(division)) return string.Empty;
+        var idx = division.IndexOf('–'); // en dash
+        if (idx < 0) idx = division.IndexOf('-');
+        return idx > 0 && idx + 1 < division.Length ? division[(idx + 1)..].Trim() : division.Trim();
+    }
+
+    private static string? ExtractGrade(string? division)
+    {
+        if (string.IsNullOrWhiteSpace(division)) return null;
+        var idx = division.IndexOf('–');
+        if (idx < 0) idx = division.IndexOf('-');
+        return idx > 0 ? division[..idx].Trim() : null;
+    }
+
+    private int GetHearingProjectedTotal()
+    {
+        var total = hearing.Sum(x => x.Count);
+        if (hearingForm is not null)
+        {
+            if (hearingForm.Id == 0)
+            {
+                total += hearingForm.Count;
+            }
+            else
+            {
+                var existing = hearing.FirstOrDefault(x => x.Id == hearingForm.Id);
+                if (existing != null)
+                {
+                    total += (hearingForm.Count - existing.Count);
+                }
+                else
+                {
+                    total += hearingForm.Count;
+                }
+            }
+        }
+        return total;
+    }
+
+    private void Recalc() => StateHasChanged();
+
+    private async Task OnClickSaveStaff()
+    {
+        try
+        {
+            await SaveAllStaff();
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"فشل حفظ بيانات الموظفين: {ex.Message}";
+            isSavingStaff = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnClickSaveRegular()
+    {
+        try
+        {
+            await SaveRegular();
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"فشل حفظ بيانات الطلبة النظاميين: {ex.Message}";
+            isSavingRegular = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnClickSaveHearing()
+    {
+        try
+        {
+            await SaveHearing();
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"فشل حفظ بيانات الدمج السمعي: {ex.Message}";
+            isSavingHearing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportStaffToPDF()
+    {
+        try
+        {
+            Console.WriteLine($"[Stats] ExportStaffToPDF: staffRows count = {staffRows.Count}");
+            foreach (var row in staffRows)
+            {
+                Console.WriteLine($"[Stats] Staff row: Role={row.Role}, Count={row.Count}, Label={GetRoleLabel(row.Role)}");
+            }
+            
+            // إنشاء ملف HTML قابل للطباعة بدلاً من PDF
+            var html = $@"
+<!DOCTYPE html>
+<html dir='rtl' lang='ar'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>إحصائية الموظفين</title>
+    <style>
+        body {{
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            direction: rtl;
+            text-align: right;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .title {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }}
+        .date {{
+            font-size: 14px;
+            color: #666;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }}
+        th {{
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f8f9fa;
+        }}
+        .total-row {{
+            background-color: #2ecc71 !important;
+            color: white;
+            font-weight: bold;
+        }}
+        .note {{
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+        }}
+        @media print {{
+            body {{ margin: 0; }}
+            .no-print {{ display: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class='header'>
+        <div class='title'>الإحصائية العامة للمدرسة - الموظفين</div>
+        <div class='date'>تاريخ التقرير: {DateTime.Now:yyyy/MM/dd}</div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>الوظيفة</th>
+                <th>العدد</th>
+            </tr>
+        </thead>
+        <tbody>";
+
+            foreach (var row in staffRows)
+            {
+                html += $@"
+            <tr>
+                <td>{GetRoleLabel(row.Role)}</td>
+                <td>{row.Count}</td>
+            </tr>";
+            }
+
+            html += $@"
+            <tr class='total-row'>
+                <td>المجموع الكلي</td>
+                <td>{staffRows.Sum(x => x.Count)}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>";
+
+            // تحويل HTML إلى PDF باستخدام JavaScript
+            var fileName = $"إحصائية_الموظفين_{DateTime.Now:yyyy-MM-dd}.html";
+            await JS.InvokeVoidAsync("downloadHTMLFile", fileName, html);
+            
+            saveMessage = "تم تصدير إحصائية الموظفين إلى ملف HTML قابل للطباعة!";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Error exporting staff to HTML: {ex.Message}");
+            saveMessage = $"فشل تصدير إحصائية الموظفين: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportRegularToPDF()
+    {
+        try
+        {
+            Console.WriteLine($"[Stats] ExportRegularToPDF: regular count = {regular.Count}");
+            foreach (var r in regular)
+            {
+                Console.WriteLine($"[Stats] Regular row: Division={r.Division}, Count={r.Count}");
+            }
+            
+            // إنشاء ملف HTML قابل للطباعة بدلاً من PDF
+            var html = $@"
+<!DOCTYPE html>
+<html dir='rtl' lang='ar'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>إحصائية الطلبة النظاميين</title>
+    <style>
+        body {{
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            direction: rtl;
+            text-align: right;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .title {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }}
+        .date {{
+            font-size: 14px;
+            color: #666;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }}
+        th {{
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f8f9fa;
+        }}
+        .total-row {{
+            background-color: #2ecc71 !important;
+            color: white;
+            font-weight: bold;
+        }}
+        .note {{
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+        }}
+        @media print {{
+            body {{ margin: 0; }}
+            .no-print {{ display: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class='header'>
+        <div class='title'>الإحصائية العامة للمدرسة - الطلبة النظاميين</div>
+        <div class='date'>تاريخ التقرير: {DateTime.Now:yyyy/MM/dd}</div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>الشعبة</th>
+                <th>عدد الطلاب</th>
+                <th>الصف</th>
+            </tr>
+        </thead>
+        <tbody>";
+
+            foreach (var r in regular)
+            {
+                html += $@"
+            <tr>
+                <td>{TrimGradePrefix(r.Division)}</td>
+                <td>{r.Count}</td>
+                <td>{ExtractGrade(r.Division) ?? ""}</td>
+            </tr>";
+            }
+
+            html += $@"
+            <tr class='total-row'>
+                <td>المجموع الكلي لجميع الصفوف</td>
+                <td>{GetRegularOverallProjectedTotal()}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>";
+
+            // تحويل HTML إلى PDF باستخدام JavaScript
+            var fileName = $"إحصائية_الطلبة_النظاميين_{DateTime.Now:yyyy-MM-dd}.html";
+            await JS.InvokeVoidAsync("downloadHTMLFile", fileName, html);
+            
+            saveMessage = "تم تصدير إحصائية الطلبة النظاميين إلى ملف HTML قابل للطباعة!";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Error exporting regular to HTML: {ex.Message}");
+            saveMessage = $"فشل تصدير إحصائية الطلبة النظاميين: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportHearingToPDF()
+    {
+        try
+        {
+            Console.WriteLine($"[Stats] ExportHearingToPDF: hearing count = {hearing.Count}");
+            foreach (var h in hearing)
+            {
+                Console.WriteLine($"[Stats] Hearing row: Grade={h.Grade}, Count={h.Count}");
+            }
+            
+            // إنشاء ملف HTML قابل للطباعة بدلاً من PDF
+            var html = $@"
+<!DOCTYPE html>
+<html dir='rtl' lang='ar'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>إحصائية طلبة الدمج السمعي</title>
+    <style>
+        body {{
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            direction: rtl;
+            text-align: right;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .title {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }}
+        .date {{
+            font-size: 14px;
+            color: #666;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }}
+        th {{
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f8f9fa;
+        }}
+        .total-row {{
+            background-color: #2ecc71 !important;
+            color: white;
+            font-weight: bold;
+        }}
+        .note {{
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+        }}
+        @media print {{
+            body {{ margin: 0; }}
+            .no-print {{ display: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class='header'>
+        <div class='title'>الإحصائية العامة للمدرسة - طلبة الدمج السمعي</div>
+        <div class='date'>تاريخ التقرير: {DateTime.Now:yyyy/MM/dd}</div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>الصف الدراسي</th>
+                <th>عدد الطلاب</th>
+            </tr>
+        </thead>
+        <tbody>";
+
+            foreach (var h in hearing)
+            {
+                html += $@"
+            <tr>
+                <td>{h.Grade}</td>
+                <td>{h.Count}</td>
+            </tr>";
+            }
+
+            html += $@"
+            <tr class='total-row'>
+                <td>المجموع الكلي</td>
+                <td>{GetHearingProjectedTotal()}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>";
+
+            // تحويل HTML إلى PDF باستخدام JavaScript
+            var fileName = $"إحصائية_طلبة_الدمج_السمعي_{DateTime.Now:yyyy-MM-dd}.html";
+            await JS.InvokeVoidAsync("downloadHTMLFile", fileName, html);
+            
+            saveMessage = "تم تصدير إحصائية طلبة الدمج السمعي إلى ملف HTML قابل للطباعة!";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Error exporting hearing to HTML: {ex.Message}");
+            saveMessage = $"فشل تصدير إحصائية طلبة الدمج السمعي: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportBothStudentsToPDF()
+    {
+        try
+        {
+            Console.WriteLine($"[Stats] ExportBothStudentsToPDF: regular count = {regular.Count}, hearing count = {hearing.Count}");
+            
+            // إنشاء ملف HTML قابل للطباعة يحتوي على الجدولين معاً
+            var html = $@"
+<!DOCTYPE html>
+<html dir='rtl' lang='ar'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>إحصائية الطلبة الشاملة</title>
+    <style>
+        body {{
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            direction: rtl;
+            text-align: right;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .main-title {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }}
+        .date {{
+            font-size: 12px;
+            color: #666;
+        }}
+        .section-title {{
+            font-size: 18px;
+            font-weight: bold;
+            color: #34495e;
+            margin: 30px 0 15px 0;
+            padding: 8px;
+            background-color: #ecf0f1;
+            border-right: 4px solid #3498db;
+        }}
+        table {{
+            width: 90%;
+            margin: 15px auto;
+            border-collapse: collapse;
+            font-size: 13px;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }}
+        th {{
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f8f9fa;
+        }}
+        .total-row {{
+            background-color: #2ecc71 !important;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }}
+        .grand-total {{
+            background-color: #e74c3c !important;
+            color: white;
+            font-weight: bold;
+            font-size: 15px;
+        }}
+        .page-break {{
+            page-break-before: always;
+        }}
+        @media print {{
+            body {{ margin: 0; }}
+            .no-print {{ display: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class='header'>
+        <div class='main-title'>الإحصائية العامة للمدرسة - الطلبة</div>
+        <div class='date'>تاريخ التقرير: {DateTime.Now:yyyy/MM/dd}</div>
+    </div>
+    
+    <!-- الطلبة النظاميين -->
+    <div class='section-title'>الطلبة النظاميين</div>
+    <table>
+        <thead>
+            <tr>
+                <th>الشعبة</th>
+                <th>عدد الطلاب</th>
+                <th>الصف</th>
+            </tr>
+        </thead>
+        <tbody>";
+
+            foreach (var r in regular)
+            {
+                html += $@"
+            <tr>
+                <td>{TrimGradePrefix(r.Division)}</td>
+                <td>{r.Count}</td>
+                <td>{ExtractGrade(r.Division) ?? ""}</td>
+            </tr>";
+            }
+
+            html += $@"
+            <tr class='total-row'>
+                <td>المجموع الكلي للطلبة النظاميين</td>
+                <td>{GetRegularOverallProjectedTotal()}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <!-- طلبة الدمج السمعي -->
+    <div class='section-title'>طلبة الدمج السمعي</div>
+    <table>
+        <thead>
+            <tr>
+                <th>الصف الدراسي</th>
+                <th>عدد الطلاب</th>
+            </tr>
+        </thead>
+        <tbody>";
+
+            foreach (var h in hearing)
+            {
+                html += $@"
+            <tr>
+                <td>{h.Grade}</td>
+                <td>{h.Count}</td>
+            </tr>";
+            }
+
+            html += $@"
+            <tr class='total-row'>
+                <td>المجموع الكلي لطلبة الدمج السمعي</td>
+                <td>{GetHearingProjectedTotal()}</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <!-- المجموع الكلي الشامل -->
+    <table>
+        <tbody>
+            <tr class='grand-total'>
+                <td>المجموع الكلي لجميع الطلبة (النظاميين + الدمج السمعي)</td>
+                <td>{GetRegularOverallProjectedTotal() + GetHearingProjectedTotal()}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>";
+
+            // تحويل HTML إلى PDF باستخدام JavaScript
+            var fileName = $"إحصائية_الطلبة_الشاملة_{DateTime.Now:yyyy-MM-dd}.html";
+            await JS.InvokeVoidAsync("downloadHTMLFile", fileName, html);
+            
+            saveMessage = "تم تصدير إحصائية الطلبة الشاملة (النظاميين + الدمج السمعي) إلى ملف HTML قابل للطباعة!";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Error exporting both students to HTML: {ex.Message}");
+            saveMessage = $"فشل تصدير إحصائية الطلبة الشاملة: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+}
+}
+
+
+

@@ -1,0 +1,152 @@
+@page "/academic-achievement"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject ILogger<AcademicAchievement> Logger
+@rendermode InteractiveServer
+
+<PageTitle>برنامج التحصيل الدراسي</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">برنامج التحصيل الدراسي</h2>
+    </div>
+
+    <!-- Subject Selection Cards -->
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-primary">
+                <div class="card-body text-center">
+                    <i class="bi bi-book-fill text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">التربية الإسلامية</h5>
+                    <p class="card-text">إدارة برامج التحصيل الدراسي للتربية الإسلامية</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <a href="/academic-achievement/islamic-education/plan" class="btn btn-primary mb-2">خطة التحصيل الدراسي</a>
+                        <a href="/academic-achievement/islamic-education/initiatives" class="btn btn-outline-primary mb-2">المبادرات والمشاريع</a>
+                        <a href="/academic-achievement/islamic-education/school-efforts" class="btn btn-outline-primary">توثيق جهود المدرسة</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-success">
+                <div class="card-body text-center">
+                    <i class="bi bi-translate text-success" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">اللغة العربية</h5>
+                    <p class="card-text">إدارة برامج التحصيل الدراسي للغة العربية</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <a href="/academic-achievement/arabic-language/plan" class="btn btn-success mb-2">خطة التحصيل الدراسي</a>
+                        <a href="/academic-achievement/arabic-language/initiatives" class="btn btn-outline-success mb-2">المبادرات والمشاريع</a>
+                        <a href="/academic-achievement/arabic-language/school-efforts" class="btn btn-outline-success">توثيق جهود المدرسة</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-info">
+                <div class="card-body text-center">
+                    <i class="bi bi-globe text-info" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">اللغة الإنجليزية</h5>
+                    <p class="card-text">إدارة برامج التحصيل الدراسي للغة الإنجليزية</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <a href="/academic-achievement/english-language/plan" class="btn btn-info mb-2">خطة التحصيل الدراسي</a>
+                        <a href="/academic-achievement/english-language/initiatives" class="btn btn-outline-info mb-2">المبادرات والمشاريع</a>
+                        <a href="/academic-achievement/english-language/school-efforts" class="btn btn-outline-info">توثيق جهود المدرسة</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-warning">
+                <div class="card-body text-center">
+                    <i class="bi bi-calculator text-warning" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">الرياضيات</h5>
+                    <p class="card-text">إدارة برامج التحصيل الدراسي للرياضيات</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <a href="/academic-achievement/mathematics/plan" class="btn btn-warning mb-2">خطة التحصيل الدراسي</a>
+                        <a href="/academic-achievement/mathematics/initiatives" class="btn btn-outline-warning mb-2">المبادرات والمشاريع</a>
+                        <a href="/academic-achievement/mathematics/school-efforts" class="btn btn-outline-warning">توثيق جهود المدرسة</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-danger">
+                <div class="card-body text-center">
+                    <i class="bi bi-flask text-danger" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">العلوم</h5>
+                    <p class="card-text">إدارة برامج التحصيل الدراسي للعلوم</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <a href="/academic-achievement/sciences/plan" class="btn btn-danger mb-2">خطة التحصيل الدراسي</a>
+                        <a href="/academic-achievement/sciences/initiatives" class="btn btn-outline-danger mb-2">المبادرات والمشاريع</a>
+                        <a href="/academic-achievement/sciences/school-efforts" class="btn btn-outline-danger">توثيق جهود المدرسة</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-secondary">
+                <div class="card-body text-center">
+                    <i class="bi bi-people-fill text-secondary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">الدراسات الاجتماعية</h5>
+                    <p class="card-text">إدارة برامج التحصيل الدراسي للدراسات الاجتماعية</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <a href="/academic-achievement/social-studies/plan" class="btn btn-secondary mb-2">خطة التحصيل الدراسي</a>
+                        <a href="/academic-achievement/social-studies/initiatives" class="btn btn-outline-secondary mb-2">المبادرات والمشاريع</a>
+                        <a href="/academic-achievement/social-studies/school-efforts" class="btn btn-outline-secondary">توثيق جهود المدرسة</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 border-dark">
+                <div class="card-body text-center">
+                    <i class="bi bi-gear-fill text-dark" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">الإدارة</h5>
+                    <p class="card-text">إدارة برامج التحصيل الدراسي للإدارة</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <a href="/academic-achievement/management/plan" class="btn btn-dark mb-2">خطة التحصيل الدراسي</a>
+                        <a href="/academic-achievement/management/initiatives" class="btn btn-outline-dark mb-2">المبادرات والمشاريع</a>
+                        <a href="/academic-achievement/management/school-efforts" class="btn btn-outline-dark">توثيق جهود المدرسة</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Management Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">الإدارة العامة لبرامج التحصيل الدراسي</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-grid">
+                                <a href="/academic-achievement/improvement-team" class="btn btn-outline-primary btn-lg">
+                                    <i class="bi bi-people-fill me-2"></i>
+                                    فريق التطوير الذاتي
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-grid">
+                                <a href="/academic-achievement/follow-up-meetings" class="btn btn-outline-success btn-lg">
+                                    <i class="bi bi-calendar-check me-2"></i>
+                                    كشاف اجتماعات فريق متابعة التحصيل الدراسي
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

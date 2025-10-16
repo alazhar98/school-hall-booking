@@ -1,0 +1,466 @@
+@page "/professional-development/design"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IProfessionalDevelopmentService ProfessionalDevelopmentService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>تصميم برنامج تدريبي</PageTitle>
+
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">تصميم برنامج تدريبي</h2>
+        <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
+            <i class="bi bi-plus"></i> إضافة تصميم جديد
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="@(() => successMessage = string.Empty)"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = string.Empty)"></button>
+        </div>
+    }
+
+    <!-- Designs Table -->
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">تصاميم البرامج التدريبية</h5>
+            <div>
+                <button class="btn btn-light btn-sm me-2" @onclick="@(() => ExportToExcel())">
+                    <i class="bi bi-file-excel"></i> Excel
+                </button>
+                <button class="btn btn-light btn-sm" @onclick="@(() => ExportToPDF())">
+                    <i class="bi bi-file-pdf"></i> PDF
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (designs.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>اسم البرنامج</th>
+                                <th>المجال</th>
+                                <th>التصنيف</th>
+                                <th>فترة التنفيذ</th>
+                                <th>الفئة المستهدفة</th>
+                                <th>العدد</th>
+                                <th>مكان التنفيذ</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var design in designs)
+                            {
+                                <tr>
+                                    <td>@design.ProgramName</td>
+                                    <td>@design.Field</td>
+                                    <td>@design.Classification</td>
+                                    <td>@design.ExecutionPeriod</td>
+                                    <td>@design.TargetAudience</td>
+                                    <td>@design.NumberOfParticipants</td>
+                                    <td>@design.ExecutionLocation</td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm" @onclick="@(() => OpenEditModal(design))" title="تعديل">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteDesign(design.Id))" title="حذف">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <p class="text-muted">لا توجد تصاميم مسجلة</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade @(showModal ? "show d-block" : "")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">@(currentDesign.Id == 0 ? "إضافة تصميم جديد" : "تعديل التصميم")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="@(() => CloseModal())"></button>
+            </div>
+            <EditForm Model="@currentDesign" OnValidSubmit="SaveDesign" FormName="designForm">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="programName" class="form-label">اسم البرنامج التدريبي *</label>
+                            <InputText id="programName" class="form-control" @bind-Value="currentDesign.ProgramName" />
+                            <ValidationMessage For="@(() => currentDesign.ProgramName)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="field" class="form-label">المجال *</label>
+                            <InputSelect id="field" class="form-control" @bind-Value="currentDesign.Field" @onchange="OnFieldChanged" TValue="string">
+                                <option value="">اختر المجال</option>
+                                <option value="تربوي">تربوي</option>
+                                <option value="أكاديمي">أكاديمي</option>
+                                <option value="إداري">إداري</option>
+                                <option value="تطويري">تطويري</option>
+                                <option value="أخرى">أخرى</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => currentDesign.Field)" />
+                            @if (currentDesign.Field == "أخرى")
+                            {
+                                <div class="mt-2">
+                                    <label for="otherField" class="form-label">يرجى تحديد المجال:</label>
+                                    <InputText id="otherField" class="form-control" @bind-Value="otherFieldValue" @oninput="OnOtherFieldChanged" placeholder="أدخل المجال" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="classification" class="form-label">التصنيف *</label>
+                            <InputSelect id="classification" class="form-control" @bind-Value="currentDesign.Classification" TValue="string">
+                                <option value="">اختر التصنيف</option>
+                                <option value="تطويري">تطويري</option>
+                                <option value="علاجي">علاجي</option>
+                                <option value="نمائي">نمائي</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => currentDesign.Classification)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="executionPeriod" class="form-label">فترة التنفيذ *</label>
+                            <InputText id="executionPeriod" class="form-control" @bind-Value="currentDesign.ExecutionPeriod" />
+                            <ValidationMessage For="@(() => currentDesign.ExecutionPeriod)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="targetAudience" class="form-label">الفئة المستهدفة *</label>
+                            <InputText id="targetAudience" class="form-control" @bind-Value="currentDesign.TargetAudience" />
+                            <ValidationMessage For="@(() => currentDesign.TargetAudience)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="numberOfParticipants" class="form-label">العدد *</label>
+                            <InputNumber id="numberOfParticipants" class="form-control" @bind-Value="currentDesign.NumberOfParticipants" TValue="int" min="1" />
+                            <ValidationMessage For="@(() => currentDesign.NumberOfParticipants)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="executionLocation" class="form-label">مكان التنفيذ *</label>
+                            <InputText id="executionLocation" class="form-control" @bind-Value="currentDesign.ExecutionLocation" />
+                            <ValidationMessage For="@(() => currentDesign.ExecutionLocation)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="objectives" class="form-label">الأهداف</label>
+                            <InputTextArea id="objectives" class="form-control" rows="3" @bind-Value="currentDesign.Objectives" />
+                            <ValidationMessage For="@(() => currentDesign.Objectives)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="worksheetName" class="form-label">اسم ورقة العمل</label>
+                            <InputText id="worksheetName" class="form-control" @bind-Value="currentDesign.WorksheetName" />
+                            <ValidationMessage For="@(() => currentDesign.WorksheetName)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="executor" class="form-label">المنفذ</label>
+                            <InputText id="executor" class="form-control" @bind-Value="currentDesign.Executor" />
+                            <ValidationMessage For="@(() => currentDesign.Executor)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="jobTitle" class="form-label">المسمى الوظيفي</label>
+                            <InputText id="jobTitle" class="form-control" @bind-Value="currentDesign.JobTitle" />
+                            <ValidationMessage For="@(() => currentDesign.JobTitle)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="duration" class="form-label">المدة الزمنية</label>
+                            <InputText id="duration" class="form-control" @bind-Value="currentDesign.Duration" />
+                            <ValidationMessage For="@(() => currentDesign.Duration)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="programEvaluation" class="form-label">تقويم البرنامج</label>
+                            <InputTextArea id="programEvaluation" class="form-control" rows="3" @bind-Value="currentDesign.ProgramEvaluation" />
+                            <ValidationMessage For="@(() => currentDesign.ProgramEvaluation)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="followUp" class="form-label">هل سيتم متابعة البرنامج؟</label>
+                            <InputSelect id="followUp" class="form-control" @bind-Value="currentDesign.FollowUp" TValue="string">
+                                <option value="">اختر</option>
+                                <option value="نعم">نعم</option>
+                                <option value="لا">لا</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => currentDesign.FollowUp)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="proposedFollowUpPlan" class="form-label">خطة المتابعة المقترحة</label>
+                            <InputTextArea id="proposedFollowUpPlan" class="form-control" rows="3" @bind-Value="currentDesign.ProposedFollowUpPlan" />
+                            <ValidationMessage For="@(() => currentDesign.ProposedFollowUpPlan)" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="@(() => CloseModal())">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<TrainingProgramDesign> designs = new();
+    private TrainingProgramDesign currentDesign = new();
+    private bool showModal = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private string otherFieldValue = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDesigns();
+    }
+
+    private async Task LoadDesigns()
+    {
+        try
+        {
+            designs = await ProfessionalDevelopmentService.GetAllDesignsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في تحميل التصاميم: {ex.Message}";
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        currentDesign = new TrainingProgramDesign();
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenEditModal(TrainingProgramDesign design)
+    {
+        currentDesign = new TrainingProgramDesign
+        {
+            Id = design.Id,
+            ProgramName = design.ProgramName,
+            Field = design.Field,
+            Classification = design.Classification,
+            ExecutionPeriod = design.ExecutionPeriod,
+            TargetAudience = design.TargetAudience,
+            NumberOfParticipants = design.NumberOfParticipants,
+            ExecutionLocation = design.ExecutionLocation,
+            Objectives = design.Objectives,
+            WorksheetName = design.WorksheetName,
+            Executor = design.Executor,
+            JobTitle = design.JobTitle,
+            Duration = design.Duration,
+            ProgramEvaluation = design.ProgramEvaluation,
+            FollowUp = design.FollowUp,
+            ProposedFollowUpPlan = design.ProposedFollowUpPlan
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentDesign = new TrainingProgramDesign();
+        otherFieldValue = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnOtherFieldChanged()
+    {
+        if (currentDesign.Field == "أخرى")
+        {
+            currentDesign.Field = otherFieldValue;
+        }
+    }
+
+    private void OnFieldChanged()
+    {
+        if (currentDesign.Field != "أخرى")
+        {
+            otherFieldValue = string.Empty;
+        }
+    }
+
+    private async Task SaveDesign()
+    {
+        try
+        {
+            if (currentDesign.Id == 0)
+            {
+                await ProfessionalDevelopmentService.AddDesignAsync(currentDesign);
+                successMessage = "تم إضافة التصميم بنجاح";
+            }
+            else
+            {
+                await ProfessionalDevelopmentService.UpdateDesignAsync(currentDesign);
+                successMessage = "تم تحديث التصميم بنجاح";
+            }
+
+            await LoadDesigns();
+            StateHasChanged();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في حفظ التصميم: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteDesign(int id)
+    {
+        try
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذا التصميم؟");
+            if (confirmed)
+            {
+                await ProfessionalDevelopmentService.DeleteDesignAsync(id);
+                successMessage = "تم حذف التصميم بنجاح";
+                await LoadDesigns();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في حذف التصميم: {ex.Message}";
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = GenerateCSV();
+            var fileName = $"تصاميم_البرامج_التدريبية_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, csvContent, "text/csv;charset=utf-8;");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في تصدير Excel: {ex.Message}";
+        }
+    }
+
+    private async Task ExportToPDF()
+    {
+        try
+        {
+            var htmlContent = GeneratePDFContent();
+            await JSRuntime.InvokeVoidAsync("printToPDF", htmlContent, "تصاميم البرامج التدريبية");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في تصدير PDF: {ex.Message}";
+        }
+    }
+
+    private string GenerateCSV()
+    {
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("\uFEFF"); // BOM for UTF-8
+        csv.AppendLine("اسم البرنامج,المجال,التصنيف,فترة التنفيذ,الفئة المستهدفة,العدد,مكان التنفيذ,الأهداف,اسم ورقة العمل,المنفذ,المسمى الوظيفي,المدة الزمنية,تقويم البرنامج,المتابعة,خطة المتابعة المقترحة");
+        
+        foreach (var design in designs)
+        {
+            csv.AppendLine($"{design.ProgramName},{design.Field},{design.Classification},{design.ExecutionPeriod},{design.TargetAudience},{design.NumberOfParticipants},{design.ExecutionLocation},{design.Objectives},{design.WorksheetName},{design.Executor},{design.JobTitle},{design.Duration},{design.ProgramEvaluation},{design.FollowUp},{design.ProposedFollowUpPlan}");
+        }
+        
+        return csv.ToString();
+    }
+
+    private string GeneratePDFContent()
+    {
+        var html = $@"
+        <!DOCTYPE html>
+        <html dir='rtl' lang='ar'>
+        <head>
+            <meta charset='utf-8'>
+            <title>تصاميم البرامج التدريبية</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; direction: rtl; }}
+                .header {{ text-align: center; margin-bottom: 30px; }}
+                .header h1 {{ color: #007bff; margin-bottom: 10px; }}
+                .header p {{ color: #666; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: right; }}
+                th {{ background-color: #f8f9fa; font-weight: bold; }}
+                .text-center {{ text-align: center; }}
+                .mt-3 {{ margin-top: 15px; }}
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>تصاميم البرامج التدريبية</h1>
+                <p>تاريخ التقرير: {DateTime.Now:yyyy/MM/dd}</p>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم البرنامج</th>
+                        <th>المجال</th>
+                        <th>التصنيف</th>
+                        <th>فترة التنفيذ</th>
+                        <th>الفئة المستهدفة</th>
+                        <th>العدد</th>
+                        <th>مكان التنفيذ</th>
+                    </tr>
+                </thead>
+                <tbody>";
+
+        foreach (var design in designs)
+        {
+            html += $@"
+                    <tr>
+                        <td>{design.ProgramName}</td>
+                        <td>{design.Field}</td>
+                        <td>{design.Classification}</td>
+                        <td>{design.ExecutionPeriod}</td>
+                        <td>{design.TargetAudience}</td>
+                        <td>{design.NumberOfParticipants}</td>
+                        <td>{design.ExecutionLocation}</td>
+                    </tr>";
+        }
+
+        html += @"
+                </tbody>
+            </table>
+        </body>
+        </html>";
+
+        return html;
+    }
+}

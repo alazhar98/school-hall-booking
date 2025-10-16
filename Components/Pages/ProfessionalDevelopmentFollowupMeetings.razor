@@ -1,0 +1,357 @@
+@page "/professional-development/followup-meetings"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IProfessionalDevelopmentService ProfessionalDevelopmentService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>كشاف اجتماعات فريق متابعة برامج الانماء المهني</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">كشاف اجتماعات فريق متابعة برامج الانماء المهني</h2>
+        <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
+            <i class="bi bi-plus"></i> إضافة اجتماع جديد
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="@(() => successMessage = string.Empty)"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = string.Empty)"></button>
+        </div>
+    }
+
+    <!-- Meetings Table -->
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">اجتماعات فريق المتابعة</h5>
+            <div>
+                <button class="btn btn-light btn-sm me-2" @onclick="@(() => ExportToExcel())">
+                    <i class="bi bi-file-excel"></i> Excel
+                </button>
+                <button class="btn btn-light btn-sm" @onclick="@(() => ExportToPDF())">
+                    <i class="bi bi-file-pdf"></i> PDF
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (meetings.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>رقم الاجتماع</th>
+                                <th>التاريخ</th>
+                                <th>اليوم</th>
+                                <th>جدول الأعمال</th>
+                                <th>الملاحظات</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var meeting in meetings)
+                            {
+                                <tr>
+                                    <td>@meeting.MeetingNumber</td>
+                                    <td>@meeting.Date.ToString("yyyy/MM/dd")</td>
+                                    <td>@meeting.Day</td>
+                                    <td>@meeting.Agenda</td>
+                                    <td>@meeting.Notes</td>
+                                    <td>@meeting.CreatedAt.ToString("yyyy/MM/dd")</td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm" @onclick="@(() => OpenEditModal(meeting))" title="تعديل">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteMeeting(meeting.Id))" title="حذف">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <p class="text-muted">لا توجد اجتماعات مسجلة</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade @(showModal ? "show d-block" : "")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">@(currentMeeting.Id == 0 ? "إضافة اجتماع جديد" : "تعديل الاجتماع")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="@(() => CloseModal())"></button>
+            </div>
+            <EditForm Model="@currentMeeting" OnValidSubmit="SaveMeeting" FormName="meetingForm">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="meetingNumber" class="form-label">رقم الاجتماع *</label>
+                            <InputText id="meetingNumber" class="form-control" @bind-Value="currentMeeting.MeetingNumber" />
+                            <ValidationMessage For="@(() => currentMeeting.MeetingNumber)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="date" class="form-label">التاريخ *</label>
+                            <InputDate id="date" class="form-control" @bind-Value="currentMeeting.Date" TValue="DateTime" />
+                            <ValidationMessage For="@(() => currentMeeting.Date)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="day" class="form-label">اليوم *</label>
+                            <InputSelect id="day" class="form-control" @bind-Value="currentMeeting.Day" TValue="string">
+                                <option value="">اختر اليوم</option>
+                                <option value="السبت">السبت</option>
+                                <option value="الأحد">الأحد</option>
+                                <option value="الاثنين">الاثنين</option>
+                                <option value="الثلاثاء">الثلاثاء</option>
+                                <option value="الأربعاء">الأربعاء</option>
+                                <option value="الخميس">الخميس</option>
+                                <option value="الجمعة">الجمعة</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => currentMeeting.Day)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="agenda" class="form-label">جدول الأعمال *</label>
+                            <InputTextArea id="agenda" class="form-control" rows="3" @bind-Value="currentMeeting.Agenda" />
+                            <ValidationMessage For="@(() => currentMeeting.Agenda)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="notes" class="form-label">الملاحظات</label>
+                            <InputTextArea id="notes" class="form-control" rows="3" @bind-Value="currentMeeting.Notes" />
+                            <ValidationMessage For="@(() => currentMeeting.Notes)" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="@(() => CloseModal())">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<FollowUpMeeting> meetings = new();
+    private FollowUpMeeting currentMeeting = new();
+    private bool showModal = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMeetings();
+    }
+
+    private async Task LoadMeetings()
+    {
+        try
+        {
+            meetings = await ProfessionalDevelopmentService.GetAllMeetingsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في تحميل الاجتماعات: {ex.Message}";
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        currentMeeting = new FollowUpMeeting();
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenEditModal(FollowUpMeeting meeting)
+    {
+        currentMeeting = new FollowUpMeeting
+        {
+            Id = meeting.Id,
+            MeetingNumber = meeting.MeetingNumber,
+            Date = meeting.Date,
+            Day = meeting.Day,
+            Agenda = meeting.Agenda,
+            Notes = meeting.Notes
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentMeeting = new FollowUpMeeting();
+        StateHasChanged();
+    }
+
+    private async Task SaveMeeting()
+    {
+        try
+        {
+            if (currentMeeting.Id == 0)
+            {
+                await ProfessionalDevelopmentService.AddMeetingAsync(currentMeeting);
+                successMessage = "تم إضافة الاجتماع بنجاح";
+            }
+            else
+            {
+                await ProfessionalDevelopmentService.UpdateMeetingAsync(currentMeeting);
+                successMessage = "تم تحديث الاجتماع بنجاح";
+            }
+
+            await LoadMeetings();
+            StateHasChanged();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في حفظ الاجتماع: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteMeeting(int id)
+    {
+        try
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذا الاجتماع؟");
+            if (confirmed)
+            {
+                await ProfessionalDevelopmentService.DeleteMeetingAsync(id);
+                successMessage = "تم حذف الاجتماع بنجاح";
+                await LoadMeetings();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في حذف الاجتماع: {ex.Message}";
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = GenerateCSV();
+            var fileName = $"اجتماعات_فريق_المتابعة_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, csvContent, "text/csv;charset=utf-8;");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في تصدير Excel: {ex.Message}";
+        }
+    }
+
+    private async Task ExportToPDF()
+    {
+        try
+        {
+            var htmlContent = GeneratePDFContent();
+            await JSRuntime.InvokeVoidAsync("printToPDF", htmlContent, "اجتماعات فريق المتابعة");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في تصدير PDF: {ex.Message}";
+        }
+    }
+
+    private string GenerateCSV()
+    {
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("\uFEFF"); // BOM for UTF-8
+        csv.AppendLine("رقم الاجتماع,التاريخ,اليوم,جدول الأعمال,الملاحظات,تاريخ الإنشاء");
+        
+        foreach (var meeting in meetings)
+        {
+            csv.AppendLine($"{meeting.MeetingNumber},{meeting.Date:yyyy/MM/dd},{meeting.Day},{meeting.Agenda},{meeting.Notes},{meeting.CreatedAt:yyyy/MM/dd}");
+        }
+        
+        return csv.ToString();
+    }
+
+    private string GeneratePDFContent()
+    {
+        var html = $@"
+        <!DOCTYPE html>
+        <html dir='rtl' lang='ar'>
+        <head>
+            <meta charset='utf-8'>
+            <title>اجتماعات فريق المتابعة</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; direction: rtl; }}
+                .header {{ text-align: center; margin-bottom: 30px; }}
+                .header h1 {{ color: #007bff; margin-bottom: 10px; }}
+                .header p {{ color: #666; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: right; }}
+                th {{ background-color: #f8f9fa; font-weight: bold; }}
+                .text-center {{ text-align: center; }}
+                .mt-3 {{ margin-top: 15px; }}
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>كشاف اجتماعات فريق متابعة برامج الانماء المهني</h1>
+                <p>تاريخ التقرير: {DateTime.Now:yyyy/MM/dd}</p>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>رقم الاجتماع</th>
+                        <th>التاريخ</th>
+                        <th>اليوم</th>
+                        <th>جدول الأعمال</th>
+                        <th>الملاحظات</th>
+                        <th>تاريخ الإنشاء</th>
+                    </tr>
+                </thead>
+                <tbody>";
+
+        foreach (var meeting in meetings)
+        {
+            html += $@"
+                    <tr>
+                        <td>{meeting.MeetingNumber}</td>
+                        <td>{meeting.Date:yyyy/MM/dd}</td>
+                        <td>{meeting.Day}</td>
+                        <td>{meeting.Agenda}</td>
+                        <td>{meeting.Notes}</td>
+                        <td>{meeting.CreatedAt:yyyy/MM/dd}</td>
+                    </tr>";
+        }
+
+        html += @"
+                </tbody>
+            </table>
+        </body>
+        </html>";
+
+        return html;
+    }
+}

@@ -1,0 +1,239 @@
+@page "/professional-development"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IProfessionalDevelopmentService ProfessionalDevelopmentService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<PageTitle>برامج الانماء المهني</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">برامج الانماء المهني</h2>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- Management Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">فريق التحسين والتطوير</h5>
+                </div>
+                <div class="card-body text-center">
+                    <i class="bi bi-person-gear fs-1 text-info mb-3"></i>
+                    <h6 class="card-title">إدارة فريق التحسين</h6>
+                    <button class="btn btn-info" @onclick="@(() => NavigateToTeam())">
+                        <i class="bi bi-arrow-left"></i> إدارة الفريق
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">اجتماعات فريق المتابعة</h5>
+                </div>
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-event fs-1 text-secondary mb-3"></i>
+                    <h6 class="card-title">إدارة الاجتماعات</h6>
+                    <button class="btn btn-secondary" @onclick="@(() => NavigateToMeetings())">
+                        <i class="bi bi-arrow-left"></i> إدارة الاجتماعات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subject Selection -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">اختيار المادة</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var subject in subjects)
+                        {
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="card h-100 subject-card" @onclick="() => SelectSubject(subject)" style="cursor: pointer;">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-book @GetSubjectIcon(subject) fs-1 text-primary mb-3"></i>
+                                        <h6 class="card-title">@subject</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (selectedSubject != null)
+    {
+        <!-- Documentation Options -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">توثيق البرنامج - @selectedSubject</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="card h-100 option-card" @onclick="@(() => NavigateToReports())" style="cursor: pointer;">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-file-text fs-1 text-info mb-3"></i>
+                                        <h6 class="card-title">التقرير</h6>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="card h-100 option-card" @onclick="@(() => NavigateToDesign())" style="cursor: pointer;">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-palette fs-1 text-warning mb-3"></i>
+                                        <h6 class="card-title">التصميم</h6>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="card h-100 option-card" @onclick="@(() => NavigateToFinalEvaluation())" style="cursor: pointer;">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-clipboard-data fs-1 text-success mb-3"></i>
+                                        <h6 class="card-title">التقييم الختامي</h6>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="card h-100 option-card" @onclick="@(() => NavigateToAttendance())" style="cursor: pointer;">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-people fs-1 text-danger mb-3"></i>
+                                        <h6 class="card-title">الحضور</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    }
+</div>
+
+<style>
+    .subject-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .option-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+
+    .card-header {
+        border-radius: 8px 8px 0 0 !important;
+    }
+</style>
+
+@code {
+    private List<string> subjects = new List<string>
+    {
+        "التربية الاسلامية",
+        "اللغة العربية", 
+        "اللغة الانجليزية",
+        "الرياضيات",
+        "العلوم",
+        "الدراسات الاجتماعية",
+        "تقنية المعلومات والمهارات الفردية",
+        "الادارة والوظائف المساندة"
+    };
+
+    private string? selectedSubject;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        // Initialize any required data
+    }
+
+    private void SelectSubject(string subject)
+    {
+        selectedSubject = subject;
+        StateHasChanged();
+    }
+
+    private string GetSubjectIcon(string subject)
+    {
+        return subject switch
+        {
+            "التربية الاسلامية" => "bi-mosque",
+            "اللغة العربية" => "bi-translate",
+            "اللغة الانجليزية" => "bi-translate",
+            "الرياضيات" => "bi-calculator",
+            "العلوم" => "bi-flask",
+            "الدراسات الاجتماعية" => "bi-globe",
+            "تقنية المعلومات والمهارات الفردية" => "bi-laptop",
+            "الادارة والوظائف المساندة" => "bi-gear",
+            _ => "bi-book"
+        };
+    }
+
+    private void NavigateToReports()
+    {
+        NavigationManager.NavigateTo("/professional-development/report");
+    }
+
+    private void NavigateToDesign()
+    {
+        NavigationManager.NavigateTo("/professional-development/design");
+    }
+
+
+    private void NavigateToAttendance()
+    {
+        NavigationManager.NavigateTo("/professional-development/attendance");
+    }
+
+    private void NavigateToTeam()
+    {
+        NavigationManager.NavigateTo("/professional-development/improvement-team");
+    }
+
+    private void NavigateToMeetings()
+    {
+        NavigationManager.NavigateTo("/professional-development/followup-meetings");
+    }
+
+    private void NavigateToFinalEvaluation()
+    {
+        NavigationManager.NavigateTo("/professional-development/final-evaluation");
+    }
+}

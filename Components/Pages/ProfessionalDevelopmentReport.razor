@@ -1,0 +1,405 @@
+@page "/professional-development/report"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IProfessionalDevelopmentService ProfessionalDevelopmentService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>تقرير برنامج الانماء المهني</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">تقرير برنامج الانماء المهني</h2>
+        <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
+            <i class="bi bi-plus"></i> إضافة تقرير جديد
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="@(() => successMessage = string.Empty)"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = string.Empty)"></button>
+        </div>
+    }
+
+    <!-- Reports Table -->
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">تقارير برامج الانماء المهني</h5>
+            <div>
+                <button class="btn btn-light btn-sm me-2" @onclick="@(() => ExportToExcel())">
+                    <i class="bi bi-file-excel"></i> Excel
+                </button>
+                <button class="btn btn-light btn-sm" @onclick="@(() => ExportToPDF())">
+                    <i class="bi bi-file-pdf"></i> PDF
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (reports == null)
+            {
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                </div>
+            }
+            else if (!reports.Any())
+            {
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-file-text fs-1"></i>
+                    <p class="mt-2">لا توجد تقارير لعرضها</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 5%;">م</th>
+                                <th style="width: 15%;">نوع البرنامج</th>
+                                <th style="width: 20%;">اسم البرنامج</th>
+                                <th style="width: 12%;">المادة</th>
+                                <th style="width: 10%;">التاريخ</th>
+                                <th style="width: 12%;">المنفذ</th>
+                                <th style="width: 15%;">مكان التنفيذ</th>
+                                <th style="width: 8%;">عدد الحضور</th>
+                                <th style="width: 8%;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int rowIndex = 1;
+                            }
+                            @foreach (var report in reports)
+                            {
+                                <tr>
+                                    <td class="text-center fw-bold">@rowIndex</td>
+                                    <td>@report.ProgramType</td>
+                                    <td>@report.ProgramName</td>
+                                    <td>@report.Subject</td>
+                                    <td>@report.Date.ToString("yyyy-MM-dd")</td>
+                                    <td>@report.Executor</td>
+                                    <td>@report.ExecutionLocation</td>
+                                    <td class="text-center">@report.NumberOfAttendees</td>
+                                    <td>
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button class="btn btn-warning btn-sm" @onclick="@(() => OpenEditModal(report))" title="تعديل">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteReport(report.Id))" title="حذف">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                rowIndex++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade @(showModal ? "show d-block" : "")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">@(currentReport.Id == 0 ? "إضافة تقرير جديد" : "تعديل التقرير")</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="@(() => CloseModal())"></button>
+            </div>
+            <EditForm Model="@currentReport" OnValidSubmit="SaveReport" FormName="reportForm">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="programType" class="form-label">نوع البرنامج</label>
+                            <InputText id="programType" class="form-control" @bind-Value="currentReport.ProgramType" />
+                            <ValidationMessage For="@(() => currentReport.ProgramType)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="programName" class="form-label">اسم البرنامج</label>
+                            <InputText id="programName" class="form-control" @bind-Value="currentReport.ProgramName" />
+                            <ValidationMessage For="@(() => currentReport.ProgramName)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="subject" class="form-label">المادة</label>
+                            <InputText id="subject" class="form-control" @bind-Value="currentReport.Subject" />
+                            <ValidationMessage For="@(() => currentReport.Subject)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="date" class="form-label">التاريخ</label>
+                            <InputDate id="date" class="form-control" @bind-Value="currentReport.Date" TValue="DateTime" />
+                            <ValidationMessage For="@(() => currentReport.Date)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="executor" class="form-label">المنفذ</label>
+                            <InputText id="executor" class="form-control" @bind-Value="currentReport.Executor" />
+                            <ValidationMessage For="@(() => currentReport.Executor)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="executionLocation" class="form-label">مكان التنفيذ</label>
+                            <InputText id="executionLocation" class="form-control" @bind-Value="currentReport.ExecutionLocation" />
+                            <ValidationMessage For="@(() => currentReport.ExecutionLocation)" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="numberOfAttendees" class="form-label">عدد الحضور</label>
+                            <InputNumber id="numberOfAttendees" class="form-control" @bind-Value="currentReport.NumberOfAttendees" TValue="int" />
+                            <ValidationMessage For="@(() => currentReport.NumberOfAttendees)" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="programJustifications" class="form-label">مبررات البرنامج</label>
+                        <InputTextArea id="programJustifications" class="form-control" rows="3" @bind-Value="currentReport.ProgramJustifications" />
+                        <ValidationMessage For="@(() => currentReport.ProgramJustifications)" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="@(() => CloseModal())">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+<style>
+    .modal.show {
+        display: block !important;
+    }
+    
+    .table th {
+        border-top: none;
+        font-weight: bold;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+
+@code {
+    private List<ProfessionalDevelopmentProgram> reports = new();
+    private ProfessionalDevelopmentProgram currentReport = new ProfessionalDevelopmentProgram();
+    private bool showModal = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReports();
+    }
+
+    private async Task LoadReports()
+    {
+        try
+        {
+            reports = await ProfessionalDevelopmentService.GetAllProgramsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تحميل التقارير: " + ex.Message;
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        currentReport = new ProfessionalDevelopmentProgram();
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenEditModal(ProfessionalDevelopmentProgram report)
+    {
+        currentReport = new ProfessionalDevelopmentProgram
+        {
+            Id = report.Id,
+            ProgramType = report.ProgramType,
+            ProgramName = report.ProgramName,
+            Subject = report.Subject,
+            Date = report.Date,
+            Executor = report.Executor,
+            ExecutionLocation = report.ExecutionLocation,
+            NumberOfAttendees = report.NumberOfAttendees,
+            ProgramJustifications = report.ProgramJustifications
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentReport = new ProfessionalDevelopmentProgram();
+        StateHasChanged();
+    }
+
+    private async Task SaveReport()
+    {
+        try
+        {
+            if (currentReport.Id == 0)
+            {
+                await ProfessionalDevelopmentService.AddProgramAsync(currentReport);
+                successMessage = "تم إضافة التقرير بنجاح";
+            }
+            else
+            {
+                await ProfessionalDevelopmentService.UpdateProgramAsync(currentReport);
+                successMessage = "تم تحديث التقرير بنجاح";
+            }
+
+            await LoadReports();
+            StateHasChanged();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حفظ التقرير: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteReport(int id)
+    {
+        try
+        {
+            if (await JSRuntime.InvokeAsync<bool>("confirmDialog", "هل أنت متأكد من حذف هذا التقرير؟"))
+            {
+                await ProfessionalDevelopmentService.DeleteProgramAsync(id);
+                successMessage = "تم حذف التقرير بنجاح";
+                await LoadReports();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حذف التقرير: " + ex.Message;
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            if (reports == null || !reports.Any())
+            {
+                errorMessage = "لا توجد بيانات للتصدير";
+                return;
+            }
+
+            var data = reports.Select(r => new
+            {
+                نوع_البرنامج = r.ProgramType,
+                اسم_البرنامج = r.ProgramName,
+                المادة = r.Subject,
+                التاريخ = r.Date.ToString("yyyy-MM-dd"),
+                المنفذ = r.Executor,
+                مكان_التنفيذ = r.ExecutionLocation,
+                عدد_الحضور = r.NumberOfAttendees,
+                مبررات_البرنامج = r.ProgramJustifications ?? ""
+            }).ToList();
+
+            await JSRuntime.InvokeVoidAsync("exportToExcel", data, "تقارير_برامج_الانماء_المهني");
+            successMessage = "تم تصدير البيانات إلى Excel بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير Excel: " + ex.Message;
+        }
+    }
+
+    private async Task ExportToPDF()
+    {
+        try
+        {
+            if (reports == null || !reports.Any())
+            {
+                errorMessage = "لا توجد بيانات للتصدير";
+                return;
+            }
+
+            var tableRows = reports.Select((r, index) => $@"
+                <tr>
+                    <td>{index + 1}</td>
+                    <td>{r.ProgramType}</td>
+                    <td>{r.ProgramName}</td>
+                    <td>{r.Subject}</td>
+                    <td>{r.Date:yyyy-MM-dd}</td>
+                    <td>{r.Executor}</td>
+                    <td>{r.ExecutionLocation}</td>
+                    <td>{r.NumberOfAttendees}</td>
+                </tr>").ToList();
+
+            var tableRowsHtml = string.Join("", tableRows);
+
+            var html = $@"
+                <html>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>تقارير برامج الانماء المهني</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; direction: rtl; }}
+                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+                        th {{ background-color: #f2f2f2; font-weight: bold; }}
+                        .header {{ text-align: center; margin-bottom: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>تقارير برامج الانماء المهني</h1>
+                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>م</th>
+                                <th>نوع البرنامج</th>
+                                <th>اسم البرنامج</th>
+                                <th>المادة</th>
+                                <th>التاريخ</th>
+                                <th>المنفذ</th>
+                                <th>مكان التنفيذ</th>
+                                <th>عدد الحضور</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {tableRowsHtml}
+                        </tbody>
+                    </table>
+                </body>
+                </html>";
+
+            await JSRuntime.InvokeVoidAsync("exportToPDF", html, "تقارير_برامج_الانماء_المهني");
+            successMessage = "تم تصدير البيانات إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+}

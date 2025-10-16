@@ -1,0 +1,1883 @@
+@page "/behaviordiscipline"
+@page "/behavior-discipline"
+@using SchoolHallBooking.Services
+@using SchoolHallBooking.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">جاري التحميل...</span>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-warning text-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>غير مصرح لك بالوصول</strong>
+                    <br>
+                    <small>يجب تسجيل الدخول أولاً للوصول إلى هذه الصفحة</small>
+                    <br>
+                    <a href="/school/login" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>
+                        تسجيل الدخول
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid" style="direction: rtl;">
+        @if (activeSlide == 1)
+        {
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <h2 class="m-0">الانضباط السلوكي</h2>
+                <span class="text-muted">شريحة 1</span>
+            </div>
+            <div class="d-flex flex-wrap gap-3">
+                <button class="btn btn-info" @onclick="(() => OpenSlide(2))">التأخر الصباحي</button>
+                <button class="btn btn-info" @onclick="(() => OpenSlide(3))">الانضباط السلوكي</button>
+                <button class="btn btn-info" @onclick="(() => OpenSlide(6))">إنذار طالب</button>
+                <button class="btn btn-info" @onclick="(() => OpenSlide(4))">تنبيه طالب</button>
+                <button class="btn btn-info" @onclick="(() => OpenSlide(5))">إخطار ولي أمر</button>
+            </div>
+        }
+        else if (activeSlide == 2)
+        {
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <h2 class="m-0">التأخر الصباحي</h2>
+                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+            </div>
+
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <h5 class="m-0">الطلاب</h5>
+                <button class="btn btn-sm btn-outline-primary" @onclick="AddStudent">+ إضافة طالب</button>
+            </div>
+
+            @for (int s = 0; s < students.Count; s++)
+            {
+                var sidx = s;
+                var student = students[sidx];
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="m-0">الطالب @(sidx + 1)</h6>
+                        <div>
+                            <button class="btn btn-sm btn-success me-2" @onclick="(() => PrintStudent(sidx))">طباعة PDF</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveStudent(sidx))">حذف الطالب</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">اسم الطالب</label>
+                                <InputText class="form-control form-control-sm" @bind-Value="student.StudentName" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">الصف</label>
+                                <InputText class="form-control form-control-sm" @bind-Value="student.StudentClass" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">اليوم</label>
+                                <InputText class="form-control form-control-sm" @bind-Value="student.Day" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">التاريخ</label>
+                                <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control form-control-sm" @bind-Value="student.Date" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">عدد الأيام</label>
+                                <div class="form-control form-control-sm bg-light text-center fw-bold">
+                                    @student.DaysCount يوم
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">ملاحظات</label>
+                                <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="student.Notes" />
+                            </div>
+                        </div>
+
+                        <div class="mb-2 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0">سجل التأخر</h6>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="(() => AddRow(sidx))">+ إضافة صف</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm" style="text-align:center;vertical-align:middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:70px">م</th>
+                                        <th>اليوم</th>
+                                        <th>التاريخ</th>
+                                        <th>سبب التأخر</th>
+                                        <th style="width:120px">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < student.LateRows.Count; i++)
+                                    {
+                                        var idx = i;
+                                        var row = student.LateRows[idx];
+                                        <tr>
+                                            <td>@(idx + 1)</td>
+                                            <td><InputText class="form-control form-control-sm" @bind-Value="row.RowDay" /></td>
+                                            <td><InputText class="form-control form-control-sm" @bind-Value="row.RowDate" /></td>
+                                            <td><InputText class="form-control form-control-sm" @bind-Value="row.Reason" /></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveRow(sidx, idx))">حذف</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary" @onclick="Save">حفظ البيانات</button>
+                <button class="btn btn-secondary" @onclick="Load">استرجاع</button>
+            </div>
+        }
+        else if (activeSlide == 3)
+        {
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <h2 class="m-0">الانضباط السلوكي</h2>
+                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+            </div>
+
+            <!-- إضافة طالب جديد -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="m-0">إضافة طالب جديد</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">اسم الطالب</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="currentStudent.StudentName" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">الصف</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="currentStudent.StudentClass" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">اسم المعلم</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="currentStudent.TeacherName" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-3">
+                        <div class="col-12">
+                            <label class="form-label">ملاحظات على الطالب</label>
+                            <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="currentStudent.OtherNotes" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-4">
+                            <label class="form-label">التوقيع</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="currentStudent.TeacherSignature" disabled />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">تاريخ الإحالة للجنة</label>
+                            <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control form-control-sm" @bind-Value="currentStudent.CommitteeReferralDate" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة)</label>
+                            <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="currentStudent.CommitteeProcedures" />
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-success" @onclick="AddBehaviorStudent">+ إضافة طالب</button>
+                        <button class="btn btn-primary" @onclick="SaveBehavior">حفظ البيانات</button>
+                        <button class="btn btn-secondary" @onclick="LoadBehavior">استرجاع</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قائمة الطلاب -->
+            @if (behaviorStudents.Count > 0)
+            {
+                <div class="row">
+                    @for (int i = 0; i < behaviorStudents.Count; i++)
+                    {
+                        var idx = i;
+                        var student = behaviorStudents[idx];
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">@student.StudentName - @student.StudentClass</h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-light me-2" @onclick="(() => SelectStudent(idx))">
+                                            @(selectedStudentIndex == idx ? "محدد" : "تحديد")
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-light me-2" @onclick="(() => PrintStudentReport(idx))">طباعة</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveBehaviorStudent(idx))">حذف</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- إضافة مخالفة جديدة للطالب المحدد -->
+                                    @if (selectedStudentIndex == idx)
+                                    {
+                                        <div class="mb-3 p-3 bg-light rounded">
+                                            <h6 class="text-primary">إضافة مخالفة جديدة</h6>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">اليوم</label>
+                                                    <InputText class="form-control form-control-sm" @bind-Value="currentViolation.Day" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">التاريخ</label>
+                                                    <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control form-control-sm" @bind-Value="currentViolation.Date" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">الحصة</label>
+                                                    <InputText class="form-control form-control-sm" @bind-Value="currentViolation.Period" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">المخالفة</label>
+                                                    <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="currentViolation.ViolationDescription" />
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentViolation.Guidance" />
+                                                        <label class="form-check-label small">توجيه</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentViolation.GradeDeduction" />
+                                                        <label class="form-check-label small">خصم الدرجات</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentViolation.TemporarySuspension" />
+                                                        <label class="form-check-label small">إيقاف مؤقت</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentViolation.Other" />
+                                                        <label class="form-check-label small">أخرى</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @if (currentViolation.Other)
+                                            {
+                                                <div class="mb-2">
+                                                    <InputText class="form-control form-control-sm" placeholder="حدد الإجراء الآخر" @bind-Value="currentViolation.OtherSpecify" />
+                                                </div>
+                                            }
+                                            <button class="btn btn-sm btn-primary" @onclick="(() => AddViolationToStudent(idx))">+ إضافة مخالفة</button>
+                                        </div>
+                                    }
+
+                                    <!-- جدول المخالفات -->
+                                    @if (student.Violations.Any())
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>م</th>
+                                                        <th>اليوم</th>
+                                                        <th>التاريخ</th>
+                                                        <th>الحصة</th>
+                                                        <th>المخالفة</th>
+                                                        <th>الإجراء</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @for (int j = 0; j < student.Violations.Count; j++)
+                                                    {
+                                                        var violation = student.Violations[j];
+                                                        <tr>
+                                                            <td>@(j + 1)</td>
+                                                            <td>@violation.Day</td>
+                                                            <td>@violation.Date?.ToString("yyyy-MM-dd")</td>
+                                                            <td>@violation.Period</td>
+                                                            <td>@violation.ViolationDescription</td>
+                                                            <td>
+                                                                @if (violation.Guidance) { <span class="badge bg-info me-1">توجيه</span> }
+                                                                @if (violation.GradeDeduction) { <span class="badge bg-warning me-1">خصم الدرجات</span> }
+                                                                @if (violation.TemporarySuspension) { <span class="badge bg-danger me-1">إيقاف مؤقت</span> }
+                                                                @if (violation.Other) { <span class="badge bg-secondary me-1">@violation.OtherSpecify</span> }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted text-center">لا توجد مخالفات مسجلة</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else if (activeSlide == 4)
+        {
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <h2 class="m-0">تنبيه طالب</h2>
+                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+            </div>
+
+            <!-- إضافة تنبيه جديد -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">إضافة تنبيه جديد</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">اسم الطالب</label>
+                            <InputText class="form-control" @bind-Value="currentWarning.StudentName" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">الصف</label>
+                            <InputText class="form-control" @bind-Value="currentWarning.StudentClass" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">التاريخ</label>
+                            <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control" @bind-Value="currentWarning.Date" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">الأسباب</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="currentWarning.Reasons" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">اسم المعلم</label>
+                            <InputText class="form-control" @bind-Value="currentWarning.TeacherName" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">تاريخ الإحالة للجنة</label>
+                            <InputText class="form-control" @bind-Value="currentWarning.CommitteeReferralDate" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة)</label>
+                            <InputTextArea class="form-control" rows="2" @bind-Value="currentWarning.CommitteeActions" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">التعهد</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="currentWarning.StudentPledge" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">توقيع الطالب</label>
+                            <InputText class="form-control" disabled @bind-Value="currentWarning.StudentSignature" />
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-success" @onclick="AddWarning">+ إضافة تنبيه</button>
+                        <button class="btn btn-primary" @onclick="SaveWarning">حفظ البيانات</button>
+                        <button class="btn btn-secondary" @onclick="LoadWarning">استرجاع</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قائمة التنبيهات -->
+            @if (studentWarnings.Count > 0)
+            {
+                <div class="row">
+                    @for (int i = 0; i < studentWarnings.Count; i++)
+                    {
+                        var idx = i;
+                        var warning = studentWarnings[idx];
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">@warning.StudentName - @warning.StudentClass</h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-dark me-2" @onclick="(() => SelectWarning(idx))">
+                                            @(selectedWarningIndex == idx ? "محدد" : "تحديد")
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-dark me-2" @onclick="(() => PrintWarning(idx))">طباعة</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveWarning(idx))">حذف</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- إضافة مخالفة جديدة للتنبيه المحدد -->
+                                    @if (selectedWarningIndex == idx)
+                                    {
+                                        <div class="mb-3 p-3 bg-light rounded">
+                                            <h6 class="text-warning">إضافة مخالفة جديدة</h6>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">اليوم</label>
+                                                    <InputText class="form-control form-control-sm" @bind-Value="currentWarningViolation.Day" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">التاريخ</label>
+                                                    <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control form-control-sm" @bind-Value="currentWarningViolation.Date" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">الحصة</label>
+                                                    <InputText class="form-control form-control-sm" @bind-Value="currentWarningViolation.Period" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small">المخالفة</label>
+                                                    <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="currentWarningViolation.ViolationDescription" />
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentWarningViolation.Guidance" />
+                                                        <label class="form-check-label small">توجيه</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentWarningViolation.GradeDeduction" />
+                                                        <label class="form-check-label small">خصم الدرجات</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentWarningViolation.TemporarySuspension" />
+                                                        <label class="form-check-label small">إيقاف مؤقت</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-check">
+                                                        <InputCheckbox class="form-check-input" @bind-Value="currentWarningViolation.Other" />
+                                                        <label class="form-check-label small">أخرى</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @if (currentWarningViolation.Other)
+                                            {
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-md-6">
+                                                        <InputText class="form-control form-control-sm" placeholder="حدد الإجراء الآخر" @bind-Value="currentWarningViolation.OtherSpecify" />
+                                                    </div>
+                                                </div>
+                                            }
+                                            <button class="btn btn-sm btn-warning" @onclick="(() => AddViolationToWarning(idx))">+ إضافة مخالفة</button>
+                                        </div>
+                                    }
+
+                                    <!-- جدول المخالفات -->
+                                    @if (warning.Violations.Count > 0)
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead class="table-warning">
+                                                    <tr>
+                                                        <th>م</th>
+                                                        <th>اليوم</th>
+                                                        <th>التاريخ</th>
+                                                        <th>الحصة</th>
+                                                        <th>المخالفة</th>
+                                                        <th>الإجراء</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @for (int j = 0; j < warning.Violations.Count; j++)
+                                                    {
+                                                        var violation = warning.Violations[j];
+                                                        <tr>
+                                                            <td>@(j + 1)</td>
+                                                            <td>@violation.Day</td>
+                                                            <td>@violation.Date.ToString("yyyy-MM-dd")</td>
+                                                            <td>@violation.Period</td>
+                                                            <td>@violation.ViolationDescription</td>
+                                                            <td>
+                                                                @if (violation.Guidance) { <span class="badge bg-info me-1">توجيه</span> }
+                                                                @if (violation.GradeDeduction) { <span class="badge bg-warning me-1">خصم الدرجات</span> }
+                                                                @if (violation.TemporarySuspension) { <span class="badge bg-danger me-1">إيقاف مؤقت</span> }
+                                                                @if (violation.Other) { <span class="badge bg-secondary me-1">@violation.OtherSpecify</span> }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted text-center">لا توجد مخالفات مسجلة</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else if (activeSlide == 5)
+        {
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <h2 class="m-0">إخطار ولي الأمر</h2>
+                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+            </div>
+
+            <!-- إضافة إخطار جديد -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">إضافة إخطار جديد</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">اسم الطالب</label>
+                            <InputText class="form-control" @bind-Value="currentNotification.StudentName" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">الصف</label>
+                            <InputText class="form-control" @bind-Value="currentNotification.StudentClass" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">التاريخ</label>
+                            <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control" @bind-Value="currentNotification.Date" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">الأسباب</label>
+                            <InputTextArea class="form-control" rows="2" @bind-Value="currentNotification.Reasons" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">المخالفة السلوكية</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="currentGuardianViolation.ViolationDescription" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">ملاحظات على الطالب</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="currentGuardianViolation.OtherNotes" />
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-warning btn-sm" @onclick="AddGuardianViolation">+ إضافة مخالفة</button>
+                    </div>
+                    
+                    <!-- عرض المخالفات المضافة -->
+                    @if (currentNotification.Violations.Count > 0)
+                    {
+                        <div class="mt-3">
+                            <h6>المخالفات المضافة:</h6>
+                            @for (int i = 0; i < currentNotification.Violations.Count; i++)
+                            {
+                                var idx = i;
+                                var violation = currentNotification.Violations[idx];
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <div><strong>المخالفة:</strong> @violation.ViolationDescription</div>
+                                                <div><strong>ملاحظات:</strong> @violation.OtherNotes</div>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveViolation(idx))">حذف</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-success" @onclick="AddGuardianNotification">+ إضافة إخطار</button>
+                        <button class="btn btn-primary" @onclick="SaveGuardianNotification">حفظ البيانات</button>
+                        <button class="btn btn-secondary" @onclick="LoadGuardianNotification">استرجاع</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قائمة الإخطارات -->
+            @if (guardianNotifications.Count > 0)
+            {
+                <div class="row">
+                    @for (int i = 0; i < guardianNotifications.Count; i++)
+                    {
+                        var idx = i;
+                        var notification = guardianNotifications[idx];
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">@notification.StudentName - @notification.StudentClass</h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-light me-2" @onclick="(() => PrintGuardianNotification(idx))">طباعة</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveGuardianNotification(idx))">حذف</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <strong>التاريخ:</strong> @notification.Date.ToString("yyyy-MM-dd")
+                                        </div>
+                                        <div class="col-12">
+                                            <strong>الأسباب:</strong> @notification.Reasons
+                                        </div>
+                                        <div class="col-12">
+                                            <strong>المخالفات السلوكية:</strong>
+                                            @if (notification.Violations.Count > 0)
+                                            {
+                                                <ul class="mb-0 mt-1">
+                                                    @foreach (var violation in notification.Violations)
+                                                    {
+                                                        <li>@violation.ViolationDescription</li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">لا توجد مخالفات</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else if (activeSlide == 6)
+        {
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <h2 class="m-0">إنذار طالب</h2>
+                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+            </div>
+
+            <!-- إضافة إنذار جديد -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">إضافة إنذار جديد</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">اسم الطالب</label>
+                            <InputText class="form-control" @bind-Value="currentAlert.StudentName" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">الصف</label>
+                            <InputText class="form-control" @bind-Value="currentAlert.StudentClass" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">التاريخ</label>
+                            <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control" @bind-Value="currentAlert.Date" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">الأسباب</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="currentAlert.Reasons" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">اسم المعلم</label>
+                            <InputText class="form-control" @bind-Value="currentAlert.TeacherName" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">تاريخ الإحالة للجنة</label>
+                            <InputText class="form-control" @bind-Value="currentAlert.CommitteeReferralDate" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة)</label>
+                            <InputTextArea class="form-control" rows="2" @bind-Value="currentAlert.CommitteeActions" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">التعهد</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="currentAlert.StudentPledge" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">توقيع الطالب</label>
+                            <InputText class="form-control" disabled @bind-Value="currentAlert.StudentSignature" />
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-success" @onclick="AddAlert">+ إضافة إنذار</button>
+                        <button class="btn btn-primary" @onclick="SaveAlert">حفظ البيانات</button>
+                        <button class="btn btn-secondary" @onclick="LoadAlert">استرجاع</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قائمة الإنذارات -->
+            @if (studentAlerts.Count > 0)
+            {
+                <div class="row">
+                    @for (int i = 0; i < studentAlerts.Count; i++)
+                    {
+                        var idx = i;
+                        var alert = studentAlerts[idx];
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">@alert.StudentName - @alert.StudentClass</h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-dark me-2" @onclick="(() => PrintAlert(idx))">طباعة</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveAlert(idx))">حذف</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <strong>التاريخ:</strong> @alert.Date.ToString("yyyy-MM-dd")
+                                        </div>
+                                        <div class="col-12">
+                                            <strong>الأسباب:</strong> @alert.Reasons
+                                        </div>
+                                        <div class="col-12">
+                                            <strong>اسم المعلم:</strong> @alert.TeacherName
+                                        </div>
+                                        <div class="col-12">
+                                            <strong>تاريخ الإحالة للجنة:</strong> @alert.CommitteeReferralDate
+                                        </div>
+                                        <div class="col-12">
+                                            <strong>الإجراءات المتبعة:</strong> @alert.CommitteeActions
+                                        </div>
+                                        <div class="col-12">
+                                            <strong>التعهد:</strong> @alert.StudentPledge
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private int activeSlide = 1;
+
+    private class LateRow
+    {
+        public string RowDay { get; set; } = string.Empty;
+        public string RowDate { get; set; } = string.Empty;
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    private class Student
+    {
+        public string StudentName { get; set; } = string.Empty;
+        public string StudentClass { get; set; } = string.Empty;
+        public string Day { get; set; } = string.Empty;
+        public DateTime? Date { get; set; } = DateTime.Today;
+        public string Notes { get; set; } = string.Empty;
+        public List<LateRow> LateRows { get; set; } = new();
+        
+        // خاصية محسوبة لعدد الأيام
+        public int DaysCount => LateRows.Count;
+    }
+
+    private List<Student> students = new();
+
+    private class BehaviorStudent
+    {
+        public string StudentName { get; set; } = string.Empty;
+        public string StudentClass { get; set; } = string.Empty;
+        public string OtherNotes { get; set; } = string.Empty;
+        public string TeacherName { get; set; } = string.Empty;
+        public string TeacherSignature { get; set; } = string.Empty;
+        public DateTime? CommitteeReferralDate { get; set; } = DateTime.Today;
+        public string CommitteeProcedures { get; set; } = string.Empty;
+        public List<BehaviorViolation> Violations { get; set; } = new();
+    }
+
+    private class BehaviorViolation
+    {
+        public string Day { get; set; } = string.Empty;
+        public DateTime? Date { get; set; } = DateTime.Today;
+        public string Period { get; set; } = string.Empty;
+        public string ViolationDescription { get; set; } = string.Empty;
+        public bool Guidance { get; set; } = false;
+        public bool GradeDeduction { get; set; } = false;
+        public bool TemporarySuspension { get; set; } = false;
+        public bool Other { get; set; } = false;
+        public string OtherSpecify { get; set; } = string.Empty;
+    }
+
+    private List<BehaviorStudent> behaviorStudents = new();
+    private BehaviorStudent currentStudent = new();
+    private BehaviorViolation currentViolation = new();
+    private int selectedStudentIndex = -1;
+
+    // Student Warning variables
+    private List<StudentWarning> studentWarnings = new();
+    private StudentWarning currentWarning = new();
+    private WarningViolation currentWarningViolation = new();
+    private int selectedWarningIndex = -1;
+
+    // Student Alert variables (separate from warning)
+    private List<StudentAlert> studentAlerts = new();
+    private StudentAlert currentAlert = new();
+
+    // Guardian Notification variables
+    private List<GuardianNotification> guardianNotifications = new();
+    private GuardianNotification currentNotification = new();
+    private GuardianBehaviorViolation currentGuardianViolation = new();
+    private int selectedNotificationIndex = -1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            
+            // تحميل البيانات فوراً بعد التحقق من المصادقة
+            if (isAuthenticated)
+            {
+                await Load();
+                await LoadBehavior();
+                await LoadWarning();
+                await LoadAlert();
+                await LoadGuardianNotification();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking authentication: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && isAuthenticated)
+        {
+            // تحميل البيانات المحفوظة تلقائياً عند فتح الصفحة
+            await Load();
+            await LoadBehavior();
+            await LoadWarning();
+            await LoadAlert();
+            await LoadGuardianNotification();
+            StateHasChanged();
+        }
+    }
+
+    private async void OpenSlide(int slide)
+    {
+        activeSlide = slide;
+        if (activeSlide == 2)
+        {
+            await Load();
+        }
+        else if (activeSlide == 3)
+        {
+            await LoadBehavior();
+        }
+        else if (activeSlide == 4)
+        {
+            await LoadWarning();
+        }
+        else if (activeSlide == 5)
+        {
+            await LoadGuardianNotification();
+        }
+        else if (activeSlide == 6)
+        {
+            await LoadAlert();
+        }
+    }
+
+
+    private void AddStudent()
+    {
+        students.Add(new Student());
+        StateHasChanged();
+    }
+
+    private void RemoveStudent(int index)
+    {
+        if (index >= 0 && index < students.Count)
+        {
+            students.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void AddRow(int studentIndex) => students[studentIndex].LateRows.Add(new LateRow());
+    private void RemoveRow(int studentIndex, int rowIndex)
+    {
+        if (studentIndex >= 0 && studentIndex < students.Count && 
+            rowIndex >= 0 && rowIndex < students[studentIndex].LateRows.Count)
+        {
+            students[studentIndex].LateRows.RemoveAt(rowIndex);
+        }
+    }
+
+    private async Task Save()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(students);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "behavior-morning-delay", json);
+        StateHasChanged();
+    }
+
+    private async Task Load()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "behavior-morning-delay");
+            if (!string.IsNullOrEmpty(json))
+            {
+                students = System.Text.Json.JsonSerializer.Deserialize<List<Student>>(json) ?? new();
+            }
+        }
+        catch {}
+        StateHasChanged();
+    }
+
+    private async Task PrintStudent(int studentIndex)
+    {
+        var html = CreateMorningDelayHTML(studentIndex);
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "إخطار تأخر حضور طالب");
+    }
+
+    private string CreateMorningDelayHTML(int studentIndex)
+    {
+        if (studentIndex < 0 || studentIndex >= students.Count) return string.Empty;
+        
+        var student = students[studentIndex];
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;padding:20px;color:#000'>");
+        
+        // Header (without logo)
+        sb.Append("<div style='margin-bottom:10px'>");
+        sb.Append("<div>سلطنة عمان</div>");
+        sb.Append("<div>وزارة التربية والتعليم</div>");
+        sb.Append("<div>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
+        sb.Append("<div>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
+        sb.Append("</div>");
+        sb.Append("<hr/>");
+
+        // Title
+        sb.Append("<h3 style='text-align:center;margin:12px 0'>إخطار بتأخر حضور طالب / إنذار</h3>");
+
+        // Guardian line
+        sb.Append("<div style='margin:8px 0'>الفاضل ولي أمر الطالب / <span style='display:inline-block;min-width:260px;border-bottom:1px dotted #000'>&nbsp;&nbsp;" + System.Net.WebUtility.HtmlEncode(student.StudentName) + "&nbsp;&nbsp;</span></div>");
+        sb.Append("<div style='margin:8px 0'>المقيد بالصف: <span style='display:inline-block;min-width:140px;border-bottom:1px dotted #000'>" + System.Net.WebUtility.HtmlEncode(student.StudentClass) + "</span></div>");
+
+        // Body intro
+        sb.Append("<div style='margin:12px 0'>نود إعلامكم بتأخر ابنكم عن الحضور للمدرسة لمدة <span style='display:inline-block;min-width:80px;border-bottom:1px dotted #000'>&nbsp;&nbsp;" + student.DaysCount + "&nbsp;&nbsp;</span> أيام، وذلك على النحو الآتي:</div>");
+
+        // Table
+        sb.Append("<table style='width:100%;border-collapse:collapse;margin:12px 0'>");
+        sb.Append("<thead><tr>");
+        string th = "style='border:1px solid #000;padding:8px;background:#f8f9fa;text-align:center'";
+        sb.Append($"<th {th}>م</th><th {th}>اليوم</th><th {th}>التاريخ</th><th {th}>سبب التأخر</th>");
+        sb.Append("</tr></thead><tbody>");
+        string td = "style='border:1px solid #000;padding:8px;text-align:center'";
+        for (int i = 0; i < student.LateRows.Count; i++)
+        {
+            var r = student.LateRows[i];
+            sb.Append("<tr>");
+            sb.Append($"<td {td}>{i + 1}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.RowDay)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.RowDate)}</td>");
+            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.Reason)}</td>");
+            sb.Append("</tr>");
+        }
+        if (student.LateRows.Count == 0)
+        {
+            sb.Append($"<tr><td {td}>1</td><td {td}></td><td {td}></td><td {td}></td></tr>");
+            sb.Append($"<tr><td {td}>2</td><td {td}></td><td {td}></td><td {td}></td></tr>");
+            sb.Append($"<tr><td {td}>3</td><td {td}></td><td {td}></td><td {td}></td></tr>");
+        }
+        sb.Append("</tbody></table>");
+
+        // Footer action
+        sb.Append("<div style='margin-top:14px'>");
+        sb.Append("عليه وبناءً على لائحة شؤون الطلبة، فإن إدارة المدرسة ستتخذ الإجراءات اللازمة حول ظاهرة التأخر الدراسي. آملين التكرم بحث الطلبة على الالتزام بالأنظمة والقوانين المدرسية.");
+        sb.Append("</div>");
+
+        // Action taken area
+        sb.Append("<div style='margin-top:18px'><strong>الإجراء المتخذ:</strong><div style='border:1px solid #000;min-height:90px;margin-top:6px;padding:6px'>" + System.Net.WebUtility.HtmlEncode(student.Notes).Replace("\n", "<br/>") + "</div></div>");
+
+        // Signature
+        sb.Append("<div style='margin-top:24px;text-align:left'>");
+        sb.Append("<div>وتفضلوا بقبول فائق الاحترام والتقدير ...</div>");
+        sb.Append("<div style='margin-top:30px'><strong>حمد بن هلال الغافري</strong></div>");
+        sb.Append("</div>");
+
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    // Behavior Discipline Methods
+    private void AddViolation()
+    {
+        if (!string.IsNullOrEmpty(currentViolation.Day) && !string.IsNullOrEmpty(currentViolation.ViolationDescription))
+        {
+            currentStudent.Violations.Add(new BehaviorViolation
+            {
+                Day = currentViolation.Day,
+                Date = currentViolation.Date,
+                Period = currentViolation.Period,
+                ViolationDescription = currentViolation.ViolationDescription,
+                Guidance = currentViolation.Guidance,
+                GradeDeduction = currentViolation.GradeDeduction,
+                TemporarySuspension = currentViolation.TemporarySuspension,
+                Other = currentViolation.Other,
+                OtherSpecify = currentViolation.OtherSpecify
+            });
+            
+            // Clear violation form
+            currentViolation = new BehaviorViolation();
+        }
+    }
+
+    private void AddBehaviorStudent()
+    {
+        if (!string.IsNullOrEmpty(currentStudent.StudentName) && !string.IsNullOrEmpty(currentStudent.StudentClass))
+        {
+            behaviorStudents.Add(new BehaviorStudent
+            {
+                StudentName = currentStudent.StudentName,
+                StudentClass = currentStudent.StudentClass,
+                OtherNotes = currentStudent.OtherNotes,
+                TeacherName = currentStudent.TeacherName,
+                TeacherSignature = currentStudent.TeacherSignature,
+                CommitteeReferralDate = currentStudent.CommitteeReferralDate,
+                CommitteeProcedures = currentStudent.CommitteeProcedures,
+                Violations = new List<BehaviorViolation>()
+            });
+            
+            // Clear forms
+            currentStudent = new BehaviorStudent();
+            currentViolation = new BehaviorViolation();
+            selectedStudentIndex = -1;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveBehaviorStudent(int index)
+    {
+        if (index >= 0 && index < behaviorStudents.Count)
+        {
+            behaviorStudents.RemoveAt(index);
+            if (selectedStudentIndex == index)
+            {
+                selectedStudentIndex = -1;
+            }
+            else if (selectedStudentIndex > index)
+            {
+                selectedStudentIndex--;
+            }
+        }
+    }
+
+    private void SelectStudent(int index)
+    {
+        selectedStudentIndex = selectedStudentIndex == index ? -1 : index;
+        // Clear violation form when selecting a student
+        currentViolation = new BehaviorViolation();
+        StateHasChanged();
+    }
+
+    private void AddViolationToStudent(int studentIndex)
+    {
+        if (!string.IsNullOrEmpty(currentViolation.Day) && !string.IsNullOrEmpty(currentViolation.ViolationDescription))
+        {
+            behaviorStudents[studentIndex].Violations.Add(new BehaviorViolation
+            {
+                Day = currentViolation.Day,
+                Date = currentViolation.Date,
+                Period = currentViolation.Period,
+                ViolationDescription = currentViolation.ViolationDescription,
+                Guidance = currentViolation.Guidance,
+                GradeDeduction = currentViolation.GradeDeduction,
+                TemporarySuspension = currentViolation.TemporarySuspension,
+                Other = currentViolation.Other,
+                OtherSpecify = currentViolation.OtherSpecify
+            });
+
+            // Clear violation form
+            currentViolation = new BehaviorViolation();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveBehavior()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(behaviorStudents);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "behavior-discipline", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadBehavior()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "behavior-discipline");
+            if (!string.IsNullOrEmpty(json))
+            {
+                behaviorStudents = System.Text.Json.JsonSerializer.Deserialize<List<BehaviorStudent>>(json) ?? new List<BehaviorStudent>();
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintStudentReport(int studentIndex)
+    {
+        if (studentIndex >= 0 && studentIndex < behaviorStudents.Count)
+        {
+            var html = CreateStudentReportHTML(studentIndex);
+            await JSRuntime.InvokeVoidAsync("printHTML", html, $"تقرير سلوك طالب - {behaviorStudents[studentIndex].StudentName}");
+        }
+    }
+
+    private string CreateStudentReportHTML(int studentIndex)
+    {
+        var student = behaviorStudents[studentIndex];
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div style='direction:rtl;font-family:Tahoma,Arial;padding:20px;color:#000'>");
+        
+        // Header with logo
+        sb.Append("<div style='margin-bottom:20px;text-align:center'>");
+        sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>سلطنة عمان</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>وزارة التربية والتعليم</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>(8 - 10)</div>");
+        sb.Append("</div>");
+
+        // Title
+        sb.Append("<h3 style='text-align:center;margin:20px 0;font-size:18px'>تقرير سلوك طالب</h3>");
+
+        // Recipient
+        sb.Append("<div style='margin:15px 0'>");
+        sb.Append("<div style='font-weight:bold'>إلى: الفاضل / لجنة شؤون الطلبة بالمدرسة</div>");
+        sb.Append("<div style='margin:10px 0'>السلام عليكم ورحمة الله وبركاته... وبعد:</div>");
+        sb.Append("<div style='margin:10px 0'>نرفع إليكم هذا التقرير عن سلوك طالب في الفصل، متمنين منكم العلم والإجراء اللازم، علماً بأنه لم يكن بإمكاني معالجة سلوك الطالب ضمن صلاحياتي كمعلم.</div>");
+        sb.Append("</div>");
+
+        // Student info above table
+        sb.Append("<div style='margin:20px 0;text-align:center'>");
+        sb.Append($"<div style='font-weight:bold;margin-bottom:10px'>اسم الطالب: {System.Net.WebUtility.HtmlEncode(student.StudentName)}</div>");
+        sb.Append($"<div style='font-weight:bold;margin-bottom:20px'>الصف: {System.Net.WebUtility.HtmlEncode(student.StudentClass)}</div>");
+        sb.Append("</div>");
+
+        // Main table - matching the exact structure from the image
+        sb.Append("<table style='width:100%;border-collapse:collapse;margin:20px 0;font-size:12px'>");
+        sb.Append("<thead>");
+        
+        // First header row
+        sb.Append("<tr style='background:#f8f9fa'>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center;width:40px'>م</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center' colspan='2'>وقت المخالفة</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center'>الحصة</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center'>بيان بالمخالفة / السلوك</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center' colspan='4'>الإجراء المتخذ ضد الطالب</th>");
+        sb.Append("</tr>");
+        
+        // Second header row
+        sb.Append("<tr style='background:#f8f9fa'>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'></th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'>اليوم</th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'>التاريخ</th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'></th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'></th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'>توجيه الطالب</th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'>خصم الدرجات</th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'>إيقاف مؤقت</th>");
+        sb.Append("<th style='border:1px solid #000;padding:4px'>أخرى تذكر</th>");
+        sb.Append("</tr>");
+        
+        sb.Append("</thead>");
+        sb.Append("<tbody>");
+        
+        // Fill data rows (up to 4 rows as shown in the image)
+        for (int i = 0; i < 4; i++)
+        {
+            sb.Append("<tr>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{i + 1}</td>");
+            
+            if (i < student.Violations.Count)
+            {
+                var violation = student.Violations[i];
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(violation.Day)}</td>");
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{violation.Date?.ToString("yyyy-MM-dd")}</td>");
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(violation.Period)}</td>");
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(violation.ViolationDescription)}</td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'>");
+                if (violation.Guidance) sb.Append("✓");
+                sb.Append("</td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'>");
+                if (violation.GradeDeduction) sb.Append("✓");
+                sb.Append("</td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'>");
+                if (violation.TemporarySuspension) sb.Append("✓");
+                sb.Append("</td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'>");
+                if (violation.Other) sb.Append($"✓ {System.Net.WebUtility.HtmlEncode(violation.OtherSpecify)}");
+                sb.Append("</td>");
+            }
+            else
+            {
+                // Empty row
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px'></td>");
+            }
+            sb.Append("</tr>");
+        }
+        
+        sb.Append("</tbody>");
+        sb.Append("</table>");
+
+        // Other notes section
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='font-weight:bold;margin-bottom:10px'>ملاحظات أخرى عن الطالب:</div>");
+        sb.Append("<div style='border:1px solid #000;min-height:60px;padding:8px'>");
+        sb.Append(System.Net.WebUtility.HtmlEncode(student.OtherNotes).Replace("\n", "<br/>"));
+        sb.Append("</div>");
+        sb.Append("</div>");
+
+        // Teacher info
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'>اسم المعلم: <span style='border-bottom:1px dotted #000;min-width:200px;display:inline-block'>{System.Net.WebUtility.HtmlEncode(student.TeacherName)}</span></div>");
+        sb.Append("<div style='margin-bottom:10px'>التوقيع: <span style='border-bottom:1px dotted #000;min-width:200px;display:inline-block'></span></div>");
+        sb.Append($"<div style='margin-bottom:10px'>تاريخ الإحالة للجنة: <span style='border-bottom:1px dotted #000;min-width:200px;display:inline-block'>{student.CommitteeReferralDate?.ToString("yyyy-MM-dd")}</span></div>");
+        sb.Append("</div>");
+
+        // Committee procedures
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='font-weight:bold;margin-bottom:10px'>الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة):</div>");
+        sb.Append("<div style='border:1px solid #000;min-height:60px;padding:8px'>");
+        sb.Append(System.Net.WebUtility.HtmlEncode(student.CommitteeProcedures).Replace("\n", "<br/>"));
+        sb.Append("</div>");
+        sb.Append("</div>");
+
+        // Signature
+        sb.Append("<div style='margin-top:40px;text-align:left'>");
+        sb.Append("<div style='margin-bottom:20px'><strong>حمد هلال الغافري</strong></div>");
+        sb.Append("<div><strong>مدير المدرسة</strong></div>");
+        sb.Append("</div>");
+
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    // Student Warning Methods
+    private void AddWarning()
+    {
+        if (!string.IsNullOrEmpty(currentWarning.StudentName) && !string.IsNullOrEmpty(currentWarning.StudentClass))
+        {
+            studentWarnings.Add(new StudentWarning
+            {
+                StudentName = currentWarning.StudentName,
+                StudentClass = currentWarning.StudentClass,
+                Day = currentWarning.Day,
+                Date = currentWarning.Date,
+                MessageNumber = currentWarning.MessageNumber,
+                Reasons = currentWarning.Reasons,
+                TeacherName = currentWarning.TeacherName,
+                TeacherSignature = currentWarning.TeacherSignature,
+                CommitteeReferralDate = currentWarning.CommitteeReferralDate,
+                CommitteeActions = currentWarning.CommitteeActions,
+                StudentPledge = currentWarning.StudentPledge,
+                StudentSignature = currentWarning.StudentSignature,
+                OtherNotes = currentWarning.OtherNotes,
+                Guidance = currentWarning.Guidance,
+                GradeDeduction = currentWarning.GradeDeduction,
+                TemporarySuspension = currentWarning.TemporarySuspension,
+                Other = currentWarning.Other,
+                OtherSpecify = currentWarning.OtherSpecify,
+                Violations = new List<WarningViolation>()
+            });
+            
+            // Clear form
+            currentWarning = new StudentWarning();
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveWarning(int index)
+    {
+        if (index >= 0 && index < studentWarnings.Count)
+        {
+            studentWarnings.RemoveAt(index);
+            if (selectedWarningIndex == index)
+            {
+                selectedWarningIndex = -1;
+            }
+            else if (selectedWarningIndex > index)
+            {
+                selectedWarningIndex--;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void SelectWarning(int index)
+    {
+        selectedWarningIndex = index;
+        currentWarningViolation = new WarningViolation();
+        StateHasChanged();
+    }
+
+    private void AddViolationToWarning(int warningIndex)
+    {
+        if (warningIndex >= 0 && warningIndex < studentWarnings.Count && 
+            !string.IsNullOrEmpty(currentWarningViolation.ViolationDescription))
+        {
+            studentWarnings[warningIndex].Violations.Add(new WarningViolation
+            {
+                Day = currentWarningViolation.Day,
+                Date = currentWarningViolation.Date,
+                Period = currentWarningViolation.Period,
+                ViolationDescription = currentWarningViolation.ViolationDescription,
+                Guidance = currentWarningViolation.Guidance,
+                GradeDeduction = currentWarningViolation.GradeDeduction,
+                TemporarySuspension = currentWarningViolation.TemporarySuspension,
+                Other = currentWarningViolation.Other,
+                OtherSpecify = currentWarningViolation.OtherSpecify
+            });
+
+            // Clear violation form
+            currentWarningViolation = new WarningViolation();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveWarning()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(studentWarnings);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "student-warnings", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadWarning()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "student-warnings");
+            if (!string.IsNullOrEmpty(json))
+            {
+                studentWarnings = System.Text.Json.JsonSerializer.Deserialize<List<StudentWarning>>(json) ?? new List<StudentWarning>();
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintWarning(int warningIndex)
+    {
+        var html = CreateWarningHTML(warningIndex);
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "إنذار وتعهد");
+    }
+
+    // Student Alert Methods
+    private void AddAlert()
+    {
+        if (!string.IsNullOrEmpty(currentAlert.StudentName) && !string.IsNullOrEmpty(currentAlert.StudentClass))
+        {
+            studentAlerts.Add(new StudentAlert
+            {
+                StudentName = currentAlert.StudentName,
+                StudentClass = currentAlert.StudentClass,
+                Day = currentAlert.Day,
+                Date = currentAlert.Date,
+                MessageNumber = currentAlert.MessageNumber,
+                Reasons = currentAlert.Reasons,
+                TeacherName = currentAlert.TeacherName,
+                TeacherSignature = currentAlert.TeacherSignature,
+                CommitteeReferralDate = currentAlert.CommitteeReferralDate,
+                CommitteeActions = currentAlert.CommitteeActions,
+                StudentPledge = currentAlert.StudentPledge,
+                StudentSignature = currentAlert.StudentSignature,
+                OtherNotes = currentAlert.OtherNotes,
+                Guidance = currentAlert.Guidance,
+                GradeDeduction = currentAlert.GradeDeduction,
+                TemporarySuspension = currentAlert.TemporarySuspension,
+                Other = currentAlert.Other,
+                OtherSpecify = currentAlert.OtherSpecify
+            });
+            
+            // Clear form
+            currentAlert = new StudentAlert();
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveAlert(int index)
+    {
+        if (index >= 0 && index < studentAlerts.Count)
+        {
+            studentAlerts.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAlert()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(studentAlerts);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "student-alerts", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadAlert()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "student-alerts");
+            if (!string.IsNullOrEmpty(json))
+            {
+                studentAlerts = System.Text.Json.JsonSerializer.Deserialize<List<StudentAlert>>(json) ?? new List<StudentAlert>();
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintAlert(int alertIndex)
+    {
+        var html = CreateAlertHTML(alertIndex);
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "إنذار وتعهد");
+    }
+
+    private string CreateWarningHTML(int warningIndex)
+    {
+        var warning = studentWarnings[warningIndex];
+        var sb = new System.Text.StringBuilder();
+
+        sb.Append("<div style='font-family:Arial,sans-serif;direction:rtl;text-align:right;padding:20px;max-width:800px;margin:0 auto'>");
+        
+        // Header with school info (without logo)
+        sb.Append("<div style='margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px'>");
+        sb.Append("<div style='text-align:right'>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
+        sb.Append("</div>");
+        sb.Append("</div>");
+
+        // Title
+        sb.Append("<div style='text-align:center;font-size:24px;font-weight:bold;margin:30px 0'>إنذار وتعهد</div>");
+
+        // Student info
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>اسم الطالب:</strong> {System.Net.WebUtility.HtmlEncode(warning.StudentName)}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>الصف:</strong> {System.Net.WebUtility.HtmlEncode(warning.StudentClass)}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>التاريخ:</strong> {warning.Date.ToString("yyyy-MM-dd")}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>الأسباب:</strong> {System.Net.WebUtility.HtmlEncode(warning.Reasons)}</div>");
+        sb.Append("</div>");
+
+        // Violations table
+        if (warning.Violations.Count > 0)
+        {
+            sb.Append("<table style='width:100%;border-collapse:collapse;margin:20px 0'>");
+            sb.Append("<thead><tr style='background:#f8f9fa'>");
+            sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center'>اليوم</th>");
+            sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center'>التاريخ</th>");
+            sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center'>الحصة</th>");
+            sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center'>المخالفة السلوكية</th>");
+            sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center'>الاجراء المتبع</th>");
+            sb.Append("</tr></thead><tbody>");
+            
+            foreach (var violation in warning.Violations)
+            {
+                sb.Append("<tr>");
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(violation.Day)}</td>");
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{violation.Date.ToString("yyyy-MM-dd")}</td>");
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(violation.Period)}</td>");
+                sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(violation.ViolationDescription)}</td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'>");
+                if (violation.Guidance) sb.Append("<span style='background:#e3f2fd;padding:2px 6px;margin:2px;border-radius:3px'>توجيه</span>");
+                if (violation.GradeDeduction) sb.Append("<span style='background:#fff3e0;padding:2px 6px;margin:2px;border-radius:3px'>خصم درجات</span>");
+                if (violation.TemporarySuspension) sb.Append("<span style='background:#ffebee;padding:2px 6px;margin:2px;border-radius:3px'>إيقاف مؤقت</span>");
+                if (violation.Other) sb.Append($"<span style='background:#f3e5f5;padding:2px 6px;margin:2px;border-radius:3px'>{System.Net.WebUtility.HtmlEncode(violation.OtherSpecify)}</span>");
+                sb.Append("</td>");
+                sb.Append("</tr>");
+            }
+            sb.Append("</tbody></table>");
+        }
+
+        // Teacher info
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>اسم المعلم:</strong> {System.Net.WebUtility.HtmlEncode(warning.TeacherName)}</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>التوقيع:</strong> _________________</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>بالعلم:</strong> _________________</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>تاريخ الإحالة للجنة:</strong> {System.Net.WebUtility.HtmlEncode(warning.CommitteeReferralDate)}</div>");
+        sb.Append("</div>");
+
+        // Committee actions
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='margin-bottom:10px'><strong>الاجراء المتخذة:</strong></div>");
+        sb.Append($"<div style='margin-bottom:10px;padding:10px;border:1px solid #ccc;min-height:60px'>{System.Net.WebUtility.HtmlEncode(warning.CommitteeActions)}</div>");
+        sb.Append("</div>");
+
+        // Pledge section
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;margin-bottom:10px'>");
+        sb.Append("<div style='margin-left:20px;font-weight:bold'>التعهد:</div>");
+        sb.Append($"<div style='flex:1;padding:10px;border:1px solid #ccc;min-height:80px'>{System.Net.WebUtility.HtmlEncode(warning.StudentPledge)}</div>");
+        sb.Append("</div>");
+        sb.Append("</div>");
+
+        // Student signature
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>اسم الطالب:</strong> {System.Net.WebUtility.HtmlEncode(warning.StudentName)}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>الصف:</strong> {System.Net.WebUtility.HtmlEncode(warning.StudentClass)}</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>التوقيع:</strong> _________________</div>");
+        sb.Append("</div>");
+
+        // Closing
+        sb.Append("<div style='margin-top:40px;text-align:left'>");
+        sb.Append("<div style='margin-bottom:20px'>وتفضلوا بقبول فائق الاحترام والتقدير ...</div>");
+        sb.Append("<div style='margin-bottom:20px'><strong>حمد بن هلال الغافري</strong></div>");
+        sb.Append("<div><strong>مدير المدرسة</strong></div>");
+        sb.Append("</div>");
+
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    private string CreateAlertHTML(int alertIndex)
+    {
+        var alert = studentAlerts[alertIndex];
+        var sb = new System.Text.StringBuilder();
+
+        sb.Append("<div style='font-family:Arial,sans-serif;direction:rtl;text-align:right;padding:20px;max-width:800px;margin:0 auto'>");
+        
+        // Header with school info (without logo)
+        sb.Append("<div style='margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px'>");
+        sb.Append("<div style='text-align:right'>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>سلطنة عمان</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>وزارة التربية والتعليم</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
+        sb.Append("</div>");
+        sb.Append("</div>");
+
+        // Title
+        sb.Append("<div style='text-align:center;font-size:24px;font-weight:bold;margin:30px 0'>استمارة إنذار وتعهد</div>");
+
+        // Student info
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>اسم الطالب:</strong> {System.Net.WebUtility.HtmlEncode(alert.StudentName)}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>الصف:</strong> {System.Net.WebUtility.HtmlEncode(alert.StudentClass)}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>التاريخ:</strong> {alert.Date.ToString("yyyy-MM-dd")}</div>");
+        sb.Append("</div>");
+
+        // Reasons
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='margin-bottom:10px'><strong>الأسباب:</strong></div>");
+        sb.Append($"<div style='margin-bottom:10px;padding:10px;border:1px solid #ccc;min-height:60px'>{System.Net.WebUtility.HtmlEncode(alert.Reasons).Replace("\n", "<br/>")}</div>");
+        sb.Append("</div>");
+
+        // Teacher info
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>اسم المعلم:</strong> {System.Net.WebUtility.HtmlEncode(alert.TeacherName)}</div>");
+        sb.Append("</div>");
+
+        // Committee info
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>تاريخ الإحالة للجنة:</strong> {System.Net.WebUtility.HtmlEncode(alert.CommitteeReferralDate)}</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة):</strong></div>");
+        sb.Append($"<div style='margin-bottom:10px;padding:10px;border:1px solid #ccc;min-height:60px'>{System.Net.WebUtility.HtmlEncode(alert.CommitteeActions).Replace("\n", "<br/>")}</div>");
+        sb.Append("</div>");
+
+        // Student pledge
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='margin-bottom:10px'><strong>التعهد:</strong></div>");
+        sb.Append($"<div style='margin-bottom:10px;padding:10px;border:1px solid #ccc;min-height:80px'>{System.Net.WebUtility.HtmlEncode(alert.StudentPledge).Replace("\n", "<br/>")}</div>");
+        sb.Append("</div>");
+
+        // Signatures
+        sb.Append("<div style='margin:40px 0'>");
+        sb.Append("<div style='margin-bottom:20px'><strong>توقيع الطالب:</strong> _________________</div>");
+        sb.Append("<div style='margin-bottom:20px'><strong>توقيع المعلم:</strong> _________________</div>");
+        sb.Append("</div>");
+
+        // School administration signature
+        sb.Append("<div style='margin-top:40px;text-align:left'>");
+        sb.Append("<div style='margin-bottom:20px'><strong>حمد بن هلال الغافري</strong></div>");
+        sb.Append("<div><strong>مدير المدرسة</strong></div>");
+        sb.Append("</div>");
+
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    // Guardian Notification Methods
+    private void AddGuardianViolation()
+    {
+        if (!string.IsNullOrEmpty(currentGuardianViolation.ViolationDescription))
+        {
+            currentNotification.Violations.Add(new GuardianBehaviorViolation
+            {
+                ViolationDescription = currentGuardianViolation.ViolationDescription,
+                OtherNotes = currentGuardianViolation.OtherNotes
+            });
+            
+            // Clear violation form
+            currentGuardianViolation = new GuardianBehaviorViolation();
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveViolation(int index)
+    {
+        if (index >= 0 && index < currentNotification.Violations.Count)
+        {
+            currentNotification.Violations.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void AddGuardianNotification()
+    {
+        if (!string.IsNullOrEmpty(currentNotification.StudentName) && !string.IsNullOrEmpty(currentNotification.StudentClass))
+        {
+            guardianNotifications.Add(new GuardianNotification
+            {
+                StudentName = currentNotification.StudentName,
+                StudentClass = currentNotification.StudentClass,
+                Date = currentNotification.Date,
+                Reasons = currentNotification.Reasons,
+                Violations = new List<GuardianBehaviorViolation>(currentNotification.Violations),
+                OtherNotes = currentNotification.OtherNotes
+            });
+            
+            // Clear form
+            currentNotification = new GuardianNotification();
+            currentGuardianViolation = new GuardianBehaviorViolation();
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveGuardianNotification(int index)
+    {
+        if (index >= 0 && index < guardianNotifications.Count)
+        {
+            guardianNotifications.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveGuardianNotification()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(guardianNotifications);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "guardian-notifications", json);
+        StateHasChanged();
+    }
+
+    private async Task LoadGuardianNotification()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "guardian-notifications");
+            if (!string.IsNullOrEmpty(json))
+            {
+                guardianNotifications = System.Text.Json.JsonSerializer.Deserialize<List<GuardianNotification>>(json) ?? new List<GuardianNotification>();
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task PrintGuardianNotification(int notificationIndex)
+    {
+        var html = CreateGuardianNotificationHTML(notificationIndex);
+        await JSRuntime.InvokeVoidAsync("printHTML", html, "إخطار ولي الأمر");
+    }
+
+    private string CreateGuardianNotificationHTML(int notificationIndex)
+    {
+        var notification = guardianNotifications[notificationIndex];
+        var sb = new System.Text.StringBuilder();
+
+        sb.Append("<div style='font-family:Arial,sans-serif;direction:rtl;text-align:right;padding:20px;max-width:800px;margin:0 auto'>");
+        
+        // Header with school info (without logo)
+        sb.Append("<div style='margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px'>");
+        sb.Append("<div style='text-align:right'>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>سلطنة عمان</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>وزارة التربية والتعليم</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
+        sb.Append("</div>");
+        sb.Append("</div>");
+
+        // Title
+        sb.Append("<div style='text-align:center;font-size:24px;font-weight:bold;margin:30px 0'>استمارة إخطار ولي الأمر بنصح الطالب</div>");
+
+        // Student name line
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>اسم الطالب /</strong> {System.Net.WebUtility.HtmlEncode(notification.StudentName)}</div>");
+        sb.Append("</div>");
+
+        // Introduction
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='margin-bottom:10px'>السلام عليكم ورحمة الله وبركاته... وبعد...</div>");
+        sb.Append("<div style='margin-bottom:10px'>نفيدكم علما بأن إدارة المدرسة قد قامت بتقديم النصح للطالب وذلك بسبب:</div>");
+        sb.Append("</div>");
+
+        // Violation details table
+        sb.Append("<table style='width:100%;border-collapse:collapse;margin:20px 0'>");
+        sb.Append("<thead>");
+        sb.Append("<tr style='background:#f8f9fa'>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center;width:50%'>المخالفة السلوكية</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center;width:50%'>ملاحظات على الطالب</th>");
+        sb.Append("</tr>");
+        sb.Append("</thead>");
+        sb.Append("<tbody>");
+        
+        if (notification.Violations.Count > 0)
+        {
+            foreach (var violation in notification.Violations)
+            {
+                sb.Append("<tr>");
+                sb.Append("<td style='border:1px solid #000;padding:8px;height:80px;vertical-align:top'>");
+                sb.Append($"<div style='height:80px;border-bottom:1px dotted #ccc'>{System.Net.WebUtility.HtmlEncode(violation.ViolationDescription).Replace("\n", "<br/>")}</div>");
+                sb.Append("</td>");
+                sb.Append("<td style='border:1px solid #000;padding:8px;height:80px;vertical-align:top'>");
+                sb.Append($"<div style='height:80px;border-bottom:1px dotted #ccc'>{System.Net.WebUtility.HtmlEncode(violation.OtherNotes).Replace("\n", "<br/>")}</div>");
+                sb.Append("</td>");
+                sb.Append("</tr>");
+            }
+        }
+        else
+        {
+            sb.Append("<tr>");
+            sb.Append("<td style='border:1px solid #000;padding:8px;height:80px;vertical-align:top'>");
+            sb.Append("<div style='height:80px;border-bottom:1px dotted #ccc'></div>");
+            sb.Append("</td>");
+            sb.Append("<td style='border:1px solid #000;padding:8px;height:80px;vertical-align:top'>");
+            sb.Append("<div style='height:80px;border-bottom:1px dotted #ccc'></div>");
+            sb.Append("</td>");
+            sb.Append("</tr>");
+        }
+        
+        sb.Append("</tbody>");
+        sb.Append("</table>");
+
+        // Follow-up action text
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='margin-bottom:10px'>وقد قامت إدارة المدرسة بتوجيه الطالب شفويا وإرشاده إلى عدم تكرار المخالفة.</div>");
+        sb.Append("<div style='margin-bottom:10px'>هذا للعلم، واتخاذ ما يلزم بما يحقق مصلحة الطالب من خلال الالتزام بقواعد الانتظام الطلابي والانضباط السلوكي.</div>");
+        sb.Append("<div style='margin-bottom:10px'>وتفضلوا بقبول فائق الاحترام والتقدير</div>");
+        sb.Append("</div>");
+
+        // Recipient information section
+        sb.Append("<div style='margin:20px 0'>");
+        sb.Append("<div style='margin-bottom:10px'><strong>اسم المستلم:</strong> _________________</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>صلته بالطالب:</strong> _________________</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>الرقم المدني:</strong> _________________</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>رقم الهاتف:</strong> _________________</div>");
+        sb.Append("<div style='margin-bottom:10px'><strong>التوقيع:</strong> _________________</div>");
+        sb.Append("</div>");
+
+        // School administration signature
+        sb.Append("<div style='margin-top:40px;text-align:left'>");
+        sb.Append("<div style='margin-bottom:20px'><strong>حمد بن هلال الغافري</strong></div>");
+        sb.Append("<div><strong>مدير المدرسة</strong></div>");
+        sb.Append("</div>");
+
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+
+    // Student Warning Classes
+    public class StudentWarning
+    {
+        public string StudentName { get; set; } = "";
+        public string StudentClass { get; set; } = "";
+        public string Day { get; set; } = "";
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string MessageNumber { get; set; } = "";
+        public string Reasons { get; set; } = "";
+        public string TeacherName { get; set; } = "";
+        public string TeacherSignature { get; set; } = "";
+        public string CommitteeReferralDate { get; set; } = "";
+        public string CommitteeActions { get; set; } = "";
+        public string StudentPledge { get; set; } = "";
+        public string StudentSignature { get; set; } = "";
+        public string OtherNotes { get; set; } = "";
+        public bool Guidance { get; set; } = false;
+        public bool GradeDeduction { get; set; } = false;
+        public bool TemporarySuspension { get; set; } = false;
+        public bool Other { get; set; } = false;
+        public string OtherSpecify { get; set; } = "";
+        public List<WarningViolation> Violations { get; set; } = new List<WarningViolation>();
+    }
+
+    public class WarningViolation
+    {
+        public string Day { get; set; } = "";
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string Period { get; set; } = "";
+        public string ViolationDescription { get; set; } = "";
+        public bool Guidance { get; set; }
+        public bool GradeDeduction { get; set; }
+        public bool TemporarySuspension { get; set; }
+        public bool Other { get; set; }
+        public string OtherSpecify { get; set; } = "";
+    }
+
+    public class StudentAlert
+    {
+        public string StudentName { get; set; } = "";
+        public string StudentClass { get; set; } = "";
+        public string Day { get; set; } = "";
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string MessageNumber { get; set; } = "";
+        public string Reasons { get; set; } = "";
+        public string TeacherName { get; set; } = "";
+        public string TeacherSignature { get; set; } = "";
+        public string CommitteeReferralDate { get; set; } = "";
+        public string CommitteeActions { get; set; } = "";
+        public string StudentPledge { get; set; } = "";
+        public string StudentSignature { get; set; } = "";
+        public string OtherNotes { get; set; } = "";
+        public bool Guidance { get; set; } = false;
+        public bool GradeDeduction { get; set; } = false;
+        public bool TemporarySuspension { get; set; } = false;
+        public bool Other { get; set; } = false;
+        public string OtherSpecify { get; set; } = "";
+    }
+
+    // Guardian Notification Class
+    public class GuardianNotification
+    {
+        public string StudentName { get; set; } = "";
+        public string StudentClass { get; set; } = "";
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string Reasons { get; set; } = "";
+        public List<GuardianBehaviorViolation> Violations { get; set; } = new List<GuardianBehaviorViolation>();
+        public string OtherNotes { get; set; } = "";
+    }
+
+    public class GuardianBehaviorViolation
+    {
+        public string ViolationDescription { get; set; } = "";
+        public string OtherNotes { get; set; } = "";
+    }
+}
