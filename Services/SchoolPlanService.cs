@@ -83,11 +83,12 @@ namespace SchoolHallBooking.Services
                                  .FirstOrDefaultAsync(po => po.Id == id);
         }
 
-        public async Task AddPlanObjectiveAsync(PlanObjective planObjective)
+        public async Task<PlanObjective> AddPlanObjectiveAsync(PlanObjective planObjective)
         {
             planObjective.CreatedAt = DateTime.Now;
             _context.PlanObjectives.Add(planObjective);
             await _context.SaveChangesAsync();
+            return planObjective;
         }
 
         public async Task UpdatePlanObjectiveAsync(PlanObjective planObjective)

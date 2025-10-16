@@ -185,6 +185,48 @@ namespace SchoolHallBooking.Services
             }
         }
 
+        // Attendance Records
+        public async Task<List<AttendanceRecord>> GetAttendanceRecordsByAttendanceIdAsync(int attendanceId)
+        {
+            return await _context.AttendanceRecords
+                                .Where(ar => ar.AttendanceId == attendanceId && ar.IsActive)
+                                .OrderBy(ar => ar.Id)
+                                .ToListAsync();
+        }
+
+        public async Task<AttendanceRecord?> GetAttendanceRecordByIdAsync(int id)
+        {
+            return await _context.AttendanceRecords.FindAsync(id);
+        }
+
+        public async Task AddAttendanceRecordAsync(AttendanceRecord attendanceRecord)
+        {
+            attendanceRecord.CreatedAt = DateTime.Now;
+            attendanceRecord.IsActive = true;
+            _context.AttendanceRecords.Add(attendanceRecord);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAttendanceRecordAsync(AttendanceRecord attendanceRecord)
+        {
+            var existingRecord = await _context.AttendanceRecords.FindAsync(attendanceRecord.Id);
+            if (existingRecord != null)
+            {
+                _context.Entry(existingRecord).CurrentValues.SetValues(attendanceRecord);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task DeleteAttendanceRecordAsync(int id)
+        {
+            var attendanceRecord = await _context.AttendanceRecords.FindAsync(id);
+            if (attendanceRecord != null)
+            {
+                attendanceRecord.IsActive = false; // Soft delete
+                await _context.SaveChangesAsync();
+            }
+        }
+
         // Improvement Teams
         public async Task<List<ImprovementTeam>> GetAllTeamMembersAsync()
         {

@@ -329,6 +329,7 @@ else
             {
                 successMessage = "تم إضافة المشرف بنجاح.";
                 await LoadActivities();
+                StateHasChanged();
                 CloseAddSupervisorModal();
             }
             else
@@ -382,6 +383,7 @@ else
             {
                 successMessage = "تم تحديث بيانات المشرف بنجاح.";
                 await LoadActivities();
+                StateHasChanged();
                 CloseEditSupervisorModal();
             }
             else
@@ -411,6 +413,7 @@ else
                 {
                     successMessage = "تم حذف المشرف بنجاح.";
                     await LoadActivities();
+                    StateHasChanged();
                 }
                 else
                 {

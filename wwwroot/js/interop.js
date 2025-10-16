@@ -273,6 +273,22 @@ window.blazorInterop = {
         } catch (e) {
             alert("فشل طباعة الاستمارة. يرجى المحاولة مرة أخرى.");
         }
+    },
+
+    // Show element function
+    showElement: function (elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.display = 'inline-block';
+        }
+    },
+
+    // Hide element function
+    hideElement: function (elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.display = 'none';
+        }
     }
 };
 
@@ -451,6 +467,12 @@ window.printHTML = function(htmlContent, fileName) {
 };
 window.downloadFile = function(fileName, data, mimeType) {
     return window.blazorInterop.downloadFile(fileName, data, mimeType);
+};
+window.showElement = function(elementId) {
+    return window.blazorInterop.showElement(elementId);
+};
+window.hideElement = function(elementId) {
+    return window.blazorInterop.hideElement(elementId);
 };
 
 // Ensure all functions are available when the page loads

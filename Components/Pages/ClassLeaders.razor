@@ -4,6 +4,7 @@
 @inject IClassLeaderService ClassLeaderService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
 <PageTitle>رواد الفصول</PageTitle>
 
@@ -269,6 +270,7 @@
             }
 
             await LoadClassLeaders();
+            StateHasChanged();
             CloseModal();
         }
         catch (Exception ex)
@@ -287,6 +289,7 @@
                 await ClassLeaderService.DeleteClassLeaderAsync(id);
                 successMessage = "تم حذف الصف والمعلم بنجاح";
                 await LoadClassLeaders();
+                StateHasChanged();
             }
         }
         catch (Exception ex)

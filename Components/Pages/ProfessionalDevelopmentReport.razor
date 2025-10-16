@@ -274,6 +274,7 @@
             }
 
             await LoadReports();
+            StateHasChanged();
             CloseModal();
         }
         catch (Exception ex)
@@ -291,6 +292,7 @@
                 await ProfessionalDevelopmentService.DeleteProgramAsync(id);
                 successMessage = "تم حذف التقرير بنجاح";
                 await LoadReports();
+                StateHasChanged();
             }
         }
         catch (Exception ex)

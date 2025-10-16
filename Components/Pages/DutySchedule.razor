@@ -7,6 +7,7 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
 
 @if (isLoading)
 {
@@ -41,6 +42,71 @@ else
     <h1 class="mb-4">جدول المناوبة الأسبوعية</h1>
 
     <div class="container-fluid duty-schedule-container">
+    <!-- Column and Row Management -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-gear me-2"></i>
+                    <strong>إدارة الجدول</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- إدارة الأعمدة -->
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-columns me-1"></i>
+                                الأعمدة الحالية:
+                            </label>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                @foreach (var col in columns)
+                                {
+                                    <div class="badge bg-primary p-2 d-flex align-items-center gap-2">
+                                        <span>@col</span>
+                                        <button type="button" class="btn-close btn-close-white btn-sm" 
+                                                @onclick="() => RemoveColumn(col)" 
+                                                title="حذف العمود"></button>
+                                    </div>
+                                }
+                                @if (columns.Count == 0)
+                                {
+                                    <span class="text-muted">لا توجد أعمدة. قم بإضافة عمود جديد.</span>
+                                }
+                            </div>
+                            <div class="input-group">
+                                <input type="text" class="form-control" @bind="newColumnName" 
+                                       placeholder="أدخل اسم العمود الجديد (مثل: الإشراف العام، الصف الثامن...)" />
+                                <button class="btn btn-primary" @onclick="AddColumn">
+                                    <i class="bi bi-plus-circle me-1"></i>
+                                    إضافة عمود
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- إدارة الصفوف -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-list-ol me-1"></i>
+                                عدد الصفوف لكل يوم:
+                            </label>
+                            <div class="input-group">
+                                <button class="btn btn-outline-secondary" @onclick="DecreaseRows" disabled="@(rowsPerDay <= 1)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <input type="number" class="form-control text-center fw-bold" 
+                                       @bind="rowsPerDay" min="1" max="10" />
+                                <button class="btn btn-outline-secondary" @onclick="IncreaseRows" disabled="@(rowsPerDay >= 10)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">الحد الأدنى: 1، الحد الأقصى: 10</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Controls -->
     <div class="row g-3 align-items-end mb-3">
         <div class="col-12 col-md-auto">
@@ -112,7 +178,7 @@ else
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var editRow in Enumerable.Range(0, 2))
+                        @foreach (var editRow in Enumerable.Range(0, rowsPerDay))
                         {
                             <tr>
                                 @foreach (var c in columns)
@@ -216,21 +282,14 @@ else
 
 @code {
     private readonly string[] days = new[] { "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس" };
-    private readonly string[] columns = new[]
-    {
-        "الإشراف العام",
-        "الصف الثامن",
-        "الصف التاسع",
-        "الصف العاشر",
-        "الفسحة",
-        "الجمعية"
-    };
+    private List<string> columns = new List<string>();
+    private int rowsPerDay = 2; // عدد الصفوف لكل يوم (قابل للتعديل)
 
     private string selectedDay = "الأحد";
     private string saveMessage = string.Empty;
     private bool isEditMode = false;
 
-    // Data model: Day -> Column -> List of teacher names (2 rows per day)
+    // Data model: Day -> Column -> List of teacher names (dynamic rows per day)
     private readonly Dictionary<string, Dictionary<string, List<string>>> schedule = new();
 
     // Editable text buffers: Day -> Column -> Row -> CSV text
@@ -239,6 +298,10 @@ else
     // Authentication variables
     private bool isLoading = true;
     private bool isAuthenticated = false;
+    
+    // Column management
+    private string newColumnName = string.Empty;
+    private bool showAddColumnModal = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -254,13 +317,13 @@ else
                     if (!cellText.ContainsKey(d)) cellText[d] = new();
                     foreach (var c in columns)
                     {
-                        if (!schedule[d].ContainsKey(c)) schedule[d][c] = new();
-                        if (!cellText[d].ContainsKey(c)) cellText[d][c] = new();
-                        for (int row = 0; row < 2; row++)
-                        {
-                            if (!cellText[d][c].ContainsKey(row)) cellText[d][c][row] = string.Empty;
-                        }
+                    if (!schedule[d].ContainsKey(c)) schedule[d][c] = new();
+                    if (!cellText[d].ContainsKey(c)) cellText[d][c] = new();
+                    for (int row = 0; row < rowsPerDay; row++)
+                    {
+                        if (!cellText[d][c].ContainsKey(row)) cellText[d][c][row] = string.Empty;
                     }
+                }
                 }
 
                 // Load existing data from database
@@ -280,7 +343,7 @@ else
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && isAuthenticated && !isLoading)
         {
             UpdateScheduleDisplay();
         }
@@ -303,6 +366,14 @@ else
             string MapToKnownColumn(string dbColumn)
             {
                 var norm = NormalizeArabic(dbColumn);
+                
+                // إذا كانت القائمة فارغة، أضف العمود مباشرة
+                if (columns.Count == 0)
+                {
+                    columns.Add(norm);
+                    return norm;
+                }
+                
                 // Fuzzy normalization for Arabic variants
                 string Canon(string x)
                 {
@@ -326,7 +397,10 @@ else
                     if (cc == canon) return c;
                     if (cc.Contains(canon) || canon.Contains(cc)) return c;
                 }
-                return columns[0];
+                
+                // إذا لم يتم العثور على تطابق، أضف العمود الجديد
+                columns.Add(norm);
+                return norm;
             }
 
             string MapToKnownDay(string dbDay)
@@ -349,20 +423,69 @@ else
             }
 
             var scheduleData = await DutyScheduleService.GetScheduleAsync();
+            
+            // استخراج الأعمدة الفريدة من البيانات المحفوظة
+            var uniqueColumns = scheduleData
+                .Select(item => NormalizeArabic(item.Column))
+                .Distinct()
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .ToList();
+            
+            // إذا كانت هناك أعمدة في قاعدة البيانات، استخدمها
+            if (uniqueColumns.Any())
+            {
+                columns.Clear();
+                columns.AddRange(uniqueColumns);
+            }
+            
+            // استخراج أقصى رقم صف من البيانات المحفوظة
+            if (scheduleData.Any())
+            {
+                var maxRow = scheduleData.Max(item => item.Row);
+                if (maxRow >= rowsPerDay)
+                {
+                    rowsPerDay = maxRow + 1;
+                }
+            }
+            
+            // إعادة تهيئة الهياكل بناءً على الأعمدة والصفوف المحملة
+            foreach (var d in days)
+            {
+                if (!schedule.ContainsKey(d)) schedule[d] = new();
+                if (!cellText.ContainsKey(d)) cellText[d] = new();
+                
+                foreach (var c in columns)
+                {
+                    if (!schedule[d].ContainsKey(c)) schedule[d][c] = new();
+                    if (!cellText[d].ContainsKey(c)) cellText[d][c] = new();
+                    
+                    for (int row = 0; row < rowsPerDay; row++)
+                    {
+                        if (!cellText[d][c].ContainsKey(row)) 
+                            cellText[d][c][row] = string.Empty;
+                        if (schedule[d][c].Count <= row)
+                            schedule[d][c].Add(string.Empty);
+                    }
+                }
+            }
+            
+            // تحميل البيانات الفعلية
             int applied = 0;
             foreach (var item in scheduleData)
             {
                 var mappedDay = MapToKnownDay(item.Day);
                 var mappedColumn = MapToKnownColumn(item.Column);
+                
                 if (cellText.ContainsKey(mappedDay) && 
                     cellText[mappedDay].ContainsKey(mappedColumn) &&
                     cellText[mappedDay][mappedColumn].ContainsKey(item.Row))
                 {
-                    cellText[mappedDay][mappedColumn][item.Row] = item.TeacherNames;
+                    cellText[mappedDay][mappedColumn][item.Row] = item.TeacherNames ?? string.Empty;
                     applied++;
                 }
             }
-            await JSRuntime.InvokeVoidAsync("console.log", $"[DutySchedule] Loaded items: {scheduleData.Count}, applied to UI: {applied}");
+            
+            await JSRuntime.InvokeVoidAsync("console.log", $"[DutySchedule] Loaded items: {scheduleData.Count}, applied to UI: {applied}, columns: {columns.Count}, rows: {rowsPerDay}");
             UpdateScheduleDisplay();
             StateHasChanged();
         }
@@ -386,7 +509,7 @@ else
             {
                 foreach (var c in columns)
                 {
-                    for (int row = 0; row < 2; row++)
+                    for (int row = 0; row < rowsPerDay; row++)
                     {
                         var text = GetCell(d, c, row);
                         if (!string.IsNullOrWhiteSpace(text)) totalNonEmpty++;
@@ -408,7 +531,7 @@ else
             {
                 foreach (var c in columns)
                 {
-                    for (int row = 0; row < 2; row++)
+                    for (int row = 0; row < rowsPerDay; row++)
                     {
                         var text = GetCell(d, c, row);
                         if (!string.IsNullOrWhiteSpace(text))
@@ -443,12 +566,20 @@ else
         // Sync text -> list for all days
         foreach (var d in days)
         {
+            // Ensure schedule dictionary has the day key
+            if (!schedule.ContainsKey(d)) schedule[d] = new();
+            
             foreach (var c in columns)
             {
+                // Ensure schedule[d] has the column key
+                if (!schedule[d].ContainsKey(c)) schedule[d][c] = new();
+                
                 schedule[d][c].Clear();
-                for (int row = 0; row < 2; row++)
+                for (int row = 0; row < rowsPerDay; row++)
                 {
-                    var text = cellText[d][c][row] ?? string.Empty;
+                    var text = cellText.ContainsKey(d) && cellText[d].ContainsKey(c) && cellText[d][c].ContainsKey(row) 
+                        ? cellText[d][c][row] ?? string.Empty 
+                        : string.Empty;
                     // keep fixed positions: add value for each row (may be empty)
                     schedule[d][c].Add(text);
                 }
@@ -478,7 +609,7 @@ else
         if (!schedule.ContainsKey(day)) schedule[day] = new();
         if (!schedule[day].ContainsKey(column)) schedule[day][column] = new();
         schedule[day][column].Clear();
-        for (int r = 0; r < 2; r++)
+        for (int r = 0; r < rowsPerDay; r++)
         {
             if (!cellText[day][column].ContainsKey(r)) cellText[day][column][r] = string.Empty;
             var t = cellText[day][column][r] ?? string.Empty;
@@ -545,14 +676,14 @@ else
             worksheet.Cell(1, 1).Style.Font.FontSize = 16;
             worksheet.Cell(1, 1).Style.Font.Bold = true;
             worksheet.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-            worksheet.Range(1, 1, 1, columns.Length + 1).Merge();
+            worksheet.Range(1, 1, 1, columns.Count + 1).Merge();
 
             // إضافة رؤوس الأعمدة
             worksheet.Cell(3, 1).Value = "اليوم";
             worksheet.Cell(3, 1).Style.Font.Bold = true;
             worksheet.Cell(3, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             
-            for (int i = 0; i < columns.Length; i++)
+            for (int i = 0; i < columns.Count; i++)
             {
                 worksheet.Cell(3, i + 2).Value = columns[i];
                 worksheet.Cell(3, i + 2).Style.Font.Bold = true;
@@ -563,37 +694,34 @@ else
             int row = 4;
             foreach (var day in days)
             {
-                // الصف الأول للخلايا
-                worksheet.Cell(row, 1).Value = day;
-                worksheet.Cell(row, 1).Style.Font.Bold = true;
-                worksheet.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                
-                for (int col = 0; col < columns.Length; col++)
+                // إضافة جميع الصفوف لكل يوم
+                for (int r = 0; r < rowsPerDay; r++)
                 {
-                    var cellValue = GetCell(day, columns[col], 0);
-                    worksheet.Cell(row, col + 2).Value = cellValue;
-                    worksheet.Cell(row, col + 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    if (r == 0)
+                    {
+                        worksheet.Cell(row, 1).Value = day;
+                        worksheet.Cell(row, 1).Style.Font.Bold = true;
+                        worksheet.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    
+                    for (int col = 0; col < columns.Count; col++)
+                    {
+                        var cellValue = GetCell(day, columns[col], r);
+                        worksheet.Cell(row, col + 2).Value = cellValue;
+                        worksheet.Cell(row, col + 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    row++;
                 }
-                row++;
-
-                // الصف الثاني للخلايا
-                for (int col = 0; col < columns.Length; col++)
-                {
-                    var cellValue = GetCell(day, columns[col], 1);
-                    worksheet.Cell(row, col + 2).Value = cellValue;
-                    worksheet.Cell(row, col + 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                }
-                row++;
             }
 
             // تنسيق الجدول
-            var tableRange = worksheet.Range(3, 1, row - 1, columns.Length + 1);
+            var tableRange = worksheet.Range(3, 1, row - 1, columns.Count + 1);
             tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
             // ضبط عرض الأعمدة
             worksheet.Column(1).Width = 15; // عمود الأيام
-            for (int i = 2; i <= columns.Length + 1; i++)
+            for (int i = 2; i <= columns.Count + 1; i++)
             {
                 worksheet.Column(i).Width = 20;
             }
@@ -763,6 +891,124 @@ else
             await JSRuntime.InvokeVoidAsync("console.error", $"PDF export error: {ex}");
             StateHasChanged();
         }
+    }
+
+    // Column Management Functions
+    private void AddColumn()
+    {
+        if (string.IsNullOrWhiteSpace(newColumnName))
+        {
+            saveMessage = "يرجى إدخال اسم العمود";
+            return;
+        }
+
+        if (columns.Contains(newColumnName.Trim()))
+        {
+            saveMessage = "هذا العمود موجود بالفعل";
+            return;
+        }
+
+        columns.Add(newColumnName.Trim());
+        
+        // Initialize the new column in all data structures
+        foreach (var d in days)
+        {
+            if (!schedule.ContainsKey(d)) schedule[d] = new();
+            if (!cellText.ContainsKey(d)) cellText[d] = new();
+            
+            if (!schedule[d].ContainsKey(newColumnName.Trim())) 
+                schedule[d][newColumnName.Trim()] = new();
+            if (!cellText[d].ContainsKey(newColumnName.Trim())) 
+                cellText[d][newColumnName.Trim()] = new();
+            
+            for (int row = 0; row < rowsPerDay; row++)
+            {
+                if (!cellText[d][newColumnName.Trim()].ContainsKey(row)) 
+                    cellText[d][newColumnName.Trim()][row] = string.Empty;
+                schedule[d][newColumnName.Trim()].Add(string.Empty);
+            }
+        }
+        
+        newColumnName = string.Empty;
+        saveMessage = "تم إضافة العمود بنجاح";
+        StateHasChanged();
+    }
+
+    private void RemoveColumn(string columnName)
+    {
+        if (columns.Count <= 1)
+        {
+            saveMessage = "لا يمكن حذف آخر عمود. يجب أن يكون هناك عمود واحد على الأقل.";
+            return;
+        }
+
+        columns.Remove(columnName);
+        
+        // Remove the column from all data structures
+        foreach (var d in days)
+        {
+            if (schedule.ContainsKey(d) && schedule[d].ContainsKey(columnName))
+                schedule[d].Remove(columnName);
+            if (cellText.ContainsKey(d) && cellText[d].ContainsKey(columnName))
+                cellText[d].Remove(columnName);
+        }
+        
+        saveMessage = $"تم حذف العمود '{columnName}' بنجاح";
+        StateHasChanged();
+    }
+
+    // Row Management Functions
+    private void IncreaseRows()
+    {
+        if (rowsPerDay >= 10) return;
+        
+        rowsPerDay++;
+        
+        // Add new row to all existing data structures
+        foreach (var d in days)
+        {
+            if (!cellText.ContainsKey(d)) cellText[d] = new();
+            if (!schedule.ContainsKey(d)) schedule[d] = new();
+            
+            foreach (var c in columns)
+            {
+                if (!cellText[d].ContainsKey(c)) cellText[d][c] = new();
+                if (!schedule[d].ContainsKey(c)) schedule[d][c] = new();
+                
+                // Add the new row
+                if (!cellText[d][c].ContainsKey(rowsPerDay - 1))
+                    cellText[d][c][rowsPerDay - 1] = string.Empty;
+                schedule[d][c].Add(string.Empty);
+            }
+        }
+        
+        saveMessage = $"تم زيادة عدد الصفوف إلى {rowsPerDay}";
+        StateHasChanged();
+    }
+
+    private void DecreaseRows()
+    {
+        if (rowsPerDay <= 1) return;
+        
+        rowsPerDay--;
+        
+        // Remove the last row from all data structures
+        foreach (var d in days)
+        {
+            if (!cellText.ContainsKey(d)) continue;
+            if (!schedule.ContainsKey(d)) continue;
+            
+            foreach (var c in columns)
+            {
+                if (cellText[d].ContainsKey(c) && cellText[d][c].ContainsKey(rowsPerDay))
+                    cellText[d][c].Remove(rowsPerDay);
+                if (schedule[d].ContainsKey(c) && schedule[d][c].Count > rowsPerDay)
+                    schedule[d][c].RemoveAt(rowsPerDay);
+            }
+        }
+        
+        saveMessage = $"تم تقليل عدد الصفوف إلى {rowsPerDay}";
+        StateHasChanged();
     }
 }
 }

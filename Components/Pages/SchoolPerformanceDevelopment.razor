@@ -130,16 +130,14 @@ else
                             </div>
                         </div>
                     }
-                    <div class="table-responsive">
-                        <table id="visit-table" class="table table-bordered text-center align-middle">
-                            <thead>
+                    <!-- الجدول الأول: جوانب القوة والتعزيز والمتابعة -->
+                    <div class="table-responsive mb-4">
+                        <table id="visit-table-1" class="table table-bordered text-center align-middle">
+                            <thead class="table-primary">
                                 <tr>
                                     <th>جوانب القوة</th>
                                     <th>جوانب التعزيز</th>
                                     <th>إجراءات المتابعة</th>
-                                    <th>أولويات التطوير</th>
-                                    <th>إجراءات التطوير</th>
-                                    <th>إجراءات المتابعة للتطوير</th>
                                     <th>إجراءات</th>
                                 </tr>
                             </thead>
@@ -150,6 +148,31 @@ else
                                         <td>@item.Strengths</td>
                                         <td>@item.Enhancements</td>
                                         <td>@item.FollowUpActions</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="(() => EditVisit(item))">تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteVisit(item.Id))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- الجدول الثاني: أولويات وإجراءات التطوير -->
+                    <div class="table-responsive">
+                        <table id="visit-table-2" class="table table-bordered text-center align-middle">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>أولويات التطوير</th>
+                                    <th>إجراءات التطوير</th>
+                                    <th>إجراءات المتابعة للتطوير</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in visitItems)
+                                {
+                                    <tr>
                                         <td>@item.DevelopmentPriorities</td>
                                         <td>@item.DevelopmentActions</td>
                                         <td>@item.DevelopmentFollowUp</td>
@@ -215,16 +238,14 @@ else
                             </div>
                         </div>
                     }
-                    <div class="table-responsive">
-                        <table id="work-table" class="table table-bordered text-center align-middle">
-                            <thead>
+                    <!-- الجدول الأول: جوانب القوة والتعزيز والمتابعة -->
+                    <div class="table-responsive mb-4">
+                        <table id="work-table-1" class="table table-bordered text-center align-middle">
+                            <thead class="table-primary">
                                 <tr>
                                     <th>جوانب القوة</th>
                                     <th>جوانب التعزيز</th>
                                     <th>إجراءات المتابعة</th>
-                                    <th>أولويات التطوير</th>
-                                    <th>إجراءات التطوير</th>
-                                    <th>إجراءات المتابعة للتطوير</th>
                                     <th>إجراءات</th>
                                 </tr>
                             </thead>
@@ -235,6 +256,31 @@ else
                                         <td>@item.Strengths</td>
                                         <td>@item.Enhancements</td>
                                         <td>@item.FollowUpActions</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="(() => EditWork(item))">تعديل</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => DeleteWork(item.Id))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- الجدول الثاني: أولويات وإجراءات التطوير -->
+                    <div class="table-responsive">
+                        <table id="work-table-2" class="table table-bordered text-center align-middle">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>أولويات التطوير</th>
+                                    <th>إجراءات التطوير</th>
+                                    <th>إجراءات المتابعة للتطوير</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in workItems)
+                                {
+                                    <tr>
                                         <td>@item.DevelopmentPriorities</td>
                                         <td>@item.DevelopmentActions</td>
                                         <td>@item.DevelopmentFollowUp</td>
@@ -809,10 +855,24 @@ else
         await LoadDataAsync();
     }
 
-    private Task ExportVisitPDF() => JSRuntime.InvokeVoidAsync("exportToPDF", "visit-table", "تحليل_الزيارات").AsTask();
-    private Task ExportVisitExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "visit-table", "تحليل_الزيارات").AsTask();
-    private Task ExportWorkPDF() => JSRuntime.InvokeVoidAsync("exportToPDF", "work-table", "تحليل_اعمال_الطلبة").AsTask();
-    private Task ExportWorkExcel() => JSRuntime.InvokeVoidAsync("exportToExcel", "work-table", "تحليل_اعمال_الطلبة").AsTask();
+    private async Task ExportVisitPDF()
+    {
+        await JSRuntime.InvokeVoidAsync("printHTML", GenerateVisitAnalysisHTML(), "تحليل_الزيارات");
+    }
+    private async Task ExportVisitExcel()
+    {
+        await JSRuntime.InvokeVoidAsync("exportToExcel", "visit-table-1", "تحليل_الزيارات_الجدول_الأول");
+        await JSRuntime.InvokeVoidAsync("exportToExcel", "visit-table-2", "تحليل_الزيارات_الجدول_الثاني");
+    }
+    private async Task ExportWorkPDF()
+    {
+        await JSRuntime.InvokeVoidAsync("printHTML", GenerateWorkAnalysisHTML(), "تحليل_اعمال_الطلبة");
+    }
+    private async Task ExportWorkExcel()
+    {
+        await JSRuntime.InvokeVoidAsync("exportToExcel", "work-table-1", "تحليل_اعمال_الطلبة_الجدول_الأول");
+        await JSRuntime.InvokeVoidAsync("exportToExcel", "work-table-2", "تحليل_اعمال_الطلبة_الجدول_الثاني");
+    }
 
     private async Task SaveAdminJob()
     {
@@ -861,5 +921,181 @@ else
     { if (currentSPDVisit.Id == 0) await Service.AddSPDVisitRecordAsync(currentSPDVisit); else await Service.UpdateSPDVisitRecordAsync(currentSPDVisit); spdVisits = await Service.GetSPDVisitRecordsAsync(GlobalSubject); currentSPDVisit = new(); await InvokeAsync(StateHasChanged); }
     private async Task DeleteSPDVisit(int id)
     { await Service.DeleteSPDVisitRecordAsync(id); spdVisits = await Service.GetSPDVisitRecordsAsync(GlobalSubject); await InvokeAsync(StateHasChanged); }
+
+    private string GenerateVisitAnalysisHTML()
+    {
+        var html = $@"
+        <!DOCTYPE html>
+        <html dir='rtl' lang='ar'>
+        <head>
+            <meta charset='utf-8'>
+            <title>تحليل الزيارة الإشرافية - {selectedSubject}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; direction: rtl; }}
+                .header {{ text-align: center; margin-bottom: 30px; }}
+                .header h1 {{ color: #198754; font-size: 24px; margin-bottom: 10px; }}
+                .table-container {{ margin-bottom: 30px; }}
+                .table-title {{ font-weight: bold; font-size: 16px; margin-bottom: 10px; text-align: center; }}
+                .table-title.first {{ color: #0d6efd; }}
+                .table-title.second {{ color: #198754; }}
+                table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+                th {{ background-color: #f8f9fa; border: 1px solid #333; padding: 12px 8px; text-align: center; font-weight: bold; }}
+                .table-primary th {{ background-color: #cfe2ff; }}
+                .table-success th {{ background-color: #d1e7dd; }}
+                td {{ border: 1px solid #333; padding: 12px 8px; text-align: center; }}
+                .page-break {{ page-break-before: always; }}
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>تحليل الزيارة الإشرافية - {selectedSubject}</h1>
+            </div>
+
+            <div class='table-container'>
+                <div class='table-title first'>أهم المقترحات</div>
+                <table class='table-primary'>
+                    <thead>
+                        <tr>
+                            <th>جوانب القوة</th>
+                            <th>جوانب التعزيز</th>
+                            <th>إجراءات المتابعة</th>
+                        </tr>
+                    </thead>
+                    <tbody>";
+
+        foreach (var item in visitItems)
+        {
+            html += $@"
+                        <tr>
+                            <td>{item.Strengths}</td>
+                            <td>{item.Enhancements}</td>
+                            <td>{item.FollowUpActions}</td>
+                        </tr>";
+        }
+
+        html += @"
+                    </tbody>
+                </table>
+            </div>
+
+            <div class='table-container'>
+                <div class='table-title second'>جوانب المتابعة</div>
+                <table class='table-success'>
+                    <thead>
+                        <tr>
+                            <th>أولويات التطوير</th>
+                            <th>إجراءات التطوير</th>
+                            <th>إجراءات المتابعة للتطوير</th>
+                        </tr>
+                    </thead>
+                    <tbody>";
+
+        foreach (var item in visitItems)
+        {
+            html += $@"
+                        <tr>
+                            <td>{item.DevelopmentPriorities}</td>
+                            <td>{item.DevelopmentActions}</td>
+                            <td>{item.DevelopmentFollowUp}</td>
+                        </tr>";
+        }
+
+        html += @"
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>";
+
+        return html;
+    }
+
+    private string GenerateWorkAnalysisHTML()
+    {
+        var html = $@"
+        <!DOCTYPE html>
+        <html dir='rtl' lang='ar'>
+        <head>
+            <meta charset='utf-8'>
+            <title>تحليل أعمال الطلبة - {selectedSubject}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; direction: rtl; }}
+                .header {{ text-align: center; margin-bottom: 30px; }}
+                .header h1 {{ color: #198754; font-size: 24px; margin-bottom: 10px; }}
+                .table-container {{ margin-bottom: 30px; }}
+                .table-title {{ font-weight: bold; font-size: 16px; margin-bottom: 10px; text-align: center; }}
+                .table-title.first {{ color: #0d6efd; }}
+                .table-title.second {{ color: #198754; }}
+                table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+                th {{ background-color: #f8f9fa; border: 1px solid #333; padding: 12px 8px; text-align: center; font-weight: bold; }}
+                .table-primary th {{ background-color: #cfe2ff; }}
+                .table-success th {{ background-color: #d1e7dd; }}
+                td {{ border: 1px solid #333; padding: 12px 8px; text-align: center; }}
+                .page-break {{ page-break-before: always; }}
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <h1>تحليل أعمال الطلبة - {selectedSubject}</h1>
+            </div>
+
+            <div class='table-container'>
+                <div class='table-title first'>أهم المقترحات</div>
+                <table class='table-primary'>
+                    <thead>
+                        <tr>
+                            <th>جوانب القوة</th>
+                            <th>جوانب التعزيز</th>
+                            <th>إجراءات المتابعة</th>
+                        </tr>
+                    </thead>
+                    <tbody>";
+
+        foreach (var item in workItems)
+        {
+            html += $@"
+                        <tr>
+                            <td>{item.Strengths}</td>
+                            <td>{item.Enhancements}</td>
+                            <td>{item.FollowUpActions}</td>
+                        </tr>";
+        }
+
+        html += @"
+                    </tbody>
+                </table>
+            </div>
+
+            <div class='table-container'>
+                <div class='table-title second'>جوانب المتابعة</div>
+                <table class='table-success'>
+                    <thead>
+                        <tr>
+                            <th>أولويات التطوير</th>
+                            <th>إجراءات التطوير</th>
+                            <th>إجراءات المتابعة للتطوير</th>
+                        </tr>
+                    </thead>
+                    <tbody>";
+
+        foreach (var item in workItems)
+        {
+            html += $@"
+                        <tr>
+                            <td>{item.DevelopmentPriorities}</td>
+                            <td>{item.DevelopmentActions}</td>
+                            <td>{item.DevelopmentFollowUp}</td>
+                        </tr>";
+        }
+
+        html += @"
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>";
+
+        return html;
+    }
     }
 }

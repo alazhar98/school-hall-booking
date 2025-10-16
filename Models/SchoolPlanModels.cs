@@ -33,7 +33,7 @@ namespace SchoolHallBooking.Models
     public class PlanSubObjective
     {
         public int Id { get; set; }
-        public int PlanObjectiveId { get; set; }
+        public int? PlanObjectiveId { get; set; }
 
         [Required(ErrorMessage = "المجال مطلوب")]
         [StringLength(100, ErrorMessage = "يجب أن يكون اسم المجال أقل من 100 حرف")]

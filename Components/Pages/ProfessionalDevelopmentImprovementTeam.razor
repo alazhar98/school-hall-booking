@@ -206,6 +206,7 @@
             }
 
             await LoadTeamMembers();
+            StateHasChanged();
             CloseModal();
         }
         catch (Exception ex)
@@ -224,6 +225,7 @@
                 await ProfessionalDevelopmentService.DeleteTeamMemberAsync(id);
                 successMessage = "تم حذف العضو بنجاح";
                 await LoadTeamMembers();
+                StateHasChanged();
             }
         }
         catch (Exception ex)

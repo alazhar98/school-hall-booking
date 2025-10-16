@@ -10,6 +10,36 @@
 <PageTitle>مشرفو الأنشطة - نظام حجز القاعات</PageTitle>
 
 <div class="container-fluid py-4">
+    <!-- إدارة الأنشطة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <i class="bi bi-gear me-2"></i>
+                    <strong>إدارة الأنشطة</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-plus-circle me-1"></i>
+                                إضافة نشاط جديد:
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" @bind="newActivityName" 
+                                       placeholder="أدخل اسم النشاط الجديد (مثل: النشاط الرياضي، النشاط الثقافي...)" />
+                                <button class="btn btn-success" @onclick="AddActivity">
+                                    <i class="bi bi-plus-circle me-1"></i>
+                                    إضافة نشاط
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -48,7 +78,19 @@
                                     @foreach (var activity in activities)
                                     {
                                         <tr>
-                                            <td class="fw-medium">@activity.Name</td>
+                                            <td class="fw-medium">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <span>@activity.Name</span>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <button class="btn btn-outline-warning" @onclick="() => OpenEditActivityModal(activity)" title="تعديل اسم النشاط">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-danger" @onclick="() => DeleteActivity(activity)" title="حذف النشاط">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td>
                                                 @if (activity.Supervisors.Any())
                                                 {
@@ -246,6 +288,35 @@
     <div class="modal-backdrop show"></div>
 }
 
+<!-- Edit Activity Modal -->
+@if (showEditActivityModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل اسم النشاط</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditActivityModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editActivityName" class="form-label">اسم النشاط</label>
+                        <input type="text" id="editActivityName" class="form-control" @bind="editActivityName" placeholder="أدخل اسم النشاط الجديد" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseEditActivityModal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" @onclick="UpdateActivity">
+                        <i class="bi bi-save me-1"></i>
+                        حفظ التغييرات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+}
+
 @code {
     private bool isLoading = true;
     private List<Activity> activities = new();
@@ -255,13 +326,19 @@
     private bool showAddSupervisorModal = false;
     private bool showEditSupervisorModal = false;
     private bool showSupervisorsListModal = false;
+    private bool showEditActivityModal = false;
     private bool isAddingSupervisor = false;
     private bool isEditingSupervisor = false;
 
     // Models
     private Activity? selectedActivity;
+    private Activity? editActivity;
     private ActivitySupervisor newSupervisor = new();
     private ActivitySupervisor editSupervisor = new();
+
+    // Activity management
+    private string newActivityName = string.Empty;
+    private string editActivityName = string.Empty;
 
     // Messages
     private string successMessage = string.Empty;
@@ -317,6 +394,7 @@
             {
                 successMessage = "تم إضافة المشرف بنجاح.";
                 await LoadActivities();
+                StateHasChanged();
                 CloseAddSupervisorModal();
             }
             else
@@ -631,5 +709,126 @@
 </html>";
 
         return html;
+    }
+
+    // Activity Management Functions
+    private async Task AddActivity()
+    {
+        if (string.IsNullOrWhiteSpace(newActivityName))
+        {
+            errorMessage = "يرجى إدخال اسم النشاط";
+            return;
+        }
+
+        if (activities.Any(a => a.Name == newActivityName.Trim()))
+        {
+            errorMessage = "هذا النشاط موجود بالفعل";
+            return;
+        }
+
+        try
+        {
+            var newActivity = new Activity
+            {
+                Name = newActivityName.Trim(),
+                IsActive = true,
+                CreatedAt = DateTime.Now
+            };
+
+            var result = await ActivitySupervisorService.AddActivityAsync(newActivity);
+            if (result != null)
+            {
+                successMessage = $"تم إضافة النشاط '{newActivityName.Trim()}' بنجاح";
+                newActivityName = string.Empty;
+                await LoadActivities();
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = "خطأ في إضافة النشاط";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في إضافة النشاط: {ex.Message}";
+        }
+    }
+
+    private void OpenEditActivityModal(Activity activity)
+    {
+        editActivity = activity;
+        editActivityName = activity.Name;
+        showEditActivityModal = true;
+    }
+
+    private void CloseEditActivityModal()
+    {
+        showEditActivityModal = false;
+        editActivity = null;
+        editActivityName = string.Empty;
+    }
+
+    private async Task UpdateActivity()
+    {
+        if (editActivity == null) return;
+
+        if (string.IsNullOrWhiteSpace(editActivityName))
+        {
+            errorMessage = "يرجى إدخال اسم النشاط";
+            return;
+        }
+
+        if (activities.Any(a => a.Name == editActivityName.Trim() && a.Id != editActivity.Id))
+        {
+            errorMessage = "هذا الاسم مستخدم بالفعل لنشاط آخر";
+            return;
+        }
+
+        try
+        {
+            editActivity.Name = editActivityName.Trim();
+            var result = await ActivitySupervisorService.UpdateActivityAsync(editActivity);
+            if (result != null)
+            {
+                successMessage = $"تم تحديث اسم النشاط بنجاح";
+                await LoadActivities();
+                CloseEditActivityModal();
+            }
+            else
+            {
+                errorMessage = "خطأ في تحديث النشاط";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في تحديث النشاط: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteActivity(Activity activity)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف النشاط '{activity.Name}'؟ سيتم حذف جميع المشرفين المرتبطين به."))
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await ActivitySupervisorService.DeleteActivityAsync(activity.Id);
+            if (result)
+            {
+                successMessage = $"تم حذف النشاط '{activity.Name}' بنجاح";
+                await LoadActivities();
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = "خطأ في حذف النشاط";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في حذف النشاط: {ex.Message}";
+        }
     }
 }

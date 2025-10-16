@@ -443,6 +443,43 @@ namespace SchoolHallBooking.Migrations
                     b.ToTable("Attendances");
                 });
 
+            modelBuilder.Entity("SchoolHallBooking.Models.AttendanceRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AttendanceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceId");
+
+                    b.ToTable("AttendanceRecords");
+                });
+
             modelBuilder.Entity("SchoolHallBooking.Models.Booking", b =>
                 {
                     b.Property<int>("Id")
@@ -678,10 +715,62 @@ namespace SchoolHallBooking.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("ActivitiesMatchTopics")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CombiningTheoryAndPractice")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CommitmentToTrainingTopics")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfidenceAfterProgram")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConfidenceBeforeProgram")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ContributesToCurrentJob")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DevelopmentAspects")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EducationalQualification")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EvaluationDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("KnowledgeAfterProgram")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("KnowledgeBeforeProgram")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MeetsPersonalExpectations")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ParticipantName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProgramDateSuitability")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ProgramTitle")
@@ -689,10 +778,47 @@ namespace SchoolHallBooking.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RelatedFunctions")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SchoolName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SkillsAfterProgram")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SkillsBeforeProgram")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Subject")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("SupportFromProgramStaff")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TopicsSuitableForParticipants")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TrainerAbilityToConveyInformation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TrainerInteractionWithParticipants")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TrainerMasteryOfMaterial")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TrainingMaterialAdequacy")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TrainingRoomSuitability")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1661,6 +1787,17 @@ namespace SchoolHallBooking.Migrations
                     b.Navigation("Activity");
                 });
 
+            modelBuilder.Entity("SchoolHallBooking.Models.AttendanceRecord", b =>
+                {
+                    b.HasOne("SchoolHallBooking.Models.Attendance", "Attendance")
+                        .WithMany("AttendanceRecords")
+                        .HasForeignKey("AttendanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attendance");
+                });
+
             modelBuilder.Entity("SchoolHallBooking.Models.Booking", b =>
                 {
                     b.HasOne("SchoolHallBooking.Models.Hall", "Hall")
@@ -1704,6 +1841,11 @@ namespace SchoolHallBooking.Migrations
             modelBuilder.Entity("SchoolHallBooking.Models.Activity", b =>
                 {
                     b.Navigation("Supervisors");
+                });
+
+            modelBuilder.Entity("SchoolHallBooking.Models.Attendance", b =>
+                {
+                    b.Navigation("AttendanceRecords");
                 });
 
             modelBuilder.Entity("SchoolHallBooking.Models.Hall", b =>

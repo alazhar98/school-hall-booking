@@ -8,6 +8,7 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject Microsoft.JSInterop.IJSRuntime JS
+@rendermode InteractiveServer
 
 @if (isLoading)
 {
@@ -158,7 +159,7 @@ else
                 <div class="card-header bg-info text-white">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-mortarboard-fill me-2"></i>
-                        <h4 class="mb-0">جدول الطلبة النظاميين</h4>
+                        <h4 class="mb-0">الطلبة النظاميين</h4>
                     </div>
                 </div>
                 <div class="card-body">
@@ -301,7 +302,7 @@ else
                 <div class="card-header bg-warning text-dark">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-ear me-2"></i>
-                        <h4 class="mb-0">جدول طلبة الدمج السمعي</h4>
+                        <h4 class="mb-0">طلبة الدمج السمعي</h4>
                     </div>
                 </div>
                 <div class="card-body">
@@ -410,6 +411,25 @@ else
                             تصدير PDF (طلبة الدمج السمعي)
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combined Export Button -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body text-center py-4">
+                    <h5 class="card-title text-primary mb-3">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        تصدير شامل للطلبة
+                    </h5>
+                    <p class="text-muted mb-3">تصدير جدولي الطلبة النظاميين وطلبة الدمج السمعي معاً في ملف PDF واحد</p>
+                    <button class="btn btn-primary btn-lg px-5" @onclick="ExportBothStudentsToPDF">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        تصدير PDF (الطلبة النظاميين + الدمج السمعي)
+                    </button>
                 </div>
             </div>
         </div>
@@ -1048,10 +1068,6 @@ else
             </tr>
         </tbody>
     </table>
-    
-    <div class='note'>
-        تم إنشاء هذا التقرير تلقائياً من نظام إدارة المدرسة
-    </div>
 </body>
 </html>";
 
@@ -1178,10 +1194,6 @@ else
             </tr>
         </tbody>
     </table>
-    
-    <div class='note'>
-        تم إنشاء هذا التقرير تلقائياً من نظام إدارة المدرسة
-    </div>
 </body>
 </html>";
 
@@ -1305,10 +1317,6 @@ else
             </tr>
         </tbody>
     </table>
-    
-    <div class='note'>
-        تم إنشاء هذا التقرير تلقائياً من نظام إدارة المدرسة
-    </div>
 </body>
 </html>";
 
@@ -1323,6 +1331,183 @@ else
         {
             Console.WriteLine($"[Stats] Error exporting hearing to HTML: {ex.Message}");
             saveMessage = $"فشل تصدير إحصائية طلبة الدمج السمعي: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportBothStudentsToPDF()
+    {
+        try
+        {
+            Console.WriteLine($"[Stats] ExportBothStudentsToPDF: regular count = {regular.Count}, hearing count = {hearing.Count}");
+            
+            // إنشاء ملف HTML قابل للطباعة يحتوي على الجدولين معاً
+            var html = $@"
+<!DOCTYPE html>
+<html dir='rtl' lang='ar'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>إحصائية الطلبة الشاملة</title>
+    <style>
+        body {{
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            direction: rtl;
+            text-align: right;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .main-title {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }}
+        .date {{
+            font-size: 12px;
+            color: #666;
+        }}
+        .section-title {{
+            font-size: 18px;
+            font-weight: bold;
+            color: #34495e;
+            margin: 30px 0 15px 0;
+            padding: 8px;
+            background-color: #ecf0f1;
+            border-right: 4px solid #3498db;
+        }}
+        table {{
+            width: 90%;
+            margin: 15px auto;
+            border-collapse: collapse;
+            font-size: 13px;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }}
+        th {{
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f8f9fa;
+        }}
+        .total-row {{
+            background-color: #2ecc71 !important;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }}
+        .grand-total {{
+            background-color: #e74c3c !important;
+            color: white;
+            font-weight: bold;
+            font-size: 15px;
+        }}
+        .page-break {{
+            page-break-before: always;
+        }}
+        @media print {{
+            body {{ margin: 0; }}
+            .no-print {{ display: none; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class='header'>
+        <div class='main-title'>الإحصائية العامة للمدرسة - الطلبة</div>
+        <div class='date'>تاريخ التقرير: {DateTime.Now:yyyy/MM/dd}</div>
+    </div>
+    
+    <!-- الطلبة النظاميين -->
+    <div class='section-title'>الطلبة النظاميين</div>
+    <table>
+        <thead>
+            <tr>
+                <th>الشعبة</th>
+                <th>عدد الطلاب</th>
+                <th>الصف</th>
+            </tr>
+        </thead>
+        <tbody>";
+
+            foreach (var r in regular)
+            {
+                html += $@"
+            <tr>
+                <td>{TrimGradePrefix(r.Division)}</td>
+                <td>{r.Count}</td>
+                <td>{ExtractGrade(r.Division) ?? ""}</td>
+            </tr>";
+            }
+
+            html += $@"
+            <tr class='total-row'>
+                <td>المجموع الكلي للطلبة النظاميين</td>
+                <td>{GetRegularOverallProjectedTotal()}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <!-- طلبة الدمج السمعي -->
+    <div class='section-title'>طلبة الدمج السمعي</div>
+    <table>
+        <thead>
+            <tr>
+                <th>الصف الدراسي</th>
+                <th>عدد الطلاب</th>
+            </tr>
+        </thead>
+        <tbody>";
+
+            foreach (var h in hearing)
+            {
+                html += $@"
+            <tr>
+                <td>{h.Grade}</td>
+                <td>{h.Count}</td>
+            </tr>";
+            }
+
+            html += $@"
+            <tr class='total-row'>
+                <td>المجموع الكلي لطلبة الدمج السمعي</td>
+                <td>{GetHearingProjectedTotal()}</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <!-- المجموع الكلي الشامل -->
+    <table>
+        <tbody>
+            <tr class='grand-total'>
+                <td>المجموع الكلي لجميع الطلبة (النظاميين + الدمج السمعي)</td>
+                <td>{GetRegularOverallProjectedTotal() + GetHearingProjectedTotal()}</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>";
+
+            // تحويل HTML إلى PDF باستخدام JavaScript
+            var fileName = $"إحصائية_الطلبة_الشاملة_{DateTime.Now:yyyy-MM-dd}.html";
+            await JS.InvokeVoidAsync("downloadHTMLFile", fileName, html);
+            
+            saveMessage = "تم تصدير إحصائية الطلبة الشاملة (النظاميين + الدمج السمعي) إلى ملف HTML قابل للطباعة!";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Stats] Error exporting both students to HTML: {ex.Message}");
+            saveMessage = $"فشل تصدير إحصائية الطلبة الشاملة: {ex.Message}";
             StateHasChanged();
         }
     }

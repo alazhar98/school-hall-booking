@@ -332,6 +332,7 @@
             }
 
             await LoadDesigns();
+            StateHasChanged();
             CloseModal();
         }
         catch (Exception ex)
@@ -350,6 +351,7 @@
                 await ProfessionalDevelopmentService.DeleteDesignAsync(id);
                 successMessage = "تم حذف التصميم بنجاح";
                 await LoadDesigns();
+                StateHasChanged();
             }
         }
         catch (Exception ex)

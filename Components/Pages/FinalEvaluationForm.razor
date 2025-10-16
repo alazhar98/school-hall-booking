@@ -1,0 +1,1097 @@
+@page "/professional-development/final-evaluation"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject IProfessionalDevelopmentService ProfessionalDevelopmentService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<link href="~/css/evaluation-form.css" rel="stylesheet" />
+
+<PageTitle>استمارة التقييم الختامي</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">استمارة تقييم ختامي لبرنامج تدريبي</h2>
+        <button class="btn btn-success" @onclick="PrintForm">
+            <i class="bi bi-printer me-1"></i> طباعة النموذج
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div id="evaluation-form" class="evaluation-form">
+        <!-- Header Section -->
+        <div class="form-header">
+            <div class="header-logos">
+                <div class="left-logo">
+                    <div class="green-schools-logo">
+                        <div class="leaf-icon">🌿</div>
+                        <div class="logo-text">
+                            <div class="arabic-text">المدارس الخضراء</div>
+                            <div class="english-text">Green Schools</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="center-content">
+                    <div class="ministry-text">وزارة التربية والتعليم</div>
+                    <div class="directorate-text">المديرية العامة للتربية والتعليم لمحافظة جنوب الباطنة.</div>
+                    <div class="school-text">مدرسة الفضل بن العباس للتعليم الأساسي ( 8 - 10)</div>
+                    <div class="form-title-text">استمارة تقييم ختامي لبرنامج تدريبي</div>
+                </div>
+                <div class="right-logo">
+                    <div class="moe-logo">
+                        <div class="emblem">🏛️</div>
+                        <div class="logo-text">وزارة التربية والتعليم</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- General Information Section -->
+        <div class="section">
+            <h4 class="section-title">البيانات العامة</h4>
+            <div class="general-info-grid">
+                <div class="info-row">
+                    <div class="info-item">
+                        <label class="info-label">المسمى الوظيفي:</label>
+                        <div class="job-title-section">
+                            <div class="job-option">
+                                <input type="radio" name="jobTitle" id="administrative" @onchange="() => OnJobTitleChange(administrativeRole)">
+                                <label for="administrative">إداري :</label>
+                                <input type="text" class="job-title-input" value="@administrative" @oninput="OnAdministrativeInputChange" placeholder="حدد الإداري" style="display: none;" id="administrativeInput">
+                            </div>
+                            <div class="job-option">
+                                <input type="radio" name="jobTitle" id="teacher" @onchange="() => OnJobTitleChange(teacherRole)">
+                                <label for="teacher">معلم :</label>
+                                <input type="text" class="job-title-input" value="@teacher" @oninput="OnTeacherInputChange" placeholder="حدد المعلم" style="display: none;" id="teacherInput">
+                            </div>
+                            <div class="job-option">
+                                <input type="radio" name="jobTitle" id="relatedFunctions" @onchange="() => OnJobTitleChange(relatedFunctionsRole)">
+                                <label for="relatedFunctions">وظائف مرتبطة :</label>
+                                <input type="text" class="job-title-input" value="@relatedFunctionsInput" @oninput="OnRelatedFunctionsInputChange" placeholder="حدد الوظائف المرتبطة" style="display: none;" id="relatedFunctionsInput">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-item">
+                        <label class="info-label">المؤهل العلمي:</label>
+                        <div class="qualification-options">
+                            <input type="radio" name="qualification" id="diploma" @onchange="() => { evaluation.EducationalQualification = diploma; StateHasChanged(); }">
+                            <label for="diploma">دبلوم</label>
+                            
+                            <input type="radio" name="qualification" id="bachelor" @onchange="() => { evaluation.EducationalQualification = bachelor; StateHasChanged(); }">
+                            <label for="bachelor">بكالوريوس</label>
+                            
+                            <input type="radio" name="qualification" id="master" @onchange="() => { evaluation.EducationalQualification = master; StateHasChanged(); }">
+                            <label for="master">ماجستير</label>
+                            
+                            <input type="radio" name="qualification" id="phd" @onchange="() => { evaluation.EducationalQualification = phd; StateHasChanged(); }">
+                            <label for="phd">دكتوراه</label>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <label class="info-label">عنوان البرنامج:</label>
+                        <input type="text" class="program-title-input" @bind="evaluation.ProgramTitle" placeholder="عنوان البرنامج">
+                    </div>
+                    
+                    <div class="info-item">
+                        <label class="info-label">المادة:</label>
+                        <select class="subject-select" @bind="evaluation.Subject">
+                            <option value="">اختر المادة</option>
+                            <option value="التربية الاسلامية">التربية الاسلامية</option>
+                            <option value="اللغة العربية">اللغة العربية</option>
+                            <option value="اللغة الانجليزية">اللغة الانجليزية</option>
+                            <option value="الرياضيات">الرياضيات</option>
+                            <option value="العلوم">العلوم</option>
+                            <option value="الدراسات الاجتماعية">الدراسات الاجتماعية</option>
+                            <option value="تقنية المعلومات والمهارات الفردية">تقنية المعلومات والمهارات الفردية</option>
+                            <option value="الادارة والوظائف المساندة">الادارة والوظائف المساندة</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation Section -->
+        <div class="section">
+            <h4 class="section-title">ضع علامة ( √ ) أمام الخيار الذي تراه مناسبا لكل بند من البنود التالية :</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered evaluation-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 5%;">م</th>
+                            <th rowspan="2" style="width: 45%;">بنود التقييم</th>
+                            <th colspan="5" style="width: 40%;">مستوى التقييم</th>
+                            <th rowspan="2" style="width: 10%;">المجموع الكلي لكل محور</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 8%;">1<br />ضعيف</th>
+                            <th style="width: 8%;">2<br />مقبول</th>
+                            <th style="width: 8%;">3<br />جيد</th>
+                            <th style="width: 8%;">4<br />جيد جدا</th>
+                            <th style="width: 8%;">5<br />ممتاز</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- التنظيم الإداري -->
+                        <tr class="category-row">
+                            <td colspan="8" class="category-header">التنظيم الإداري</td>
+                        </tr>
+                        <tr>
+                            <td>1</td>
+                            <td class="text-end">ملاءمة تاريخ عقد البرنامج</td>
+                            <td><input type="radio" name="dateSuitability" value="1" @onchange="() => { evaluation.ProgramDateSuitability = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="dateSuitability" value="2" @onchange="() => { evaluation.ProgramDateSuitability = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="dateSuitability" value="3" @onchange="() => { evaluation.ProgramDateSuitability = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="dateSuitability" value="4" @onchange="() => { evaluation.ProgramDateSuitability = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="dateSuitability" value="5" @onchange="() => { evaluation.ProgramDateSuitability = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td class="text-end">ملاءمة القاعة التدريبية</td>
+                            <td><input type="radio" name="roomSuitability" value="1" @onchange="() => { evaluation.TrainingRoomSuitability = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="roomSuitability" value="2" @onchange="() => { evaluation.TrainingRoomSuitability = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="roomSuitability" value="3" @onchange="() => { evaluation.TrainingRoomSuitability = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="roomSuitability" value="4" @onchange="() => { evaluation.TrainingRoomSuitability = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="roomSuitability" value="5" @onchange="() => { evaluation.TrainingRoomSuitability = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td class="text-end">الدعم والمساندة من القائمين على البرنامج</td>
+                            <td><input type="radio" name="support" value="1" @onchange="() => { evaluation.SupportFromProgramStaff = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="support" value="2" @onchange="() => { evaluation.SupportFromProgramStaff = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="support" value="3" @onchange="() => { evaluation.SupportFromProgramStaff = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="support" value="4" @onchange="() => { evaluation.SupportFromProgramStaff = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="support" value="5" @onchange="() => { evaluation.SupportFromProgramStaff = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <!-- صف المجموع للتنظيم الإداري -->
+                        <tr class="total-row">
+                            <td colspan="6" class="text-end"><strong>مجموع التنظيم الإداري:</strong></td>
+                            <td colspan="2"><strong>@administrativeTotal</strong></td>
+                        </tr>
+
+                        <!-- المادة التدريبية -->
+                        <tr class="category-row">
+                            <td colspan="8" class="category-header">المادة التدريبية</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td class="text-end">تسهم في تطوير مهامي الوظيفية الحالية.</td>
+                            <td><input type="radio" name="contributesToJob" value="1" @onchange="() => { evaluation.ContributesToCurrentJob = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="contributesToJob" value="2" @onchange="() => { evaluation.ContributesToCurrentJob = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="contributesToJob" value="3" @onchange="() => { evaluation.ContributesToCurrentJob = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="contributesToJob" value="4" @onchange="() => { evaluation.ContributesToCurrentJob = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="contributesToJob" value="5" @onchange="() => { evaluation.ContributesToCurrentJob = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td class="text-end">تحقق توقعاتي الشخصية</td>
+                            <td><input type="radio" name="meetsExpectations" value="1" @onchange="() => { evaluation.MeetsPersonalExpectations = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="meetsExpectations" value="2" @onchange="() => { evaluation.MeetsPersonalExpectations = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="meetsExpectations" value="3" @onchange="() => { evaluation.MeetsPersonalExpectations = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="meetsExpectations" value="4" @onchange="() => { evaluation.MeetsPersonalExpectations = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="meetsExpectations" value="5" @onchange="() => { evaluation.MeetsPersonalExpectations = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td class="text-end">مناسبة الموضوعات لمستويات المشاركين</td>
+                            <td><input type="radio" name="topicsSuitable" value="1" @onchange="() => { evaluation.TopicsSuitableForParticipants = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="topicsSuitable" value="2" @onchange="() => { evaluation.TopicsSuitableForParticipants = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="topicsSuitable" value="3" @onchange="() => { evaluation.TopicsSuitableForParticipants = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="topicsSuitable" value="4" @onchange="() => { evaluation.TopicsSuitableForParticipants = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="topicsSuitable" value="5" @onchange="() => { evaluation.TopicsSuitableForParticipants = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td class="text-end">كفاية المادة التدريبية و الانشطة المقدمة</td>
+                            <td><input type="radio" name="materialAdequacy" value="1" @onchange="() => { evaluation.TrainingMaterialAdequacy = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="materialAdequacy" value="2" @onchange="() => { evaluation.TrainingMaterialAdequacy = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="materialAdequacy" value="3" @onchange="() => { evaluation.TrainingMaterialAdequacy = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="materialAdequacy" value="4" @onchange="() => { evaluation.TrainingMaterialAdequacy = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="materialAdequacy" value="5" @onchange="() => { evaluation.TrainingMaterialAdequacy = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>8</td>
+                            <td class="text-end">توافق الانشطة التدريبية مع الموضوع</td>
+                            <td><input type="radio" name="activitiesMatch" value="1" @onchange="() => { evaluation.ActivitiesMatchTopics = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="activitiesMatch" value="2" @onchange="() => { evaluation.ActivitiesMatchTopics = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="activitiesMatch" value="3" @onchange="() => { evaluation.ActivitiesMatchTopics = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="activitiesMatch" value="4" @onchange="() => { evaluation.ActivitiesMatchTopics = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="activitiesMatch" value="5" @onchange="() => { evaluation.ActivitiesMatchTopics = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <!-- صف المجموع للمادة التدريبية -->
+                        <tr class="total-row">
+                            <td colspan="6" class="text-end"><strong>مجموع المادة التدريبية:</strong></td>
+                            <td colspan="2"><strong>@trainingMaterialTotal</strong></td>
+                        </tr>
+
+                        <!-- المدرب -->
+                        <tr class="category-row">
+                            <td colspan="8" class="category-header">المدرب</td>
+                        </tr>
+                        <tr>
+                            <td>9</td>
+                            <td class="text-end">التمكن من المادة التدريبية</td>
+                            <td><input type="radio" name="trainerMastery" value="1" @onchange="() => { evaluation.TrainerMasteryOfMaterial = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerMastery" value="2" @onchange="() => { evaluation.TrainerMasteryOfMaterial = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerMastery" value="3" @onchange="() => { evaluation.TrainerMasteryOfMaterial = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerMastery" value="4" @onchange="() => { evaluation.TrainerMasteryOfMaterial = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerMastery" value="5" @onchange="() => { evaluation.TrainerMasteryOfMaterial = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>10</td>
+                            <td class="text-end">التفاعل مع المشاركين</td>
+                            <td><input type="radio" name="trainerInteraction" value="1" @onchange="() => { evaluation.TrainerInteractionWithParticipants = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerInteraction" value="2" @onchange="() => { evaluation.TrainerInteractionWithParticipants = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerInteraction" value="3" @onchange="() => { evaluation.TrainerInteractionWithParticipants = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerInteraction" value="4" @onchange="() => { evaluation.TrainerInteractionWithParticipants = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerInteraction" value="5" @onchange="() => { evaluation.TrainerInteractionWithParticipants = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>11</td>
+                            <td class="text-end">القدرة على توصيل المعلومة</td>
+                            <td><input type="radio" name="trainerConveying" value="1" @onchange="() => { evaluation.TrainerAbilityToConveyInformation = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerConveying" value="2" @onchange="() => { evaluation.TrainerAbilityToConveyInformation = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerConveying" value="3" @onchange="() => { evaluation.TrainerAbilityToConveyInformation = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerConveying" value="4" @onchange="() => { evaluation.TrainerAbilityToConveyInformation = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="trainerConveying" value="5" @onchange="() => { evaluation.TrainerAbilityToConveyInformation = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>12</td>
+                            <td class="text-end">الجمع بين الجانب النظري و العملي</td>
+                            <td><input type="radio" name="theoryPractice" value="1" @onchange="() => { evaluation.CombiningTheoryAndPractice = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="theoryPractice" value="2" @onchange="() => { evaluation.CombiningTheoryAndPractice = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="theoryPractice" value="3" @onchange="() => { evaluation.CombiningTheoryAndPractice = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="theoryPractice" value="4" @onchange="() => { evaluation.CombiningTheoryAndPractice = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="theoryPractice" value="5" @onchange="() => { evaluation.CombiningTheoryAndPractice = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>13</td>
+                            <td class="text-end">الالتزام بموضوعات التدريب</td>
+                            <td><input type="radio" name="commitment" value="1" @onchange="() => { evaluation.CommitmentToTrainingTopics = 1; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="commitment" value="2" @onchange="() => { evaluation.CommitmentToTrainingTopics = 2; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="commitment" value="3" @onchange="() => { evaluation.CommitmentToTrainingTopics = 3; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="commitment" value="4" @onchange="() => { evaluation.CommitmentToTrainingTopics = 4; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td><input type="radio" name="commitment" value="5" @onchange="() => { evaluation.CommitmentToTrainingTopics = 5; CalculateAllTotals(); StateHasChanged(); }"></td>
+                            <td></td>
+                        </tr>
+                        <!-- صف المجموع للمدرب -->
+                        <tr class="total-row">
+                            <td colspan="6" class="text-end"><strong>مجموع المدرب:</strong></td>
+                            <td colspan="2"><strong>@trainerTotal</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Learning Level Section -->
+        <div class="section">
+            <h4 class="section-title">مستوى التعلم .</h4>
+            <p class="section-description">
+                إن مشاركتك في البرنامج لا تعني عدم وجود أي معارف أو مهارات سابقة في موضوع البرنامج. لذلك أخي المتدرب نود أن نعرف هل أضاف لك البرنامج معارف ومهارات جديدة، ويرجى تحديد مستواك فيما يأتي قبل البرنامج وبعده .
+            </p>
+            <div class="table-responsive">
+                <table class="table table-bordered learning-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">م</th>
+                            <th style="width: 35%;">المعارف والمهارات المكتسبة</th>
+                            <th colspan="3" style="width: 30%;">قبل البرنامج</th>
+                            <th colspan="3" style="width: 30%;">بعد البرنامج</th>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                            <th>عالية</th>
+                            <th>متوسطة</th>
+                            <th>متدنية</th>
+                            <th>عالية</th>
+                            <th>متوسطة</th>
+                            <th>متدنية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td class="text-end">المعارف</td>
+                            <td><input type="radio" name="knowledgeBefore" value="عالية" @onchange="() => evaluation.KnowledgeBeforeProgram = highLevel"></td>
+                            <td><input type="radio" name="knowledgeBefore" value="متوسطة" @onchange="() => evaluation.KnowledgeBeforeProgram = mediumLevel"></td>
+                            <td><input type="radio" name="knowledgeBefore" value="متدنية" @onchange="() => evaluation.KnowledgeBeforeProgram = lowLevel"></td>
+                            <td><input type="radio" name="knowledgeAfter" value="عالية" @onchange="() => evaluation.KnowledgeAfterProgram = highLevel"></td>
+                            <td><input type="radio" name="knowledgeAfter" value="متوسطة" @onchange="() => evaluation.KnowledgeAfterProgram = mediumLevel"></td>
+                            <td><input type="radio" name="knowledgeAfter" value="متدنية" @onchange="() => evaluation.KnowledgeAfterProgram = lowLevel"></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td class="text-end">المهارات</td>
+                            <td><input type="radio" name="skillsBefore" value="عالية" @onchange="() => evaluation.SkillsBeforeProgram = highLevel"></td>
+                            <td><input type="radio" name="skillsBefore" value="متوسطة" @onchange="() => evaluation.SkillsBeforeProgram = mediumLevel"></td>
+                            <td><input type="radio" name="skillsBefore" value="متدنية" @onchange="() => evaluation.SkillsBeforeProgram = lowLevel"></td>
+                            <td><input type="radio" name="skillsAfter" value="عالية" @onchange="() => evaluation.SkillsAfterProgram = highLevel"></td>
+                            <td><input type="radio" name="skillsAfter" value="متوسطة" @onchange="() => evaluation.SkillsAfterProgram = mediumLevel"></td>
+                            <td><input type="radio" name="skillsAfter" value="متدنية" @onchange="() => evaluation.SkillsAfterProgram = lowLevel"></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td class="text-end">الثقة في القدرة على التطبيق</td>
+                            <td><input type="radio" name="confidenceBefore" value="عالية" @onchange="() => evaluation.ConfidenceBeforeProgram = highLevel"></td>
+                            <td><input type="radio" name="confidenceBefore" value="متوسطة" @onchange="() => evaluation.ConfidenceBeforeProgram = mediumLevel"></td>
+                            <td><input type="radio" name="confidenceBefore" value="متدنية" @onchange="() => evaluation.ConfidenceBeforeProgram = lowLevel"></td>
+                            <td><input type="radio" name="confidenceAfter" value="عالية" @onchange="() => evaluation.ConfidenceAfterProgram = highLevel"></td>
+                            <td><input type="radio" name="confidenceAfter" value="متوسطة" @onchange="() => evaluation.ConfidenceAfterProgram = mediumLevel"></td>
+                            <td><input type="radio" name="confidenceAfter" value="متدنية" @onchange="() => evaluation.ConfidenceAfterProgram = lowLevel"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Development Aspects Section -->
+        <div class="section">
+            <h4 class="section-title">جوانب في البرنامج تحتاج إلى تطوير من وجهة نظرك :</h4>
+            <div class="development-textarea">
+                <textarea class="form-control development-text" rows="3" @bind="evaluation.DevelopmentAspects" placeholder=""></textarea>
+            </div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="section signature-section">
+            <div class="signature-row">
+                <div class="signature-item">
+                    <span class="signature-text">يعتمد ؛؛؛ مدير المدرسة حمد بن هلال الغافري</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-center gap-3 mt-4">
+        <button class="btn btn-primary" @onclick="SaveEvaluation">
+            <i class="bi bi-save me-1"></i> حفظ التقييم
+        </button>
+        <button class="btn btn-secondary" @onclick="ClearForm">
+            <i class="bi bi-arrow-clockwise me-1"></i> مسح النموذج
+        </button>
+        <button class="btn btn-info" @onclick="NavigateBack">
+            <i class="bi bi-arrow-right me-1"></i> العودة
+        </button>
+    </div>
+</div>
+
+<style>
+    .evaluation-form {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #198754;
+        padding-bottom: 20px;
+    }
+
+    .ministry-name, .green-schools {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .directorate-info h4 {
+        color: #198754;
+        margin: 15px 0 5px 0;
+        font-size: 18px;
+    }
+
+    .directorate-info h5 {
+        color: #0d6efd;
+        margin: 0 0 15px 0;
+        font-size: 16px;
+    }
+
+    .form-title h2 {
+        color: #198754;
+        font-size: 24px;
+        margin: 0;
+    }
+
+    .section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+
+    .section-title {
+        color: #198754;
+        font-weight: bold;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #198754;
+        padding-bottom: 5px;
+    }
+
+    .section-description {
+        color: #6c757d;
+        font-style: italic;
+        margin-bottom: 15px;
+    }
+
+    .evaluation-table, .learning-table {
+        background: white;
+        margin-bottom: 0;
+    }
+
+    .evaluation-table th, .learning-table th {
+        background-color: #198754;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        border: 1px solid #dee2e6;
+    }
+
+    .evaluation-table td, .learning-table td {
+        text-align: center;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    .category-row {
+        background-color: #e9ecef !important;
+    }
+
+    .category-header {
+        font-weight: bold;
+        color: #198754;
+        text-align: center;
+        font-size: 16px;
+    }
+
+    .signature-section {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #dee2e6;
+    }
+
+    .signature-line {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .signature-name {
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #198754;
+    }
+
+    .signature-label {
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #6c757d;
+    }
+
+    .signature-space {
+        height: 40px;
+        border-bottom: 1px solid #000;
+        margin-top: 20px;
+    }
+
+    .form-check {
+        margin-bottom: 0;
+    }
+
+    .form-check-input {
+        margin-top: 0;
+    }
+
+    @@media print {
+        .container-fluid {
+            padding: 0;
+        }
+        
+        .btn {
+            display: none !important;
+        }
+        
+        .evaluation-form {
+            box-shadow: none;
+            border: none;
+        }
+        
+        .section {
+            background: white !important;
+            border: 1px solid #000 !important;
+            page-break-inside: avoid;
+        }
+        
+        .evaluation-table, .learning-table {
+            page-break-inside: avoid;
+        }
+    }
+
+    .job-title-input {
+        min-width: 150px;
+        margin-right: 10px;
+    }
+
+    .related-functions-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .total-row {
+        background-color: #f8f9fa !important;
+        font-weight: bold;
+    }
+
+    .total-row td {
+        border-top: 2px solid #dee2e6 !important;
+    }
+</style>
+
+
+@code {
+    private FinalEvaluation evaluation = new();
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    
+    // Job title variables
+    private string administrative = string.Empty;
+    private string teacher = string.Empty;
+    private string relatedFunctionsInput = string.Empty;
+    private string selectedJobType = string.Empty;
+    
+    // Calculation variables
+    private int administrativeTotal = 0;
+    private int trainingMaterialTotal = 0;
+    private int trainerTotal = 0;
+    
+    // Constants for form values
+    private readonly string diploma = "دبلوم";
+    private readonly string bachelor = "بكالوريوس";
+    private readonly string master = "ماجستير";
+    private readonly string phd = "دكتوراه";
+    private readonly string highLevel = "عالية";
+    private readonly string mediumLevel = "متوسطة";
+    private readonly string lowLevel = "متدنية";
+    private readonly string administrativeRole = "إداري";
+    private readonly string teacherRole = "معلم";
+    private readonly string relatedFunctionsRole = "وظائف مرتبطة";
+
+    protected override void OnInitialized()
+    {
+        evaluation.EvaluationDate = DateTime.Now;
+        evaluation.SchoolName = "مدرسة الفضل بن العباس للتعليم الأساسي (8 - 10)";
+    }
+
+    private void CalculateAdministrativeTotal()
+    {
+        administrativeTotal = evaluation.ProgramDateSuitability + evaluation.TrainingRoomSuitability + evaluation.SupportFromProgramStaff;
+    }
+
+    private void CalculateTrainingMaterialTotal()
+    {
+        trainingMaterialTotal = evaluation.ContributesToCurrentJob + evaluation.MeetsPersonalExpectations + 
+                               evaluation.TopicsSuitableForParticipants + evaluation.TrainingMaterialAdequacy + 
+                               evaluation.ActivitiesMatchTopics;
+    }
+
+    private void CalculateTrainerTotal()
+    {
+        trainerTotal = evaluation.TrainerMasteryOfMaterial + evaluation.TrainerInteractionWithParticipants + 
+                      evaluation.TrainerAbilityToConveyInformation + evaluation.CombiningTheoryAndPractice + 
+                      evaluation.CommitmentToTrainingTopics;
+    }
+
+    private void CalculateAllTotals()
+    {
+        CalculateAdministrativeTotal();
+        CalculateTrainingMaterialTotal();
+        CalculateTrainerTotal();
+    }
+
+    private async Task OnJobTitleChange(string jobType)
+    {
+        selectedJobType = jobType;
+        
+        // إخفاء جميع حقول الإدخال أولاً
+        await JSRuntime.InvokeVoidAsync("hideElement", "administrativeInput");
+        await JSRuntime.InvokeVoidAsync("hideElement", "teacherInput");
+        await JSRuntime.InvokeVoidAsync("hideElement", "relatedFunctionsInput");
+        
+        // إظهار الحقل المناسب
+        if (jobType == administrativeRole)
+        {
+            await JSRuntime.InvokeVoidAsync("showElement", "administrativeInput");
+        }
+        else if (jobType == teacherRole)
+        {
+            await JSRuntime.InvokeVoidAsync("showElement", "teacherInput");
+        }
+        else if (jobType == relatedFunctionsRole)
+        {
+            await JSRuntime.InvokeVoidAsync("showElement", "relatedFunctionsInput");
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnAdministrativeInputChange(ChangeEventArgs e)
+    {
+        administrative = e.Value?.ToString() ?? string.Empty;
+        if (!string.IsNullOrEmpty(administrative))
+        {
+            evaluation.JobTitle = $"{administrativeRole}: {administrative}";
+        }
+        StateHasChanged();
+    }
+
+    private void OnTeacherInputChange(ChangeEventArgs e)
+    {
+        teacher = e.Value?.ToString() ?? string.Empty;
+        if (!string.IsNullOrEmpty(teacher))
+        {
+            evaluation.JobTitle = $"{teacherRole}: {teacher}";
+        }
+        StateHasChanged();
+    }
+
+    private void OnRelatedFunctionsInputChange(ChangeEventArgs e)
+    {
+        relatedFunctionsInput = e.Value?.ToString() ?? string.Empty;
+        if (!string.IsNullOrEmpty(relatedFunctionsInput))
+        {
+            evaluation.JobTitle = $"وظائف مرتبطة: {relatedFunctionsInput}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveEvaluation()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(evaluation.ProgramTitle))
+            {
+                errorMessage = "يرجى إدخال عنوان البرنامج";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(evaluation.Subject))
+            {
+                errorMessage = "يرجى اختيار المادة";
+                return;
+            }
+
+            // تحديد المسمى الوظيفي بناءً على الاختيار
+            if (selectedJobType == administrativeRole && !string.IsNullOrEmpty(administrative))
+            {
+                evaluation.JobTitle = $"{administrativeRole}: {administrative}";
+            }
+            else if (selectedJobType == teacherRole && !string.IsNullOrEmpty(teacher))
+            {
+                evaluation.JobTitle = $"{teacherRole}: {teacher}";
+            }
+            else if (selectedJobType == relatedFunctionsRole && !string.IsNullOrEmpty(relatedFunctionsInput))
+            {
+                evaluation.JobTitle = $"وظائف مرتبطة: {relatedFunctionsInput}";
+            }
+            else if (!string.IsNullOrEmpty(selectedJobType))
+            {
+                errorMessage = "يرجى تحديد نوع الوظيفة بالتفصيل";
+                return;
+            }
+
+            // التحقق من أن JobTitle تم تعبئته
+            if (string.IsNullOrEmpty(evaluation.JobTitle))
+            {
+                errorMessage = "يرجى تحديد المسمى الوظيفي";
+                return;
+            }
+
+            // التحقق من المؤهل العلمي
+            if (string.IsNullOrEmpty(evaluation.EducationalQualification))
+            {
+                errorMessage = "يرجى تحديد المؤهل العلمي";
+                return;
+            }
+
+            // التأكد من تعيين التاريخ الحالي
+            evaluation.EvaluationDate = DateTime.Now;
+            evaluation.CreatedAt = DateTime.Now;
+            evaluation.IsActive = true;
+
+            // حفظ في قاعدة البيانات
+            await ProfessionalDevelopmentService.AddEvaluationAsync(evaluation);
+            successMessage = "تم حفظ التقييم بنجاح";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "حدث خطأ أثناء حفظ التقييم: " + ex.Message;
+            StateHasChanged();
+        }
+        
+        return;
+    }
+
+    private void ClearForm()
+    {
+        evaluation = new FinalEvaluation();
+        evaluation.EvaluationDate = DateTime.Now;
+        evaluation.SchoolName = "مدرسة الفضل بن العباس للتعليم الأساسي (8 - 10)";
+        administrative = string.Empty;
+        teacher = string.Empty;
+        relatedFunctionsInput = string.Empty;
+        selectedJobType = string.Empty;
+        administrativeTotal = 0;
+        trainingMaterialTotal = 0;
+        trainerTotal = 0;
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/professional-development");
+    }
+
+    private async Task PrintForm()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("printHTML", GetFormHTML(), "استمارة_التقييم_الختامي");
+            successMessage = "تم إرسال النموذج للطباعة";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "حدث خطأ أثناء الطباعة: " + ex.Message;
+        }
+    }
+
+    private string GetFormHTML()
+    {
+        var html = $@"
+            <div style='text-align: center; margin-bottom: 30px; font-family: Arial, sans-serif;'>
+                <h1 style='color: #198754; font-size: 24px; margin-bottom: 10px;'>استمارة تقييم ختامي لبرنامج تدريبي</h1>
+                <p style='font-size: 14px; color: #666;'>المديرية العامة للتربية والتعليم المحافظة جنوب الباطنة</p>
+                <p style='font-size: 14px; color: #666;'>مدرسة الفضل بن العباس للتعليم الأساسي (8 - 10)</p>
+                <p style='font-size: 12px; color: #999;'>تاريخ التقييم: {evaluation.EvaluationDate:yyyy-MM-dd}</p>
+            </div>
+
+            <div style='margin-bottom: 20px;'>
+                <h3 style='color: #198754; font-size: 16px; margin-bottom: 10px;'>البيانات العامة</h3>
+                <table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>
+                    <tr>
+                        <td style='border: 1px solid #ddd; padding: 8px; width: 30%;'><strong>المسمى الوظيفي:</strong></td>
+                        <td style='border: 1px solid #ddd; padding: 8px;'>{evaluation.JobTitle}</td>
+                        <td style='border: 1px solid #ddd; padding: 8px; width: 30%;'><strong>المؤهل العلمي:</strong></td>
+                        <td style='border: 1px solid #ddd; padding: 8px;'>{evaluation.EducationalQualification}</td>
+                    </tr>
+                    <tr>
+                        <td style='border: 1px solid #ddd; padding: 8px;'><strong>عنوان البرنامج:</strong></td>
+                        <td style='border: 1px solid #ddd; padding: 8px;'>{evaluation.ProgramTitle}</td>
+                        <td style='border: 1px solid #ddd; padding: 8px;'><strong>المادة:</strong></td>
+                        <td style='border: 1px solid #ddd; padding: 8px;'>{evaluation.Subject}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style='margin-bottom: 20px;'>
+                <h3 style='color: #198754; font-size: 16px; margin-bottom: 10px;'>تقييم البرنامج</h3>
+                <p style='color: #666; font-style: italic; margin-bottom: 15px;'>ضع علامة ( √ ) أمام الخيار الذي تراه مناسبا لكل بند من البنود التالية:</p>
+                
+                <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
+                    <thead>
+                        <tr style='background-color: #198754; color: white;'>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 5%;'>م</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 45%;'>بنود التقييم</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 8%;'>1<br/>ضعيف</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 8%;'>2<br/>مقبول</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 8%;'>3<br/>جيد</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 8%;'>4<br/>جيد جدا</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 8%;'>5<br/>ممتاز</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 10%;'>المجموع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style='background-color: #f8f9fa;'>
+                            <td colspan='8' style='border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;'>التنظيم الإداري</td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>1</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>ملاءمة تاريخ عقد البرنامج</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ProgramDateSuitability, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ProgramDateSuitability, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ProgramDateSuitability, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ProgramDateSuitability, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ProgramDateSuitability, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>2</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>ملاءمة القاعة التدريبية</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingRoomSuitability, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingRoomSuitability, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingRoomSuitability, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingRoomSuitability, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingRoomSuitability, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>3</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>الدعم والمساندة من القائمين على البرنامج</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SupportFromProgramStaff, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SupportFromProgramStaff, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SupportFromProgramStaff, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SupportFromProgramStaff, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SupportFromProgramStaff, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr style='background-color: #f8f9fa; font-weight: bold;'>
+                            <td colspan='6' style='border: 1px solid #ddd; padding: 8px; text-align: right;'>مجموع التنظيم الإداري:</td>
+                            <td colspan='2' style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{administrativeTotal}</td>
+                        </tr>
+                        
+                        <tr style='background-color: #f8f9fa;'>
+                            <td colspan='8' style='border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;'>المادة التدريبية</td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>4</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>تسهم في تطوير مهامي الوظيفية الحالية</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ContributesToCurrentJob, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ContributesToCurrentJob, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ContributesToCurrentJob, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ContributesToCurrentJob, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ContributesToCurrentJob, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>5</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>تحقق توقعاتي الشخصية</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.MeetsPersonalExpectations, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.MeetsPersonalExpectations, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.MeetsPersonalExpectations, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.MeetsPersonalExpectations, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.MeetsPersonalExpectations, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>6</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>مناسبة الموضوعات لمستويات المشاركين</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TopicsSuitableForParticipants, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TopicsSuitableForParticipants, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TopicsSuitableForParticipants, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TopicsSuitableForParticipants, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TopicsSuitableForParticipants, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>7</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>كفاية المادة التدريبية والأنشطة المقدمة</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingMaterialAdequacy, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingMaterialAdequacy, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingMaterialAdequacy, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingMaterialAdequacy, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainingMaterialAdequacy, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>8</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>توافق الأنشطة التدريبية مع الموضوع</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ActivitiesMatchTopics, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ActivitiesMatchTopics, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ActivitiesMatchTopics, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ActivitiesMatchTopics, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ActivitiesMatchTopics, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr style='background-color: #f8f9fa; font-weight: bold;'>
+                            <td colspan='6' style='border: 1px solid #ddd; padding: 8px; text-align: right;'>مجموع المادة التدريبية:</td>
+                            <td colspan='2' style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{trainingMaterialTotal}</td>
+                        </tr>
+                        
+                        <tr style='background-color: #f8f9fa;'>
+                            <td colspan='8' style='border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;'>المدرب</td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>9</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>التمكن من المادة التدريبية</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerMasteryOfMaterial, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerMasteryOfMaterial, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerMasteryOfMaterial, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerMasteryOfMaterial, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerMasteryOfMaterial, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>10</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>التفاعل مع المشاركين</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerInteractionWithParticipants, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerInteractionWithParticipants, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerInteractionWithParticipants, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerInteractionWithParticipants, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerInteractionWithParticipants, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>11</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>القدرة على توصيل المعلومة</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerAbilityToConveyInformation, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerAbilityToConveyInformation, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerAbilityToConveyInformation, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerAbilityToConveyInformation, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.TrainerAbilityToConveyInformation, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>12</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>الجمع بين الجانب النظري والعملي</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CombiningTheoryAndPractice, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CombiningTheoryAndPractice, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CombiningTheoryAndPractice, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CombiningTheoryAndPractice, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CombiningTheoryAndPractice, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>13</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>الالتزام بموضوعات التدريب</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CommitmentToTrainingTopics, 1)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CommitmentToTrainingTopics, 2)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CommitmentToTrainingTopics, 3)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CommitmentToTrainingTopics, 4)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.CommitmentToTrainingTopics, 5)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px;'></td>
+                        </tr>
+                        <tr style='background-color: #f8f9fa; font-weight: bold;'>
+                            <td colspan='6' style='border: 1px solid #ddd; padding: 8px; text-align: right;'>مجموع المدرب:</td>
+                            <td colspan='2' style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{trainerTotal}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style='margin-bottom: 20px;'>
+                <h3 style='color: #198754; font-size: 16px; margin-bottom: 10px;'>مستوى التعلم</h3>
+                <p style='color: #666; font-style: italic; margin-bottom: 15px;'>
+                    إن مشاركتك في البرنامج لا تعني عدم وجود أي معارف أو مهارات سابقة في موضوع البرنامج. لذلك أخي المتدرب نود أن نعرف هل أضاف لك البرنامج معارف ومهارات جديدة، ويرجى تحديد مستواك فيما يأتي قبل البرنامج وبعده.
+                </p>
+                
+                <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
+                    <thead>
+                        <tr style='background-color: #198754; color: white;'>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 5%;'>م</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; width: 35%;'>المعارف والمهارات المكتسبة</th>
+                            <th colspan='3' style='border: 1px solid #ddd; padding: 8px; width: 30%;'>قبل البرنامج</th>
+                            <th colspan='3' style='border: 1px solid #ddd; padding: 8px; width: 30%;'>بعد البرنامج</th>
+                        </tr>
+                        <tr style='background-color: #f8f9fa;'>
+                            <th style='border: 1px solid #ddd; padding: 8px;'></th>
+                            <th style='border: 1px solid #ddd; padding: 8px;'></th>
+                            <th style='border: 1px solid #ddd; padding: 8px;'>عالية</th>
+                            <th style='border: 1px solid #ddd; padding: 8px;'>متوسطة</th>
+                            <th style='border: 1px solid #ddd; padding: 8px;'>متدنية</th>
+                            <th style='border: 1px solid #ddd; padding: 8px;'>عالية</th>
+                            <th style='border: 1px solid #ddd; padding: 8px;'>متوسطة</th>
+                            <th style='border: 1px solid #ddd; padding: 8px;'>متدنية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>1</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>المعارف</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.KnowledgeBeforeProgram, highLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.KnowledgeBeforeProgram, mediumLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.KnowledgeBeforeProgram, lowLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.KnowledgeAfterProgram, highLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.KnowledgeAfterProgram, mediumLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.KnowledgeAfterProgram, lowLevel)}</td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>2</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>المهارات</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SkillsBeforeProgram, highLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SkillsBeforeProgram, mediumLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SkillsBeforeProgram, lowLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SkillsAfterProgram, highLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SkillsAfterProgram, mediumLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.SkillsAfterProgram, lowLevel)}</td>
+                        </tr>
+                        <tr>
+                            <td style='border: 1px solid #ddd; padding: 8px;'>3</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: right;'>الثقة في القدرة على التطبيق</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ConfidenceBeforeProgram, highLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ConfidenceBeforeProgram, mediumLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ConfidenceBeforeProgram, lowLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ConfidenceAfterProgram, highLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ConfidenceAfterProgram, mediumLevel)}</td>
+                            <td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>{GetCheckmark(evaluation.ConfidenceAfterProgram, lowLevel)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style='margin-bottom: 20px;'>
+                <h3 style='color: #198754; font-size: 16px; margin-bottom: 10px;'>جوانب في البرنامج تحتاج إلى تطوير من وجهة نظرك:</h3>
+                <div style='border: 1px solid #ddd; padding: 15px; min-height: 80px; background: #f8f9fa;'>
+                    {evaluation.DevelopmentAspects}
+                </div>
+            </div>
+
+            <div style='margin-top: 40px; text-align: center;'>
+                <div style='display: inline-block; margin: 0 50px;'>
+                    <div style='font-weight: bold; margin-bottom: 10px; color: #6c757d;'>يعتمد ؛؛؛ مدير المدرسة حمد بن هلال الغافري</div>
+                    <div style='border-bottom: 1px solid #000; width: 200px; height: 1px;'></div>
+                    <div style='font-size: 12px; color: #666; margin-top: 5px;'>التوقيع والختم</div>
+                </div>
+            </div>
+        ";
+
+        return html;
+    }
+
+    private string GetCheckmark(int value, int targetValue)
+    {
+        return value == targetValue ? "✓" : "";
+    }
+
+    private string GetCheckmark(string value, string targetValue)
+    {
+        return value == targetValue ? "✓" : "";
+    }
+}

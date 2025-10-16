@@ -90,5 +90,67 @@ namespace SchoolHallBooking.Services
                 .Include(a => a.Supervisors)
                 .FirstOrDefaultAsync(a => a.Id == activityId);
         }
+
+        public async Task<Activity?> AddActivityAsync(Activity activity)
+        {
+            try
+            {
+                activity.CreatedAt = DateTime.Now;
+                activity.IsActive = true;
+                _context.Activities.Add(activity);
+                await _context.SaveChangesAsync();
+                return activity;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<Activity?> UpdateActivityAsync(Activity activity)
+        {
+            try
+            {
+                var existingActivity = await _context.Activities.FindAsync(activity.Id);
+                if (existingActivity == null)
+                    return null;
+
+                existingActivity.Name = activity.Name;
+                existingActivity.IsActive = activity.IsActive;
+
+                await _context.SaveChangesAsync();
+                return existingActivity;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<bool> DeleteActivityAsync(int activityId)
+        {
+            try
+            {
+                var activity = await _context.Activities
+                    .Include(a => a.Supervisors)
+                    .FirstOrDefaultAsync(a => a.Id == activityId);
+                    
+                if (activity == null)
+                    return false;
+
+                // حذف جميع المشرفين المرتبطين بالنشاط
+                _context.ActivitySupervisors.RemoveRange(activity.Supervisors);
+                
+                // حذف النشاط
+                _context.Activities.Remove(activity);
+                
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

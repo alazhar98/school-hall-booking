@@ -43,6 +43,7 @@ public class BookingDbContext : DbContext
         public DbSet<TrainingProgramDesign> TrainingProgramDesigns { get; set; }
         public DbSet<FinalEvaluation> FinalEvaluations { get; set; }
         public DbSet<Attendance> Attendances { get; set; }
+        public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<ImprovementTeam> ImprovementTeams { get; set; }
         public DbSet<FollowUpMeeting> FollowUpMeetings { get; set; }
         
@@ -368,6 +369,25 @@ public class BookingDbContext : DbContext
             entity.Property(e => e.Executor).IsRequired().HasMaxLength(100);
             entity.Property(e => e.IsActive).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
+        });
+
+        // AttendanceRecord
+        modelBuilder.Entity<AttendanceRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.AttendanceId).IsRequired();
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.JobTitle).HasMaxLength(200);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+
+            // Configure foreign key relationship
+            entity.HasOne(e => e.Attendance)
+                  .WithMany(e => e.AttendanceRecords)
+                  .HasForeignKey(e => e.AttendanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Improvement Team

@@ -10,5 +10,8 @@ namespace SchoolHallBooking.Services
         Task<ActivitySupervisor?> UpdateSupervisorAsync(ActivitySupervisor supervisor);
         Task<bool> DeleteSupervisorAsync(int supervisorId);
         Task<Activity?> GetActivityByIdAsync(int activityId);
+        Task<Activity?> AddActivityAsync(Activity activity);
+        Task<Activity?> UpdateActivityAsync(Activity activity);
+        Task<bool> DeleteActivityAsync(int activityId);
     }
 }

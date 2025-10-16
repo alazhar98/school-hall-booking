@@ -47,7 +47,7 @@
             @if (evaluations.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table id="evaluations-table" class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
                                 <th>عنوان البرنامج</th>
@@ -220,7 +220,7 @@
         try
         {
             var htmlContent = GenerateEvaluationPDFContent(evaluation);
-            await JSRuntime.InvokeVoidAsync("printToPDF", htmlContent, $"استمارة تقييم ختامي - {evaluation.ProgramTitle}");
+            await JSRuntime.InvokeVoidAsync("printHTML", htmlContent, $"استمارة تقييم ختامي - {evaluation.ProgramTitle}");
         }
         catch (Exception ex)
         {
@@ -232,9 +232,7 @@
     {
         try
         {
-            var csvContent = GenerateCSV();
-            var fileName = $"استمارات_التقييم_الختامي_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, csvContent, "text/csv;charset=utf-8;");
+            await JSRuntime.InvokeVoidAsync("exportToExcel", "evaluations-table", "استمارات_التقييم_الختامي");
         }
         catch (Exception ex)
         {
@@ -247,7 +245,7 @@
         try
         {
             var htmlContent = GeneratePDFContent();
-            await JSRuntime.InvokeVoidAsync("printToPDF", htmlContent, "استمارات التقييم الختامي");
+            await JSRuntime.InvokeVoidAsync("printHTML", htmlContent, "استمارات التقييم الختامي");
         }
         catch (Exception ex)
         {
@@ -255,19 +253,6 @@
         }
     }
 
-    private string GenerateCSV()
-    {
-        var csv = new System.Text.StringBuilder();
-        csv.AppendLine("\uFEFF"); // BOM for UTF-8
-        csv.AppendLine("عنوان البرنامج,المادة,تاريخ الإنشاء");
-        
-        foreach (var evaluation in evaluations)
-        {
-            csv.AppendLine($"{evaluation.ProgramTitle},{evaluation.Subject},{evaluation.CreatedAt:yyyy/MM/dd}");
-        }
-        
-        return csv.ToString();
-    }
 
     private string GeneratePDFContent()
     {

@@ -28,6 +28,38 @@
         </div>
     }
 
+    <!-- Management Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">فريق التحسين والتطوير</h5>
+                </div>
+                <div class="card-body text-center">
+                    <i class="bi bi-person-gear fs-1 text-info mb-3"></i>
+                    <h6 class="card-title">إدارة فريق التحسين</h6>
+                    <button class="btn btn-info" @onclick="@(() => NavigateToTeam())">
+                        <i class="bi bi-arrow-left"></i> إدارة الفريق
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">اجتماعات فريق المتابعة</h5>
+                </div>
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-event fs-1 text-secondary mb-3"></i>
+                    <h6 class="card-title">إدارة الاجتماعات</h6>
+                    <button class="btn btn-secondary" @onclick="@(() => NavigateToMeetings())">
+                        <i class="bi bi-arrow-left"></i> إدارة الاجتماعات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Subject Selection -->
     <div class="row">
         <div class="col-12">
@@ -82,10 +114,10 @@
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="card h-100 option-card" @onclick="@(() => NavigateToEvaluation())" style="cursor: pointer;">
+                                <div class="card h-100 option-card" @onclick="@(() => NavigateToFinalEvaluation())" style="cursor: pointer;">
                                     <div class="card-body text-center">
-                                        <i class="bi bi-clipboard-check fs-1 text-success mb-3"></i>
-                                        <h6 class="card-title">التقييم</h6>
+                                        <i class="bi bi-clipboard-data fs-1 text-success mb-3"></i>
+                                        <h6 class="card-title">التقييم الختامي</h6>
                                     </div>
                                 </div>
                             </div>
@@ -101,39 +133,9 @@
                     </div>
                 </div>
             </div>
+
         </div>
 
-        <!-- Additional Options -->
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="card-title mb-0">فريق التحسين والتطوير</h5>
-                    </div>
-                    <div class="card-body text-center">
-                        <i class="bi bi-person-gear fs-1 text-info mb-3"></i>
-                        <h6 class="card-title">إدارة فريق التحسين</h6>
-                        <button class="btn btn-info" @onclick="@(() => NavigateToTeam())">
-                            <i class="bi bi-arrow-left"></i> إدارة الفريق
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="card-title mb-0">اجتماعات فريق المتابعة</h5>
-                    </div>
-                    <div class="card-body text-center">
-                        <i class="bi bi-calendar-event fs-1 text-secondary mb-3"></i>
-                        <h6 class="card-title">إدارة الاجتماعات</h6>
-                        <button class="btn btn-secondary" @onclick="@(() => NavigateToMeetings())">
-                            <i class="bi bi-arrow-left"></i> إدارة الاجتماعات
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
     }
 </div>
 
@@ -214,10 +216,6 @@
         NavigationManager.NavigateTo("/professional-development/design");
     }
 
-    private void NavigateToEvaluation()
-    {
-        NavigationManager.NavigateTo("/professional-development/evaluation");
-    }
 
     private void NavigateToAttendance()
     {
@@ -232,5 +230,10 @@
     private void NavigateToMeetings()
     {
         NavigationManager.NavigateTo("/professional-development/followup-meetings");
+    }
+
+    private void NavigateToFinalEvaluation()
+    {
+        NavigationManager.NavigateTo("/professional-development/final-evaluation");
     }
 }

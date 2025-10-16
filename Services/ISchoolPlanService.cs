@@ -15,7 +15,7 @@ namespace SchoolHallBooking.Services
         // Plan Objectives
         Task<List<PlanObjective>> GetAllObjectivesAsync();
         Task<PlanObjective?> GetPlanObjectiveByIdAsync(int id);
-        Task AddPlanObjectiveAsync(PlanObjective planObjective);
+        Task<PlanObjective> AddPlanObjectiveAsync(PlanObjective planObjective);
         Task UpdatePlanObjectiveAsync(PlanObjective planObjective);
         Task DeletePlanObjectiveAsync(int id);
 

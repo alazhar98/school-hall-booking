@@ -32,6 +32,13 @@ namespace SchoolHallBooking.Services
         Task UpdateAttendanceAsync(Attendance attendance);
         Task DeleteAttendanceAsync(int id);
 
+        // Attendance Records
+        Task<List<AttendanceRecord>> GetAttendanceRecordsByAttendanceIdAsync(int attendanceId);
+        Task<AttendanceRecord?> GetAttendanceRecordByIdAsync(int id);
+        Task AddAttendanceRecordAsync(AttendanceRecord attendanceRecord);
+        Task UpdateAttendanceRecordAsync(AttendanceRecord attendanceRecord);
+        Task DeleteAttendanceRecordAsync(int id);
+
         // Improvement Teams
         Task<List<ImprovementTeam>> GetAllTeamMembersAsync();
         Task<ImprovementTeam?> GetTeamMemberByIdAsync(int id);

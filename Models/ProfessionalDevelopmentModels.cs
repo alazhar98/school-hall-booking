@@ -96,6 +96,46 @@ namespace SchoolHallBooking.Models
         [StringLength(100, ErrorMessage = "يجب أن تكون المادة أقل من 100 حرف")]
         public string Subject { get; set; } = string.Empty;
 
+        // البيانات العامة
+        public string JobTitle { get; set; } = string.Empty; // المسمى الوظيفي
+        public string RelatedFunctions { get; set; } = string.Empty; // الوظائف المرتبطة
+        public string EducationalQualification { get; set; } = string.Empty; // المؤهل العلمي
+
+        // تقييم التنظيم الإداري (1-3)
+        public int ProgramDateSuitability { get; set; } = 0; // ملاءمة تاريخ عقد البرنامج
+        public int TrainingRoomSuitability { get; set; } = 0; // ملاءمة القاعة التدريبية
+        public int SupportFromProgramStaff { get; set; } = 0; // الدعم والمساندة من القائمين على البرنامج
+
+        // تقييم المادة التدريبية (4-8)
+        public int ContributesToCurrentJob { get; set; } = 0; // تسهم في تطوير مهامي الوظيفية الحالية
+        public int MeetsPersonalExpectations { get; set; } = 0; // تحقق توقعاتي الشخصية
+        public int TopicsSuitableForParticipants { get; set; } = 0; // مناسبة الموضوعات لمستويات المشاركين
+        public int TrainingMaterialAdequacy { get; set; } = 0; // كفاية المادة التدريبية والأنشطة المقدمة
+        public int ActivitiesMatchTopics { get; set; } = 0; // توافق الأنشطة التدريبية مع الموضوع
+
+        // تقييم المدرب (9-13)
+        public int TrainerMasteryOfMaterial { get; set; } = 0; // التمكن من المادة التدريبية
+        public int TrainerInteractionWithParticipants { get; set; } = 0; // التفاعل مع المشاركين
+        public int TrainerAbilityToConveyInformation { get; set; } = 0; // القدرة على توصيل المعلومة
+        public int CombiningTheoryAndPractice { get; set; } = 0; // الجمع بين الجانب النظري والعملي
+        public int CommitmentToTrainingTopics { get; set; } = 0; // الالتزام بموضوعات التدريب
+
+        // مستوى التعلم قبل وبعد البرنامج
+        public string KnowledgeBeforeProgram { get; set; } = string.Empty; // المعارف قبل البرنامج
+        public string KnowledgeAfterProgram { get; set; } = string.Empty; // المعارف بعد البرنامج
+        public string SkillsBeforeProgram { get; set; } = string.Empty; // المهارات قبل البرنامج
+        public string SkillsAfterProgram { get; set; } = string.Empty; // المهارات بعد البرنامج
+        public string ConfidenceBeforeProgram { get; set; } = string.Empty; // الثقة في القدرة على التطبيق قبل البرنامج
+        public string ConfidenceAfterProgram { get; set; } = string.Empty; // الثقة في القدرة على التطبيق بعد البرنامج
+
+        // جوانب تحتاج تطوير
+        public string? DevelopmentAspects { get; set; } // جوانب في البرنامج تحتاج إلى تطوير
+
+        // معلومات إضافية
+        public string ParticipantName { get; set; } = string.Empty; // اسم المشارك
+        public string SchoolName { get; set; } = string.Empty; // اسم المدرسة
+        public DateTime EvaluationDate { get; set; } = DateTime.Now; // تاريخ التقييم
+
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
@@ -122,6 +162,24 @@ namespace SchoolHallBooking.Models
 
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        // Navigation property for attendance records
+        public virtual ICollection<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
+    }
+
+    // نموذج سجل الحضور
+    public class AttendanceRecord
+    {
+        public int Id { get; set; }
+        public int AttendanceId { get; set; }
+        public string Name { get; set; } = string.Empty; // الاسم
+        public string JobTitle { get; set; } = string.Empty; // الوظيفة
+        public string Notes { get; set; } = string.Empty; // ملاحظات
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        // Navigation property
+        public virtual Attendance Attendance { get; set; } = null!;
     }
 
     // نموذج فريق التحسين والتطوير

@@ -3,6 +3,7 @@
 @using SchoolHallBooking.Services
 @inject ISupervisoryVisitService SupervisoryVisitService
 @inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
 
 <PageTitle>الزيارات الإشرافية</PageTitle>
 
@@ -133,7 +134,7 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover table-bordered align-middle text-center">
+                            <table id="supervisory-visits-table" class="table table-hover table-bordered align-middle text-center">
                                 <thead class="table-primary">
                                     <tr>
                                         <th style="width: 5%;">م</th>
@@ -142,15 +143,14 @@
                                         <th style="width: 15%;">المعلم المزار</th>
                                         <th style="width: 10%;">اليوم</th>
                                         <th style="width: 12%;">التاريخ</th>
-                                        <th style="width: 18%;">عنوان الدرس</th>
-                                        <th style="width: 10%;">الإجراءات</th>
+                                        <th style="width: 28%;">عنوان الدرس</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @if (visits == null || !visits.Any())
                                     {
                                         <tr>
-                                            <td colspan="8">لا توجد زيارات لعرضها.</td>
+                                            <td colspan="7">لا توجد زيارات لعرضها.</td>
                                         </tr>
                                     }
                                     else
@@ -166,16 +166,6 @@
                                                 <td>@visit.Day</td>
                                                 <td>@visit.Date.ToString("yyyy-MM-dd")</td>
                                                 <td>@visit.LessonTitle</td>
-                                                <td>
-                                                    <div class="d-flex justify-content-center gap-1">
-                                                        <button class="btn btn-warning btn-sm" @onclick="() => EditVisit(visit)" title="تعديل">
-                                                            <i class="bi bi-pencil"></i>
-                                                        </button>
-                                                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteVisit(visit.Id)" title="حذف">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
                                             </tr>
                                             rowIndex++;
                                         }
@@ -360,6 +350,7 @@
         {
             await SupervisoryVisitService.UpdateVisitAsync(editingVisit);
             await LoadVisits();
+            StateHasChanged();
             showEditModal = false;
             successMessage = "تم تحديث الزيارة بنجاح";
         }
@@ -377,6 +368,7 @@
             {
                 await SupervisoryVisitService.DeleteVisitAsync(id);
                 await LoadVisits();
+                StateHasChanged();
                 successMessage = "تم حذف الزيارة بنجاح";
             }
         }
@@ -396,18 +388,7 @@
     {
         try
         {
-            var data = visits.Select(v => new
-            {
-                المادة = v.Subject,
-                المعلم_الزائر = v.VisitorTeacherName,
-                المعلم_المزار = v.VisitedTeacherName,
-                اليوم = v.Day,
-                التاريخ = v.Date.ToString("yyyy-MM-dd"),
-                عنوان_الدرس = v.LessonTitle,
-                الملاحظات = v.Notes ?? ""
-            }).ToList();
-
-            await JSRuntime.InvokeVoidAsync("exportToExcel", data, "الزيارات_الإشرافية");
+            await JSRuntime.InvokeVoidAsync("exportToExcel", "supervisory-visits-table", "الزيارات_الإشرافية");
             successMessage = "تم تصدير البيانات إلى Excel بنجاح";
         }
         catch (Exception ex)
@@ -424,44 +405,29 @@
                 $"<tr><td>{index + 1}</td><td>{v.Subject}</td><td>{v.VisitorTeacherName}</td><td>{v.VisitedTeacherName}</td><td>{v.Day}</td><td>{v.Date:yyyy-MM-dd}</td><td>{v.LessonTitle}</td><td>{v.Notes ?? ""}</td></tr>"));
 
             var html = $@"
-                <html>
-                <head>
-                    <meta charset='utf-8'>
-                    <title>الزيارات الإشرافية</title>
-                    <style>
-                        body {{ font-family: Arial, sans-serif; direction: rtl; }}
-                        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
-                        th {{ background-color: #f2f2f2; font-weight: bold; }}
-                        .header {{ text-align: center; margin-bottom: 20px; }}
-                    </style>
-                </head>
-                <body>
-                    <div class='header'>
-                        <h1>الزيارات الإشرافية</h1>
-                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>م</th>
-                                <th>المادة</th>
-                                <th>المعلم الزائر</th>
-                                <th>المعلم المزار</th>
-                                <th>اليوم</th>
-                                <th>التاريخ</th>
-                                <th>عنوان الدرس</th>
-                                <th>الملاحظات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {tableRows}
-                        </tbody>
-                    </table>
-                </body>
-                </html>";
+                <div style='text-align: center; margin-bottom: 30px;'>
+                    <h1 style='color: #198754; font-size: 24px; margin-bottom: 10px;'>الزيارات الإشرافية</h1>
+                    <p style='font-size: 14px; color: #666;'>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                </div>
+                <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
+                    <thead>
+                        <tr style='background-color: #343a40; color: white;'>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 8%;'>م</th>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 15%;'>المادة</th>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 15%;'>المعلم الزائر</th>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 15%;'>المعلم المزار</th>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 10%;'>اليوم</th>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 12%;'>التاريخ</th>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 15%;'>عنوان الدرس</th>
+                            <th style='border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; width: 10%;'>الملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tableRows}
+                    </tbody>
+                </table>";
 
-            await JSRuntime.InvokeVoidAsync("exportToPDF", html, "الزيارات_الإشرافية");
+            await JSRuntime.InvokeVoidAsync("printHTML", html, "الزيارات_الإشرافية");
             successMessage = "تم تصدير البيانات إلى PDF بنجاح";
         }
         catch (Exception ex)

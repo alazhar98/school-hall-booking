@@ -225,6 +225,7 @@
             }
 
             await LoadMeetings();
+            StateHasChanged();
             CloseModal();
         }
         catch (Exception ex)
@@ -243,6 +244,7 @@
                 await ProfessionalDevelopmentService.DeleteMeetingAsync(id);
                 successMessage = "تم حذف الاجتماع بنجاح";
                 await LoadMeetings();
+                StateHasChanged();
             }
         }
         catch (Exception ex)

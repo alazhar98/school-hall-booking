@@ -47,7 +47,7 @@
             @if (attendanceForms.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table id="attendance-table" class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
                                 <th>المادة</th>
@@ -76,6 +76,9 @@
                                         </button>
                                         <button class="btn btn-info btn-sm" @onclick="@(() => PrintAttendance(attendance))" title="طباعة">
                                             <i class="bi bi-printer"></i>
+                                        </button>
+                                        <button class="btn btn-success btn-sm" @onclick="@(() => OpenManageAttendanceModal(attendance))" title="إدارة الحضور">
+                                            <i class="bi bi-people"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -139,12 +142,102 @@
     </div>
 </div>
 
+<!-- Manage Attendance Modal -->
+<div class="modal fade @(showManageAttendanceModal ? "show d-block" : "")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">إدارة الحضور - @(currentAttendanceForManagement?.ProgramTitle)</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="@(() => CloseManageAttendanceModal())"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>المادة:</strong> @(currentAttendanceForManagement?.Subject)
+                    </div>
+                    <div class="col-md-6">
+                        <strong>التاريخ:</strong> @(currentAttendanceForManagement?.Date.ToString("yyyy/MM/dd"))
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6>قائمة الحضور (@attendanceRecords.Count صف)</h6>
+                    <div>
+                        <button class="btn btn-primary btn-sm me-2" @onclick="@(() => AddNewAttendanceRecord())">
+                            <i class="bi bi-plus"></i> إضافة مشارك
+                        </button>
+                        <button class="btn btn-secondary btn-sm" @onclick="@(() => AddEmptyRows())">
+                            <i class="bi bi-plus-square"></i> إضافة 5 صفوف فارغة
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info alert-sm mb-3">
+                    <small><i class="bi bi-info-circle"></i> يمكنك إضافة أي عدد من المشاركين. الصفوف الفارغة لن تُحفظ في قاعدة البيانات.</small>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 8%;">م</th>
+                                <th style="width: 30%;">الاسم</th>
+                                <th style="width: 25%;">الوظيفة</th>
+                                <th style="width: 25%;">التوقيع</th>
+                                <th style="width: 12%;">ملاحظات</th>
+                                <th style="width: 10%;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < attendanceRecords.Count; i++)
+                            {
+                                var record = attendanceRecords[i];
+                                var index = i + 1;
+                                <tr>
+                                    <td>@index</td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" @bind="record.Name" placeholder="اسم المشارك" />
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" @bind="record.JobTitle" placeholder="الوظيفة" />
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" placeholder="التوقيع" readonly />
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" @bind="record.Notes" placeholder="ملاحظات" />
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm" @onclick="@(() => RemoveAttendanceRecord(i))" title="حذف">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="@(() => CloseManageAttendanceModal())">إلغاء</button>
+                <button type="button" class="btn btn-success" @onclick="@(() => SaveAttendanceRecords())">حفظ البيانات</button>
+                <button type="button" class="btn btn-info" @onclick="@(() => PrintAttendanceWithRecords())">طباعة الاستمارة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
     private List<Attendance> attendanceForms = new();
     private Attendance currentAttendance = new();
     private bool showModal = false;
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
+
+    // Manage Attendance Modal
+    private bool showManageAttendanceModal = false;
+    private Attendance? currentAttendanceForManagement;
+    private List<AttendanceRecord> attendanceRecords = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -237,12 +330,17 @@
     {
         try
         {
-            var htmlContent = GenerateAttendancePDFContent(attendance);
-            await JSRuntime.InvokeVoidAsync("printToPDF", htmlContent, $"استمارة حضور - {attendance.ProgramTitle}");
+            // اطبع باستخدام السجلات الفعلية فقط بدون تعبئة صفوف إضافية
+            var records = await ProfessionalDevelopmentService.GetAttendanceRecordsByAttendanceIdAsync(attendance.Id);
+            var htmlContent = GenerateAttendanceWithRecordsPDFContent(attendance, records);
+            await JSRuntime.InvokeVoidAsync("printHTML", htmlContent, $"استمارة_حضور_{attendance.ProgramTitle}");
+            successMessage = "تم إرسال استمارة الحضور للطباعة";
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             errorMessage = $"خطأ في طباعة استمارة الحضور: {ex.Message}";
+            StateHasChanged();
         }
     }
 
@@ -250,13 +348,14 @@
     {
         try
         {
-            var csvContent = GenerateCSV();
-            var fileName = $"استمارات_الحضور_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, csvContent, "text/csv;charset=utf-8;");
+            await JSRuntime.InvokeVoidAsync("exportToExcel", "attendance-table", $"استمارات_الحضور_{DateTime.Now:yyyyMMdd_HHmmss}");
+            successMessage = "تم تصدير البيانات إلى Excel";
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             errorMessage = $"خطأ في تصدير Excel: {ex.Message}";
+            StateHasChanged();
         }
     }
 
@@ -265,11 +364,14 @@
         try
         {
             var htmlContent = GeneratePDFContent();
-            await JSRuntime.InvokeVoidAsync("printToPDF", htmlContent, "استمارات الحضور");
+            await JSRuntime.InvokeVoidAsync("printHTML", htmlContent, "استمارات_الحضور");
+            successMessage = "تم إرسال البيانات للطباعة";
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             errorMessage = $"خطأ في تصدير PDF: {ex.Message}";
+            StateHasChanged();
         }
     }
 
@@ -356,49 +458,314 @@
             <title>استمارة حضور برنامج تدريبي</title>
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 20px; direction: rtl; }}
+                
+                /* Header Styles */
                 .header {{ text-align: center; margin-bottom: 30px; }}
-                .header h1 {{ color: #007bff; margin-bottom: 10px; }}
-                .header p {{ color: #666; }}
-                .form-section {{ margin-bottom: 30px; }}
-                .form-section h3 {{ color: #333; margin-bottom: 15px; }}
-                .form-field {{ margin-bottom: 15px; }}
-                .form-field label {{ font-weight: bold; display: block; margin-bottom: 5px; }}
-                .form-field input {{ width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }}
+                .header h1 {{ color: #198754; font-size: 24px; margin: 20px 0 10px 0; }}
+                .header p {{ color: #666; font-size: 14px; margin: 2px 0; }}
+                
+                /* General Information Section */
+                .general-info {{ margin-bottom: 30px; }}
+                .general-info h3 {{ color: #198754; font-size: 18px; margin-bottom: 15px; text-align: center; }}
+                .info-table {{ width: 100%; border-collapse: collapse; }}
+                .info-table td {{ border: 1px solid #333; padding: 12px; }}
+                .info-table td:first-child {{ width: 25%; text-align: right; font-weight: bold; background-color: #f8f9fa; }}
+                .info-table td:last-child {{ width: 75%; text-align: right; }}
+                
+                /* Attendance Table */
                 .attendance-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-                .attendance-table th, .attendance-table td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
-                .attendance-table th {{ background-color: #f8f9fa; font-weight: bold; }}
-                .signature-section {{ margin-top: 40px; }}
-                .signature-line {{ border-bottom: 1px solid #333; width: 200px; display: inline-block; margin: 0 10px; }}
+                .attendance-table th {{ background-color: #6c757d; color: white; padding: 12px 8px; text-align: center; font-weight: bold; border: 1px solid #333; }}
+                .attendance-table td {{ border: 1px solid #333; padding: 12px 8px; text-align: center; }}
+                .attendance-table td:first-child {{ width: 8%; }}
+                .attendance-table td:nth-child(2) {{ width: 30%; }}
+                .attendance-table td:nth-child(3) {{ width: 25%; }}
+                .attendance-table td:nth-child(4) {{ width: 25%; }}
+                .attendance-table td:last-child {{ width: 12%; }}
+                
+                /* Signature Section */
+                .signature-section {{ margin-top: 40px; text-align: right; }}
+                .signature-section p {{ margin: 10px 0; font-weight: bold; }}
             </style>
         </head>
         <body>
+            <!-- Header Section -->
             <div class='header'>
                 <h1>استمارة حضور برنامج تدريبي</h1>
-                <p>المادة: {attendance.Subject}</p>
-                <p>عنوان البرنامج: {attendance.ProgramTitle}</p>
-                <p>التاريخ: {attendance.Date:yyyy/MM/dd}</p>
-                <p>المنفذ: {attendance.Executor}</p>
+                <p>المديرية العامة للتربية والتعليم المحافظة جنوب الباطنة</p>
+                <p>مدرسة الفضل بن العباس للتعليم الأساسي (8 - 10)</p>
             </div>
             
-            <div class='form-section'>
-                <h3>قائمة الحضور</h3>
-                <table class='attendance-table'>
-                    <thead>
-                        <tr>
-                            <th>م</th>
-                            <th>اسم المتدرب</th>
-                            <th>التوقيع</th>
-                            <th>ملاحظات</th>
-                        </tr>
-                    </thead>
-                    <tbody>";
+            <!-- General Information Section -->
+            <div class='general-info'>
+                <h3>البيانات العامة .</h3>
+                <table class='info-table'>
+                    <tr>
+                        <td>المادة</td>
+                        <td>{attendance.Subject}</td>
+                    </tr>
+                    <tr>
+                        <td>عنوان البرنامج</td>
+                        <td>{attendance.ProgramTitle}</td>
+                    </tr>
+                    <tr>
+                        <td>التاريخ</td>
+                        <td>{attendance.Date:yyyy/MM/dd}</td>
+                    </tr>
+                    <tr>
+                        <td>المنفذ</td>
+                        <td>{attendance.Executor}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Attendance Table -->
+            <table class='attendance-table'>
+                <thead>
+                    <tr>
+                        <th>م</th>
+                        <th>الاسم</th>
+                        <th>الوظيفة</th>
+                        <th>التوقيع</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody>";
 
-        // Generate 20 empty rows for attendance
-        for (int i = 1; i <= 20; i++)
+        // لا تقم بتوليد صفوف ثابتة هنا؛ سيتم استخدام الدالة مع السجلات الفعلية بدلاً منها
+
+        html += @"
+                </tbody>
+            </table>
+            
+            <!-- Signature Section -->
+            <div class='signature-section'>
+                <p>يعتمد ؛؛؛ مدير المدرسة</p>
+            </div>
+        </body>
+        </html>";
+
+        return html;
+    }
+
+    // Manage Attendance Modal Functions
+    private async Task OpenManageAttendanceModal(Attendance attendance)
+    {
+        currentAttendanceForManagement = attendance;
+        attendanceRecords = await ProfessionalDevelopmentService.GetAttendanceRecordsByAttendanceIdAsync(attendance.Id);
+        
+        // If no records exist, add one empty row to start with
+        if (!attendanceRecords.Any())
         {
-            html += $@"
+            attendanceRecords.Add(new AttendanceRecord
+            {
+                AttendanceId = attendance.Id,
+                Name = string.Empty,
+                JobTitle = string.Empty,
+                Notes = string.Empty
+            });
+        }
+        
+        showManageAttendanceModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseManageAttendanceModal()
+    {
+        showManageAttendanceModal = false;
+        currentAttendanceForManagement = null;
+        attendanceRecords.Clear();
+        StateHasChanged();
+    }
+
+    private void AddNewAttendanceRecord()
+    {
+        attendanceRecords.Add(new AttendanceRecord
+        {
+            AttendanceId = currentAttendanceForManagement?.Id ?? 0,
+            Name = string.Empty,
+            JobTitle = string.Empty,
+            Notes = string.Empty
+        });
+        StateHasChanged();
+    }
+
+    private void AddEmptyRows()
+    {
+        // Add 5 empty rows at once
+        for (int i = 0; i < 5; i++)
+        {
+            attendanceRecords.Add(new AttendanceRecord
+            {
+                AttendanceId = currentAttendanceForManagement?.Id ?? 0,
+                Name = string.Empty,
+                JobTitle = string.Empty,
+                Notes = string.Empty
+            });
+        }
+        StateHasChanged();
+    }
+
+    private void RemoveAttendanceRecord(int index)
+    {
+        if (index >= 0 && index < attendanceRecords.Count)
+        {
+            attendanceRecords.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAttendanceRecords()
+    {
+        try
+        {
+            // Delete existing records for this attendance
+            var existingRecords = await ProfessionalDevelopmentService.GetAttendanceRecordsByAttendanceIdAsync(currentAttendanceForManagement!.Id);
+            foreach (var record in existingRecords)
+            {
+                await ProfessionalDevelopmentService.DeleteAttendanceRecordAsync(record.Id);
+            }
+
+            // Add new records (only those with names)
+            foreach (var record in attendanceRecords.Where(r => !string.IsNullOrWhiteSpace(r.Name)))
+            {
+                record.AttendanceId = currentAttendanceForManagement.Id;
+                await ProfessionalDevelopmentService.AddAttendanceRecordAsync(record);
+            }
+
+            successMessage = "تم حفظ بيانات الحضور بنجاح";
+            CloseManageAttendanceModal();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في حفظ بيانات الحضور: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task PrintAttendanceWithRecords()
+    {
+        try
+        {
+            var htmlContent = GenerateAttendanceWithRecordsPDFContent(currentAttendanceForManagement!, attendanceRecords);
+            await JSRuntime.InvokeVoidAsync("printHTML", htmlContent, $"استمارة_حضور_{currentAttendanceForManagement!.ProgramTitle}");
+            successMessage = "تم إرسال استمارة الحضور للطباعة";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"خطأ في طباعة استمارة الحضور: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private string GenerateAttendanceWithRecordsPDFContent(Attendance attendance, List<AttendanceRecord> records)
+    {
+        var html = $@"
+        <!DOCTYPE html>
+        <html dir='rtl' lang='ar'>
+        <head>
+            <meta charset='utf-8'>
+            <title>استمارة حضور برنامج تدريبي</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; direction: rtl; }}
+                
+                /* Header Styles */
+                .header {{ text-align: center; margin-bottom: 30px; }}
+                .header h1 {{ color: #198754; font-size: 24px; margin: 20px 0 10px 0; }}
+                .header p {{ color: #666; font-size: 14px; margin: 2px 0; }}
+                
+                /* General Information Section */
+                .general-info {{ margin-bottom: 30px; }}
+                .general-info h3 {{ color: #198754; font-size: 18px; margin-bottom: 15px; text-align: center; }}
+                .info-table {{ width: 100%; border-collapse: collapse; }}
+                .info-table td {{ border: 1px solid #333; padding: 12px; }}
+                .info-table td:first-child {{ width: 25%; text-align: right; font-weight: bold; background-color: #f8f9fa; }}
+                .info-table td:last-child {{ width: 75%; text-align: right; }}
+                
+                /* Attendance Table */
+                .attendance-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                .attendance-table th {{ background-color: #6c757d; color: white; padding: 12px 8px; text-align: center; font-weight: bold; border: 1px solid #333; }}
+                .attendance-table td {{ border: 1px solid #333; padding: 12px 8px; text-align: center; }}
+                .attendance-table td:first-child {{ width: 8%; }}
+                .attendance-table td:nth-child(2) {{ width: 30%; }}
+                .attendance-table td:nth-child(3) {{ width: 25%; }}
+                .attendance-table td:nth-child(4) {{ width: 25%; }}
+                .attendance-table td:last-child {{ width: 12%; }}
+                
+                /* Signature Section */
+                .signature-section {{ margin-top: 40px; text-align: right; }}
+                .signature-section p {{ margin: 10px 0; font-weight: bold; }}
+            </style>
+        </head>
+        <body>
+            <!-- Header Section -->
+            <div class='header'>
+                <h1>استمارة حضور برنامج تدريبي</h1>
+                <p>المديرية العامة للتربية والتعليم المحافظة جنوب الباطنة</p>
+                <p>مدرسة الفضل بن العباس للتعليم الأساسي (8 - 10)</p>
+            </div>
+            
+            <!-- General Information Section -->
+            <div class='general-info'>
+                <h3>البيانات العامة .</h3>
+                <table class='info-table'>
+                    <tr>
+                        <td>المادة</td>
+                        <td>{attendance.Subject}</td>
+                    </tr>
+                    <tr>
+                        <td>عنوان البرنامج</td>
+                        <td>{attendance.ProgramTitle}</td>
+                    </tr>
+                    <tr>
+                        <td>التاريخ</td>
+                        <td>{attendance.Date:yyyy/MM/dd}</td>
+                    </tr>
+                    <tr>
+                        <td>المنفذ</td>
+                        <td>{attendance.Executor}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Attendance Table -->
+            <table class='attendance-table'>
+                <thead>
+                    <tr>
+                        <th>م</th>
+                        <th>الاسم</th>
+                        <th>الوظيفة</th>
+                        <th>التوقيع</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody>";
+
+        // Fill the table with actual data (only existing rows)
+        if (records.Count > 0)
+        {
+            for (int i = 0; i < records.Count; i++)
+            {
+                var record = records[i];
+                var index = i + 1;
+                html += $@"
                         <tr>
-                            <td>{i}</td>
+                            <td>{index}</td>
+                            <td>{record.Name}</td>
+                            <td>{record.JobTitle}</td>
+                            <td></td>
+                            <td>{record.Notes}</td>
+                        </tr>";
+            }
+        }
+        else
+        {
+            // If no records, show a single empty row
+            html += @"
+                        <tr>
+                            <td>1</td>
+                            <td></td>
                             <td></td>
                             <td></td>
                             <td></td>
@@ -406,14 +773,12 @@
         }
 
         html += @"
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
             
+            <!-- Signature Section -->
             <div class='signature-section'>
-                <p>اسم المدرب: <span class='signature-line'></span></p>
-                <p>التوقيع: <span class='signature-line'></span></p>
-                <p>التاريخ: <span class='signature-line'></span></p>
+                <p>يعتمد ؛؛؛ مدير المدرسة</p>
             </div>
         </body>
         </html>";

@@ -15,6 +15,14 @@
 
 <PageTitle>الإدارة - إدارة حجوزات القاعات</PageTitle>
 
+<div class="container mt-3">
+    <a href="/school" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+        رجوع إلى الصفحة الرئيسية
+    </a>
+    <hr />
+    </div>
+
 <script>
     window.downloadFile = function (dataUrl, fileName) {
         const link = document.createElement('a');
@@ -411,6 +419,20 @@ else
                          <button type="button" class="btn-close" @onclick="CloseAddEmployeeModal"></button>
                      </div>
                      <div class="modal-body">
+                         @if (!string.IsNullOrEmpty(errorMessage))
+                         {
+                             <div class="alert alert-danger" role="alert">
+                                 @errorMessage
+                             </div>
+                         }
+                         
+                         @if (!string.IsNullOrEmpty(successMessage))
+                         {
+                             <div class="alert alert-success" role="alert">
+                                 @successMessage
+                             </div>
+                         }
+                         
                          <EditForm Model="@newEmployee" OnValidSubmit="AddEmployee">
                              <DataAnnotationsValidator />
                              <ValidationSummary class="text-danger mb-3" />
@@ -609,6 +631,8 @@ else
             
             showDeleteModal = false;
             await LoadAllBookings();
+            await LoadStatistics();
+            StateHasChanged();
         }
         catch (ArgumentException ex)
         {
@@ -780,6 +804,8 @@ else
     {
         showAddEmployeeModal = false;
         newEmployee = new Employee();
+        errorMessage = "";
+        successMessage = "";
     }
 
     private async Task AddEmployee()
@@ -787,6 +813,27 @@ else
         try
         {
             isAddingEmployee = true;
+            errorMessage = "";
+            successMessage = "";
+            
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(newEmployee.EmployeeId))
+            {
+                errorMessage = "رقم الموظف مطلوب.";
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(newEmployee.Name))
+            {
+                errorMessage = "اسم الموظف مطلوب.";
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(newEmployee.Password))
+            {
+                errorMessage = "كلمة المرور مطلوبة.";
+                return;
+            }
             
             // Check if employee ID already exists
             var existingEmployee = await Context.Employees
@@ -798,13 +845,20 @@ else
                 return;
             }
 
+            // Set creation date
+            newEmployee.CreatedAt = DateTime.Now;
+            
             // Add new employee
             Context.Employees.Add(newEmployee);
             await Context.SaveChangesAsync();
             
             successMessage = "تم إضافة الموظف بنجاح.";
             await LoadEmployees();
+            StateHasChanged();
             CloseAddEmployeeModal();
+            
+            // Clear the form
+            newEmployee = new Employee();
         }
         catch (Exception ex)
         {
@@ -866,6 +920,7 @@ else
                 
                 successMessage = "تم تحديث بيانات الموظف بنجاح.";
                 await LoadEmployees();
+                StateHasChanged();
                 CloseEditEmployeeModal();
             }
         }
@@ -897,6 +952,7 @@ else
                 await Context.SaveChangesAsync();
                 successMessage = "تم حذف الموظف بنجاح.";
                 await LoadEmployees();
+                StateHasChanged();
             }
             catch (Exception ex)
             {

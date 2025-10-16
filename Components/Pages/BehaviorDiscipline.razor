@@ -93,6 +93,12 @@ else
                                 <label class="form-label">التاريخ</label>
                                 <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control form-control-sm" @bind-Value="student.Date" />
                             </div>
+                            <div class="col-md-2">
+                                <label class="form-label">عدد الأيام</label>
+                                <div class="form-control form-control-sm bg-light text-center fw-bold">
+                                    @student.DaysCount يوم
+                                </div>
+                            </div>
                             <div class="col-12">
                                 <label class="form-label">ملاحظات</label>
                                 <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="student.Notes" />
@@ -170,7 +176,7 @@ else
                     </div>
                     <div class="row g-3 mt-3">
                         <div class="col-12">
-                            <label class="form-label">ملاحظات أخرى على الطالب</label>
+                            <label class="form-label">ملاحظات على الطالب</label>
                             <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="currentStudent.OtherNotes" />
                         </div>
                     </div>
@@ -189,7 +195,7 @@ else
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-3">
-                        <button class="btn btn-success" @onclick="AddStudent">+ إضافة طالب</button>
+                        <button class="btn btn-success" @onclick="AddBehaviorStudent">+ إضافة طالب</button>
                         <button class="btn btn-primary" @onclick="SaveBehavior">حفظ البيانات</button>
                         <button class="btn btn-secondary" @onclick="LoadBehavior">استرجاع</button>
                     </div>
@@ -213,7 +219,7 @@ else
                                             @(selectedStudentIndex == idx ? "محدد" : "تحديد")
                                         </button>
                                         <button class="btn btn-sm btn-outline-light me-2" @onclick="(() => PrintStudentReport(idx))">طباعة</button>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveStudent(idx))">حذف</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveBehaviorStudent(idx))">حذف</button>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -342,15 +348,11 @@ else
                             <label class="form-label">اسم الطالب</label>
                             <InputText class="form-control" @bind-Value="currentWarning.StudentName" />
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label">الصف</label>
                             <InputText class="form-control" @bind-Value="currentWarning.StudentClass" />
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">رقم الرسالة</label>
-                            <InputText class="form-control" @bind-Value="currentWarning.MessageNumber" />
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label">التاريخ</label>
                             <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control" @bind-Value="currentWarning.Date" />
                         </div>
@@ -560,7 +562,7 @@ else
                             <InputTextArea class="form-control" rows="3" @bind-Value="currentGuardianViolation.ViolationDescription" />
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">ملاحظات أخرى على الطالب</label>
+                            <label class="form-label">ملاحظات على الطالب</label>
                             <InputTextArea class="form-control" rows="3" @bind-Value="currentGuardianViolation.OtherNotes" />
                         </div>
                     </div>
@@ -666,15 +668,11 @@ else
                             <label class="form-label">اسم الطالب</label>
                             <InputText class="form-control" @bind-Value="currentAlert.StudentName" />
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label">الصف</label>
                             <InputText class="form-control" @bind-Value="currentAlert.StudentClass" />
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">رقم الرسالة</label>
-                            <InputText class="form-control" @bind-Value="currentAlert.MessageNumber" />
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label">التاريخ</label>
                             <InputDate DateTimeFormat="yyyy-MM-dd" class="form-control" @bind-Value="currentAlert.Date" />
                         </div>
@@ -737,9 +735,6 @@ else
                                 <div class="card-body">
                                     <div class="row g-2">
                                         <div class="col-12">
-                                            <strong>رقم الرسالة:</strong> @alert.MessageNumber
-                                        </div>
-                                        <div class="col-12">
                                             <strong>التاريخ:</strong> @alert.Date.ToString("yyyy-MM-dd")
                                         </div>
                                         <div class="col-12">
@@ -788,6 +783,9 @@ else
         public DateTime? Date { get; set; } = DateTime.Today;
         public string Notes { get; set; } = string.Empty;
         public List<LateRow> LateRows { get; set; } = new();
+        
+        // خاصية محسوبة لعدد الأيام
+        public int DaysCount => LateRows.Count;
     }
 
     private List<Student> students = new();
@@ -904,6 +902,21 @@ else
     }
 
 
+    private void AddStudent()
+    {
+        students.Add(new Student());
+        StateHasChanged();
+    }
+
+    private void RemoveStudent(int index)
+    {
+        if (index >= 0 && index < students.Count)
+        {
+            students.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
     private void AddRow(int studentIndex) => students[studentIndex].LateRows.Add(new LateRow());
     private void RemoveRow(int studentIndex, int rowIndex)
     {
@@ -918,6 +931,7 @@ else
     {
         var json = System.Text.Json.JsonSerializer.Serialize(students);
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "behavior-morning-delay", json);
+        StateHasChanged();
     }
 
     private async Task Load()
@@ -953,7 +967,7 @@ else
         sb.Append("<div>سلطنة عمان</div>");
         sb.Append("<div>وزارة التربية والتعليم</div>");
         sb.Append("<div>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
-        sb.Append("<div>مدرسة الفضل بن العباس للتعليم الأساسي (10 - 8)</div>");
+        sb.Append("<div>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
         sb.Append("</div>");
         sb.Append("<hr/>");
 
@@ -965,7 +979,7 @@ else
         sb.Append("<div style='margin:8px 0'>المقيد بالصف: <span style='display:inline-block;min-width:140px;border-bottom:1px dotted #000'>" + System.Net.WebUtility.HtmlEncode(student.StudentClass) + "</span></div>");
 
         // Body intro
-        sb.Append("<div style='margin:12px 0'>نود إعلامكم بتأخر ابنكم عن الحضور للمدرسة لمدة <span style='display:inline-block;min-width:80px;border-bottom:1px dotted #000'>&nbsp;&nbsp;&nbsp;</span> أيام، وذلك على النحو الآتي:</div>");
+        sb.Append("<div style='margin:12px 0'>نود إعلامكم بتأخر ابنكم عن الحضور للمدرسة لمدة <span style='display:inline-block;min-width:80px;border-bottom:1px dotted #000'>&nbsp;&nbsp;" + student.DaysCount + "&nbsp;&nbsp;</span> أيام، وذلك على النحو الآتي:</div>");
 
         // Table
         sb.Append("<table style='width:100%;border-collapse:collapse;margin:12px 0'>");
@@ -1033,7 +1047,7 @@ else
         }
     }
 
-    private void AddStudent()
+    private void AddBehaviorStudent()
     {
         if (!string.IsNullOrEmpty(currentStudent.StudentName) && !string.IsNullOrEmpty(currentStudent.StudentClass))
         {
@@ -1057,7 +1071,7 @@ else
         }
     }
 
-    private void RemoveStudent(int index)
+    private void RemoveBehaviorStudent(int index)
     {
         if (index >= 0 && index < behaviorStudents.Count)
         {
@@ -1108,6 +1122,7 @@ else
     {
         var json = System.Text.Json.JsonSerializer.Serialize(behaviorStudents);
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "behavior-discipline", json);
+        StateHasChanged();
     }
 
     private async Task LoadBehavior()
@@ -1144,7 +1159,7 @@ else
         sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>سلطنة عمان</div>");
         sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>وزارة التربية والتعليم</div>");
         sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
-        sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>مدرسة الفضل بن العباس للتعليم الأساسي</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold;margin-bottom:5px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
         sb.Append("<div style='font-size:14px;font-weight:bold'>(8 - 10)</div>");
         sb.Append("</div>");
 
@@ -1356,6 +1371,7 @@ else
     {
         var json = System.Text.Json.JsonSerializer.Serialize(studentWarnings);
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "student-warnings", json);
+        StateHasChanged();
     }
 
     private async Task LoadWarning()
@@ -1424,6 +1440,7 @@ else
     {
         var json = System.Text.Json.JsonSerializer.Serialize(studentAlerts);
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "student-alerts", json);
+        StateHasChanged();
     }
 
     private async Task LoadAlert()
@@ -1457,7 +1474,7 @@ else
         sb.Append("<div style='margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:15px'>");
         sb.Append("<div style='text-align:right'>");
         sb.Append("<div style='font-size:14px;font-weight:bold'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
-        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (10-8)</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
         sb.Append("</div>");
         sb.Append("</div>");
 
@@ -1468,7 +1485,6 @@ else
         sb.Append("<div style='margin:20px 0'>");
         sb.Append($"<div style='margin-bottom:10px'><strong>اسم الطالب:</strong> {System.Net.WebUtility.HtmlEncode(warning.StudentName)}</div>");
         sb.Append($"<div style='margin-bottom:10px'><strong>الصف:</strong> {System.Net.WebUtility.HtmlEncode(warning.StudentClass)}</div>");
-        sb.Append($"<div style='margin-bottom:10px'><strong>رقم الرسالة:</strong> {System.Net.WebUtility.HtmlEncode(warning.MessageNumber)}</div>");
         sb.Append($"<div style='margin-bottom:10px'><strong>التاريخ:</strong> {warning.Date.ToString("yyyy-MM-dd")}</div>");
         sb.Append($"<div style='margin-bottom:10px'><strong>الأسباب:</strong> {System.Net.WebUtility.HtmlEncode(warning.Reasons)}</div>");
         sb.Append("</div>");
@@ -1556,7 +1572,7 @@ else
         sb.Append("<div style='font-size:14px;font-weight:bold'>سلطنة عمان</div>");
         sb.Append("<div style='font-size:14px;font-weight:bold'>وزارة التربية والتعليم</div>");
         sb.Append("<div style='font-size:14px;font-weight:bold'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
-        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (10-8)</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
         sb.Append("</div>");
         sb.Append("</div>");
 
@@ -1567,7 +1583,6 @@ else
         sb.Append("<div style='margin:20px 0'>");
         sb.Append($"<div style='margin-bottom:10px'><strong>اسم الطالب:</strong> {System.Net.WebUtility.HtmlEncode(alert.StudentName)}</div>");
         sb.Append($"<div style='margin-bottom:10px'><strong>الصف:</strong> {System.Net.WebUtility.HtmlEncode(alert.StudentClass)}</div>");
-        sb.Append($"<div style='margin-bottom:10px'><strong>رقم الرسالة:</strong> {System.Net.WebUtility.HtmlEncode(alert.MessageNumber)}</div>");
         sb.Append($"<div style='margin-bottom:10px'><strong>التاريخ:</strong> {alert.Date.ToString("yyyy-MM-dd")}</div>");
         sb.Append("</div>");
 
@@ -1671,6 +1686,7 @@ else
     {
         var json = System.Text.Json.JsonSerializer.Serialize(guardianNotifications);
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "guardian-notifications", json);
+        StateHasChanged();
     }
 
     private async Task LoadGuardianNotification()
@@ -1706,7 +1722,7 @@ else
         sb.Append("<div style='font-size:14px;font-weight:bold'>سلطنة عمان</div>");
         sb.Append("<div style='font-size:14px;font-weight:bold'>وزارة التربية والتعليم</div>");
         sb.Append("<div style='font-size:14px;font-weight:bold'>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div>");
-        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (10-8)</div>");
+        sb.Append("<div style='font-size:14px;font-weight:bold'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠) السجلات الادارية</div>");
         sb.Append("</div>");
         sb.Append("</div>");
 
@@ -1729,7 +1745,7 @@ else
         sb.Append("<thead>");
         sb.Append("<tr style='background:#f8f9fa'>");
         sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center;width:50%'>المخالفة السلوكية</th>");
-        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center;width:50%'>ملاحظات أخرى على الطالب</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;text-align:center;width:50%'>ملاحظات على الطالب</th>");
         sb.Append("</tr>");
         sb.Append("</thead>");
         sb.Append("<tbody>");

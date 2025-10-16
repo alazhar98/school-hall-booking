@@ -43,33 +43,36 @@ namespace SchoolHallBooking.Data
             // Touch new tables so EF ensures they exist
             _ = context.TeacherWorkshopRecords.Any();
 
-            // Cleanup: ensure one row per staff role and remove invalid roles
+            // Clear all staff statistics data to start fresh
             try
             {
                 var allStaff = await context.StaffStatistics.ToListAsync();
-                // Remove invalid roles
-                var invalid = allStaff.Where(s => !Enum.IsDefined(typeof(StaffRole), s.Role)).ToList();
-                if (invalid.Count > 0)
+                if (allStaff.Count > 0)
                 {
-                    context.StaffStatistics.RemoveRange(invalid);
+                    context.StaffStatistics.RemoveRange(allStaff);
                     await context.SaveChangesAsync();
-                }
-
-                // Deduplicate: keep newest per role
-                allStaff = await context.StaffStatistics.ToListAsync();
-                var duplicates = allStaff
-                    .GroupBy(s => s.Role)
-                    .SelectMany(g => g.OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt).Skip(1))
-                    .ToList();
-                if (duplicates.Count > 0)
-                {
-                    context.StaffStatistics.RemoveRange(duplicates);
-                    await context.SaveChangesAsync();
+                    Console.WriteLine($"Cleared {allStaff.Count} staff statistics records");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Warning: Could not cleanup StaffStatistics: {ex.Message}");
+                Console.WriteLine($"Warning: Could not clear StaffStatistics: {ex.Message}");
+            }
+
+            // Clear all employee data to start fresh
+            try
+            {
+                var allEmployees = await context.Employees.ToListAsync();
+                if (allEmployees.Count > 0)
+                {
+                    context.Employees.RemoveRange(allEmployees);
+                    await context.SaveChangesAsync();
+                    Console.WriteLine($"Cleared {allEmployees.Count} employee records");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not clear Employees: {ex.Message}");
             }
 
             // Seed initial data for halls if they don't exist or update their names

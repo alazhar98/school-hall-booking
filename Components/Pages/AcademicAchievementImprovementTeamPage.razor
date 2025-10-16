@@ -6,11 +6,11 @@
 @inject ILogger<AcademicAchievementImprovementTeamPage> Logger
 @rendermode InteractiveServer
 
-<PageTitle>فريق التحسين والتطوير</PageTitle>
+<PageTitle>فريق التطوير الذاتي</PageTitle>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary">فريق التحسين والتطوير</h2>
+        <h2 class="text-primary">فريق التطوير الذاتي</h2>
         <div>
             <button class="btn btn-success me-2" @onclick="ExportToPDF">
                 <i class="bi bi-file-pdf"></i> PDF
@@ -67,7 +67,7 @@
                 <div class="text-center py-5">
                     <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
                     <h5 class="text-muted mt-3">لا توجد أعضاء في الفريق</h5>
-                    <p class="text-muted">اضغط على "إضافة عضو جديد" لبدء إضافة أعضاء فريق التحسين والتطوير</p>
+                    <p class="text-muted">اضغط على "إضافة عضو جديد" لبدء إضافة أعضاء فريق التطوير الذاتي</p>
                 </div>
             }
         </div>
@@ -138,7 +138,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "خطأ في تحميل أعضاء فريق التحسين والتطوير");
+            Logger.LogError(ex, "خطأ في تحميل أعضاء فريق التطوير الذاتي");
         }
     }
 
@@ -211,7 +211,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "خطأ في طباعة فريق التحسين والتطوير");
+            Logger.LogError(ex, "خطأ في طباعة فريق التطوير الذاتي");
         }
     }
 
