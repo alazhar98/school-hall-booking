@@ -51,6 +51,23 @@ namespace SchoolHallBooking.Services
             var program = await _context.ProfessionalDevelopmentPrograms.FindAsync(id);
             if (program != null)
             {
+                // Delete image file if exists
+                if (!string.IsNullOrEmpty(program.ImagePath))
+                {
+                    try
+                    {
+                        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", program.ImagePath.TrimStart('/'));
+                        if (File.Exists(imagePath))
+                        {
+                            File.Delete(imagePath);
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore file deletion errors
+                    }
+                }
+                
                 program.IsActive = false; // Soft delete
                 await _context.SaveChangesAsync();
             }

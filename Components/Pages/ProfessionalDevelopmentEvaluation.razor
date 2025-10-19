@@ -3,15 +3,21 @@
 @using SchoolHallBooking.Services
 @inject IProfessionalDevelopmentService ProfessionalDevelopmentService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <PageTitle>استمارة تقييم ختامي لبرنامج تدريبي</PageTitle>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary">استمارة تقييم ختامي لبرنامج تدريبي</h2>
-        <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
-            <i class="bi bi-plus"></i> إضافة تقييم جديد
-        </button>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
+                <i class="bi bi-plus"></i> إضافة تقييم جديد
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="@(() => NavigationManager.NavigateTo("/professional-development"))">
+                <i class="bi bi-arrow-right"></i> الرجوع
+            </button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(successMessage))
@@ -201,7 +207,7 @@
     {
         try
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف هذا التقييم؟");
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", new object[] { "هل أنت متأكد من حذف هذا التقييم؟" });
             if (confirmed)
             {
                 await ProfessionalDevelopmentService.DeleteEvaluationAsync(id);
@@ -220,7 +226,7 @@
         try
         {
             var htmlContent = GenerateEvaluationPDFContent(evaluation);
-            await JSRuntime.InvokeVoidAsync("printHTML", htmlContent, $"استمارة تقييم ختامي - {evaluation.ProgramTitle}");
+            await JSRuntime.InvokeVoidAsync("printHTML", new object[] { htmlContent, $"استمارة تقييم ختامي - {evaluation.ProgramTitle}" });
         }
         catch (Exception ex)
         {
@@ -232,7 +238,7 @@
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("exportToExcel", "evaluations-table", "استمارات_التقييم_الختامي");
+            await JSRuntime.InvokeVoidAsync("exportToExcel", new object[] { "evaluations-table", "استمارات_التقييم_الختامي" });
         }
         catch (Exception ex)
         {
@@ -245,7 +251,7 @@
         try
         {
             var htmlContent = GeneratePDFContent();
-            await JSRuntime.InvokeVoidAsync("printHTML", htmlContent, "استمارات التقييم الختامي");
+            await JSRuntime.InvokeVoidAsync("printHTML", new object[] { htmlContent, "استمارات التقييم الختامي" });
         }
         catch (Exception ex)
         {

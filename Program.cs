@@ -19,7 +19,17 @@ builder.Services.AddRazorComponents()
 
 // Add Entity Framework
 builder.Services.AddDbContext<BookingDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (connectionString != null && (connectionString.Contains("Server=") || connectionString.Contains("mysql")))
+    {
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+    }
+    else
+    {
+        options.UseSqlite(connectionString ?? "Data Source=App_Data/SchoolHallBooking.db");
+    }
+});
 
 // Stats are now stored in the same SQLite DB via BookingDbContext
 
@@ -100,7 +110,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAntiforgery();
 
-app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

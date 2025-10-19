@@ -39,23 +39,107 @@ else
     <div class="container-fluid" style="direction: rtl;">
         @if (activeSlide == 1)
         {
-            <div class="mb-3 d-flex align-items-center gap-2">
-                <h2 class="m-0">الانضباط السلوكي</h2>
-                <span class="text-muted">شريحة 1</span>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="mb-3">
+                        <h2 class="m-0 text-primary">
+                            <i class="bi bi-shield-check me-2"></i>
+                            الانضباط السلوكي
+                        </h2>
+                    </div>
+                </div>
             </div>
-            <div class="d-flex flex-wrap gap-3">
-                <button class="btn btn-info" @onclick="(() => OpenSlide(2))">التأخر الصباحي</button>
-                <button class="btn btn-info" @onclick="(() => OpenSlide(3))">الانضباط السلوكي</button>
-                <button class="btn btn-info" @onclick="(() => OpenSlide(6))">إنذار طالب</button>
-                <button class="btn btn-info" @onclick="(() => OpenSlide(4))">تنبيه طالب</button>
-                <button class="btn btn-info" @onclick="(() => OpenSlide(5))">إخطار ولي أمر</button>
+
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-clock-history text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="card-title text-dark mb-3">التأخر الصباحي</h5>
+                            <p class="card-text text-muted mb-4">إدارة سجلات تأخر الطلاب عن الحضور الصباحي</p>
+                            <button class="btn btn-warning btn-lg w-100" @onclick="(() => OpenSlide(2))">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                إدارة التأخر
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-person-check text-info" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="card-title text-dark mb-3">الانضباط السلوكي</h5>
+                            <p class="card-text text-muted mb-4">تسجيل ومتابعة المخالفات السلوكية للطلاب</p>
+                            <button class="btn btn-info btn-lg w-100" @onclick="(() => OpenSlide(3))">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                إدارة السلوك
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="card-title text-dark mb-3">إنذار طالب</h5>
+                            <p class="card-text text-muted mb-4">إصدار إنذارات رسمية للطلاب المخالفين</p>
+                            <button class="btn btn-danger btn-lg w-100" @onclick="(() => OpenSlide(6))">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                إصدار إنذار
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-chat-dots text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="card-title text-dark mb-3">تنبيه طالب</h5>
+                            <p class="card-text text-muted mb-4">إرسال تنبيهات تحذيرية للطلاب</p>
+                            <button class="btn btn-warning btn-lg w-100" @onclick="(() => OpenSlide(4))">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                إرسال تنبيه
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-envelope text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="card-title text-dark mb-3">إخطار ولي أمر</h5>
+                            <p class="card-text text-muted mb-4">إرسال إخطارات رسمية لأولياء الأمور</p>
+                            <button class="btn btn-primary btn-lg w-100" @onclick="(() => OpenSlide(5))">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                إرسال إخطار
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         }
         else if (activeSlide == 2)
         {
-            <div class="mb-3 d-flex align-items-center gap-2">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
                 <h2 class="m-0">التأخر الصباحي</h2>
-                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => activeSlide = 1">
+                    <i class="bi bi-arrow-left"></i>
+                    رجوع
+                </button>
             </div>
 
             <div class="mb-3 d-flex justify-content-between align-items-center">
@@ -114,9 +198,9 @@ else
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:70px">م</th>
-                                        <th>اليوم</th>
                                         <th>التاريخ</th>
-                                        <th>سبب التأخر</th>
+                                        <th>التاريخ</th>
+                                        <th>التاريخ</th>
                                         <th style="width:120px">إجراءات</th>
                                     </tr>
                                 </thead>
@@ -127,9 +211,9 @@ else
                                         var row = student.LateRows[idx];
                                         <tr>
                                             <td>@(idx + 1)</td>
-                                            <td><InputText class="form-control form-control-sm" @bind-Value="row.RowDay" /></td>
-                                            <td><InputText class="form-control form-control-sm" @bind-Value="row.RowDate" /></td>
-                                            <td><InputText class="form-control form-control-sm" @bind-Value="row.Reason" /></td>
+                                            <td><InputDate TValue="DateTime?" class="form-control form-control-sm" @bind-Value="row.Date1" /></td>
+                                            <td><InputDate TValue="DateTime?" class="form-control form-control-sm" @bind-Value="row.Date2" /></td>
+                                            <td><InputDate TValue="DateTime?" class="form-control form-control-sm" @bind-Value="row.Date3" /></td>
                                             <td>
                                                 <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveRow(sidx, idx))">حذف</button>
                                             </td>
@@ -149,9 +233,12 @@ else
         }
         else if (activeSlide == 3)
         {
-            <div class="mb-3 d-flex align-items-center gap-2">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
                 <h2 class="m-0">الانضباط السلوكي</h2>
-                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => activeSlide = 1">
+                    <i class="bi bi-arrow-left"></i>
+                    رجوع
+                </button>
             </div>
 
             <!-- إضافة طالب جديد -->
@@ -332,9 +419,12 @@ else
         }
         else if (activeSlide == 4)
         {
-            <div class="mb-3 d-flex align-items-center gap-2">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
                 <h2 class="m-0">تنبيه طالب</h2>
-                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => activeSlide = 1">
+                    <i class="bi bi-arrow-left"></i>
+                    رجوع
+                </button>
             </div>
 
             <!-- إضافة تنبيه جديد -->
@@ -370,7 +460,7 @@ else
                     <div class="row g-3 mt-2">
                         <div class="col-md-6">
                             <label class="form-label">تاريخ الإحالة للجنة</label>
-                            <InputText class="form-control" @bind-Value="currentWarning.CommitteeReferralDate" />
+                            <InputDate TValue="DateTime?" class="form-control" @bind-Value="currentWarning.CommitteeReferralDate" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة)</label>
@@ -527,9 +617,12 @@ else
         }
         else if (activeSlide == 5)
         {
-            <div class="mb-3 d-flex align-items-center gap-2">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
                 <h2 class="m-0">إخطار ولي الأمر</h2>
-                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => activeSlide = 1">
+                    <i class="bi bi-arrow-left"></i>
+                    رجوع
+                </button>
             </div>
 
             <!-- إضافة إخطار جديد -->
@@ -652,9 +745,12 @@ else
         }
         else if (activeSlide == 6)
         {
-            <div class="mb-3 d-flex align-items-center gap-2">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
                 <h2 class="m-0">إنذار طالب</h2>
-                <button class="btn btn-sm btn-secondary" @onclick="(() => OpenSlide(1))">رجوع</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="() => activeSlide = 1">
+                    <i class="bi bi-arrow-left"></i>
+                    رجوع
+                </button>
             </div>
 
             <!-- إضافة إنذار جديد -->
@@ -690,7 +786,7 @@ else
                     <div class="row g-3 mt-2">
                         <div class="col-md-6">
                             <label class="form-label">تاريخ الإحالة للجنة</label>
-                            <InputText class="form-control" @bind-Value="currentAlert.CommitteeReferralDate" />
+                            <InputDate TValue="DateTime?" class="form-control" @bind-Value="currentAlert.CommitteeReferralDate" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة)</label>
@@ -744,7 +840,7 @@ else
                                             <strong>اسم المعلم:</strong> @alert.TeacherName
                                         </div>
                                         <div class="col-12">
-                                            <strong>تاريخ الإحالة للجنة:</strong> @alert.CommitteeReferralDate
+                                            <strong>تاريخ الإحالة للجنة:</strong> @(alert.CommitteeReferralDate?.ToString("yyyy-MM-dd") ?? "")
                                         </div>
                                         <div class="col-12">
                                             <strong>الإجراءات المتبعة:</strong> @alert.CommitteeActions
@@ -770,9 +866,9 @@ else
 
     private class LateRow
     {
-        public string RowDay { get; set; } = string.Empty;
-        public string RowDate { get; set; } = string.Empty;
-        public string Reason { get; set; } = string.Empty;
+        public DateTime? Date1 { get; set; } = DateTime.Today;
+        public DateTime? Date2 { get; set; } = DateTime.Today;
+        public DateTime? Date3 { get; set; } = DateTime.Today;
     }
 
     private class Student
@@ -917,7 +1013,18 @@ else
         }
     }
 
-    private void AddRow(int studentIndex) => students[studentIndex].LateRows.Add(new LateRow());
+    private void AddRow(int studentIndex)
+    {
+        var newRow = new LateRow();
+        // تعبئة التواريخ تلقائياً من التاريخ المدخل في الحقل العلوي
+        if (students[studentIndex].Date.HasValue)
+        {
+            newRow.Date1 = students[studentIndex].Date.Value;
+            newRow.Date2 = students[studentIndex].Date.Value;
+            newRow.Date3 = students[studentIndex].Date.Value;
+        }
+        students[studentIndex].LateRows.Add(newRow);
+    }
     private void RemoveRow(int studentIndex, int rowIndex)
     {
         if (studentIndex >= 0 && studentIndex < students.Count && 
@@ -985,7 +1092,7 @@ else
         sb.Append("<table style='width:100%;border-collapse:collapse;margin:12px 0'>");
         sb.Append("<thead><tr>");
         string th = "style='border:1px solid #000;padding:8px;background:#f8f9fa;text-align:center'";
-        sb.Append($"<th {th}>م</th><th {th}>اليوم</th><th {th}>التاريخ</th><th {th}>سبب التأخر</th>");
+        sb.Append($"<th {th}>م</th><th {th}>التاريخ</th><th {th}>التاريخ</th><th {th}>التاريخ</th>");
         sb.Append("</tr></thead><tbody>");
         string td = "style='border:1px solid #000;padding:8px;text-align:center'";
         for (int i = 0; i < student.LateRows.Count; i++)
@@ -993,9 +1100,9 @@ else
             var r = student.LateRows[i];
             sb.Append("<tr>");
             sb.Append($"<td {td}>{i + 1}</td>");
-            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.RowDay)}</td>");
-            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.RowDate)}</td>");
-            sb.Append($"<td {td}>{System.Net.WebUtility.HtmlEncode(r.Reason)}</td>");
+            sb.Append($"<td {td}>{r.Date1?.ToString("yyyy-MM-dd") ?? ""}</td>");
+            sb.Append($"<td {td}>{r.Date2?.ToString("yyyy-MM-dd") ?? ""}</td>");
+            sb.Append($"<td {td}>{r.Date3?.ToString("yyyy-MM-dd") ?? ""}</td>");
             sb.Append("</tr>");
         }
         if (student.LateRows.Count == 0)
@@ -1018,6 +1125,30 @@ else
         sb.Append("<div style='margin-top:24px;text-align:left'>");
         sb.Append("<div>وتفضلوا بقبول فائق الاحترام والتقدير ...</div>");
         sb.Append("<div style='margin-top:30px'><strong>حمد بن هلال الغافري</strong></div>");
+        sb.Append("<div style='margin-top:5px;font-weight:bold'>مدير المدرسة</div>");
+        sb.Append("</div>");
+
+        // Parent response section
+        sb.Append("<div style='margin-top:30px;page-break-inside:avoid'>");
+        sb.Append("<div style='margin-bottom:8px'><strong>رد ولي الأمر:</strong></div>");
+        sb.Append("<div style='border-bottom:1px dotted #000;min-height:80px;margin-bottom:16px;line-height:1.8'>");
+        for (int i = 0; i < 6; i++)
+        {
+            sb.Append("<div style='border-bottom:1px dotted #ccc;min-height:18px'>&nbsp;</div>");
+        }
+        sb.Append("</div>");
+        
+        sb.Append("<div style='display:flex;justify-content:space-between;margin-top:20px'>");
+        sb.Append("<div style='width:32%'>");
+        sb.Append("<div>اسم ولي الأمر: <span style='border-bottom:1px dotted #000;display:inline-block;min-width:150px'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>");
+        sb.Append("</div>");
+        sb.Append("<div style='width:32%'>");
+        sb.Append("<div>التوقيع بالعلم: <span style='border-bottom:1px dotted #000;display:inline-block;min-width:150px'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>");
+        sb.Append("</div>");
+        sb.Append("<div style='width:32%'>");
+        sb.Append("<div>رقم الهاتف: <span style='border-bottom:1px dotted #000;display:inline-block;min-width:150px'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>");
+        sb.Append("</div>");
+        sb.Append("</div>");
         sb.Append("</div>");
 
         sb.Append("</div>");
@@ -1524,7 +1655,7 @@ else
         sb.Append($"<div style='margin-bottom:10px'><strong>اسم المعلم:</strong> {System.Net.WebUtility.HtmlEncode(warning.TeacherName)}</div>");
         sb.Append("<div style='margin-bottom:10px'><strong>التوقيع:</strong> _________________</div>");
         sb.Append("<div style='margin-bottom:10px'><strong>بالعلم:</strong> _________________</div>");
-        sb.Append($"<div style='margin-bottom:10px'><strong>تاريخ الإحالة للجنة:</strong> {System.Net.WebUtility.HtmlEncode(warning.CommitteeReferralDate)}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>تاريخ الإحالة للجنة:</strong> {warning.CommitteeReferralDate?.ToString("yyyy-MM-dd") ?? ""}</div>");
         sb.Append("</div>");
 
         // Committee actions
@@ -1599,7 +1730,7 @@ else
 
         // Committee info
         sb.Append("<div style='margin:20px 0'>");
-        sb.Append($"<div style='margin-bottom:10px'><strong>تاريخ الإحالة للجنة:</strong> {System.Net.WebUtility.HtmlEncode(alert.CommitteeReferralDate)}</div>");
+        sb.Append($"<div style='margin-bottom:10px'><strong>تاريخ الإحالة للجنة:</strong> {alert.CommitteeReferralDate?.ToString("yyyy-MM-dd") ?? ""}</div>");
         sb.Append("<div style='margin-bottom:10px'><strong>الإجراءات المتبعة مع الطالب (خاص بلجنة شؤون الطلبة):</strong></div>");
         sb.Append($"<div style='margin-bottom:10px;padding:10px;border:1px solid #ccc;min-height:60px'>{System.Net.WebUtility.HtmlEncode(alert.CommitteeActions).Replace("\n", "<br/>")}</div>");
         sb.Append("</div>");
@@ -1816,7 +1947,7 @@ else
         public string Reasons { get; set; } = "";
         public string TeacherName { get; set; } = "";
         public string TeacherSignature { get; set; } = "";
-        public string CommitteeReferralDate { get; set; } = "";
+        public DateTime? CommitteeReferralDate { get; set; } = DateTime.Today;
         public string CommitteeActions { get; set; } = "";
         public string StudentPledge { get; set; } = "";
         public string StudentSignature { get; set; } = "";
@@ -1852,7 +1983,7 @@ else
         public string Reasons { get; set; } = "";
         public string TeacherName { get; set; } = "";
         public string TeacherSignature { get; set; } = "";
-        public string CommitteeReferralDate { get; set; } = "";
+        public DateTime? CommitteeReferralDate { get; set; } = DateTime.Today;
         public string CommitteeActions { get; set; } = "";
         public string StudentPledge { get; set; } = "";
         public string StudentSignature { get; set; } = "";

@@ -12,6 +12,8 @@ namespace SchoolHallBooking.Services
         private readonly IJSRuntime _jsRuntime;
         private const string AUTH_KEY = "school_auth";
 
+        public event Action? OnAuthStateChanged;
+
         public AuthService(BookingDbContext context, IJSRuntime jsRuntime)
         {
             _context = context;
@@ -36,6 +38,9 @@ namespace SchoolHallBooking.Services
                     };
 
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AUTH_KEY, JsonSerializer.Serialize(authData));
+                    
+                    // Notify subscribers that auth state has changed
+                    OnAuthStateChanged?.Invoke();
                 }
 
                 return employee;
@@ -88,6 +93,9 @@ namespace SchoolHallBooking.Services
             try
             {
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AUTH_KEY);
+                
+                // Notify subscribers that auth state has changed
+                OnAuthStateChanged?.Invoke();
             }
             catch (Exception ex)
             {

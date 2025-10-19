@@ -11,10 +11,15 @@
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary">استمارة تقييم ختامي لبرنامج تدريبي</h2>
-        <button class="btn btn-success" @onclick="PrintForm">
-            <i class="bi bi-printer me-1"></i> طباعة النموذج
-        </button>
+        <h2 class="text-primary mb-0">استمارة تقييم ختامي لبرنامج تدريبي</h2>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-success" @onclick="PrintForm">
+                <i class="bi bi-printer me-1"></i> طباعة النموذج
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="@(() => NavigationManager.NavigateTo("/professional-development"))">
+                <i class="bi bi-arrow-right"></i> الرجوع
+            </button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(successMessage))

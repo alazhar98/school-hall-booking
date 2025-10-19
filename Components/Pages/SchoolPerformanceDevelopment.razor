@@ -38,32 +38,80 @@ else
     <div class="container-fluid">
         <h2 class="mb-4">نظام تطوير الأداء المدرسي</h2>
 
+        <!-- الشرائح العامة - تظهر دائماً في الصفحة الرئيسية -->
         <div class="card mb-4">
-            <div class="card-header bg-success text-white">اختر البرنامج/المجال</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    @foreach (var s in subjects)
-                    {
-                        <div class="col-6 col-md-3 d-grid">
-                            <button class="btn btn-outline-primary" @onclick="(() => SelectSubject(s))">@s</button>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <!-- أزرار فتح الشرائح العامة 10-13 -->
-        <div class="card mb-3">
             <div class="card-header bg-light">الشرائح العامة</div>
             <div class="card-body d-flex flex-wrap gap-2">
-                <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "team")'>فريق التحسين والتطوير</button>
+                <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "team")'>فريق التطوير الذاتي</button>
                 <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "meetings")'>اجتماعات فريق المتابعة</button>
                 <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "directives")'>التعاميم الخاصة بالنظام</button>
                 <button class="btn btn-outline-secondary" @onclick='@(() => currentView = "spdvisits")'>الزيارات الخاصة بالنظام</button>
             </div>
         </div>
 
-        @if (!string.IsNullOrEmpty(selectedSubject))
+        @if (activeSlide == 0)
+        {
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card">
+                        <div class="card-header text-center">
+                            <h4 class="mb-0">اختر الفصل الدراسي</h4>
+                        </div>
+                        <div class="card-body text-center">
+                            <p class="mb-4">يرجى اختيار الفصل الدراسي الذي تريد العمل عليه:</p>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <button class="btn btn-primary btn-lg w-100 py-4" @onclick="@(() => SelectSemester("الأول"))">
+                                        <i class="bi bi-1-circle me-2"></i>
+                                        الفصل الأول
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-success btn-lg w-100 py-4" @onclick="@(() => SelectSemester("الثاني"))">
+                                        <i class="bi bi-2-circle me-2"></i>
+                                        الفصل الثاني
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (activeSlide == 1)
+        {
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-calendar-check me-2"></i>
+                            <strong>الفصل الدراسي المختار: @selectedSemester</strong>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenSlide(0)">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            تغيير الفصل
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- اختيار البرنامج/المجال -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">اختر البرنامج/المجال</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var s in subjects)
+                        {
+                            <div class="col-6 col-md-3 d-grid">
+                                <button class="btn btn-outline-primary" @onclick="(() => SelectSubject(s))">@s</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (activeSlide == 1 && !string.IsNullOrEmpty(selectedSubject))
         {
             <div class="card mb-4">
                 <div class="card-header bg-info">خاصة بالمادة الدراسية</div>
@@ -81,7 +129,7 @@ else
             </div>
         }
 
-        @if (currentView == "visit")
+        @if (activeSlide == 1 && currentView == "visit")
         {
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -189,7 +237,7 @@ else
             </div>
         }
 
-        @if (currentView == "work")
+        @if (activeSlide == 1 && currentView == "work")
         {
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -297,7 +345,7 @@ else
             </div>
         }
 
-        @if (currentView == "admin")
+        @if (activeSlide == 1 && currentView == "admin")
         {
             <div class="card mb-4">
                 <div class="card-header bg-secondary text-white">الشريحة 5: خاصة بالإدارة</div>
@@ -505,17 +553,17 @@ else
             }
         }
 
-        @* Slides 10/11/12/13 under Slide 1 — تظهر دائماً *@
+        @* Slides 10/11/12/13 — تظهر دائماً في الصفحة الرئيسية *@
         @if (currentView == "team")
         {
         <div class="card mb-4">
-            <div class="card-header bg-light">فريق التحسين والتطوير</div>
+            <div class="card-header bg-light">فريق التطوير الذاتي</div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <button class="btn btn-outline-success" @onclick='@(() => { currentTeam = new SPDImprovementTeamMember { Subject = GlobalSubject }; improvementTeam.Insert(0, currentTeam); })'>+ إضافة عضو</button>
                         <div>
-                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "team-table", "فريق_التحسين"))'>PDF</button>
-                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "team-table", "فريق_التحسين"))'>Excel</button>
+                            <button class="btn btn-success me-2" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToPDF", "team-table", "فريق_التطوير_الذاتي"))'>PDF</button>
+                            <button class="btn btn-info" @onclick='@(() => JSRuntime.InvokeVoidAsync("exportToExcel", "team-table", "فريق_التطوير_الذاتي"))'>Excel</button>
                         </div>
                     </div>
                     @if (currentTeam != null && (currentTeam.Id == 0 || improvementTeam.Contains(currentTeam)))
@@ -701,6 +749,10 @@ else
     private string selectedSubject = string.Empty;
     private string currentView = string.Empty; // "visit" or "work"
     private string adminView = string.Empty;   // jobs/students/staff/parents
+    
+    // متغيرات اختيار الفصل الدراسي
+    private int activeSlide = 0; // 0 = اختيار الفصل، 1 = المحتوى الرئيسي
+    private string selectedSemester = string.Empty;
 
     private List<SupervisoryVisitAnalysis> visitItems = new();
     private SupervisoryVisitAnalysis currentVisit = new();
@@ -745,6 +797,23 @@ else
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private void SelectSemester(string semester)
+    {
+        selectedSemester = semester;
+        activeSlide = 1; // الانتقال للمحتوى الرئيسي
+    }
+
+    private void OpenSlide(int slide)
+    {
+        activeSlide = slide;
+        if (slide == 0)
+        {
+            selectedSemester = string.Empty;
+            selectedSubject = string.Empty;
+            currentView = string.Empty;
         }
     }
 

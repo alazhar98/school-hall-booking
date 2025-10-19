@@ -1,0 +1,55 @@
+============================================================
+     School Hall Booking - GoDaddy Deployment Guide
+============================================================
+
+FILE READY FOR UPLOAD:
+  school-hall-booking-godaddy.zip (39 MB)
+
+LOCATION:
+  /Users/macbookprom3/school-hall-booking/SchoolHallBooking/
+
+============================================================
+
+QUICK STEPS:
+
+1. Login to GoDaddy.com
+2. Go to: My Products > Web Hosting > Manage
+3. Open cPanel > File Manager
+4. Navigate to: httpdocs (or public_html)
+5. Delete old files (or backup them)
+6. Upload: school-hall-booking-godaddy.zip
+7. Extract the ZIP file
+8. Move contents of 'publish' folder to root
+9. Set permissions:
+   - App_Data: 777
+   - wwwroot/uploads: 777
+10. Ensure .NET 9.0 Runtime is installed
+
+============================================================
+
+IMPORTANT FILES:
+
+* SchoolHallBooking.dll - Main application
+* web.config - IIS settings (pre-configured)
+* App_Data/SchoolHallBooking.db - SQLite database
+* wwwroot/ - Static files and uploads
+* README_DEPLOYMENT.md - Detailed instructions
+
+============================================================
+
+WARNING:
+GoDaddy Shared Hosting may NOT support .NET 9.0
+Solution: Use VPS or Dedicated Server
+
+============================================================
+
+AFTER DEPLOYMENT:
+https://yourdomain.com
+
+============================================================
+
+Date: 2025-10-18
+Version: 1.0
+Ready to deploy!
+
+============================================================

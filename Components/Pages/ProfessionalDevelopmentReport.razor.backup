@@ -1,0 +1,607 @@
+@page "/professional-development/report"
+@using SchoolHallBooking.Models
+@using SchoolHallBooking.Services
+@inject ProfessionalDevelopmentService ProfessionalDevelopmentService
+@inject IJSRuntime JSRuntime
+@inject IWebHostEnvironment WebHostEnvironment
+
+<PageTitle>تقرير برامج الإنماء المهني</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-mortarboard me-2"></i>
+                        تقرير برامج الإنماء المهني
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>
+                            @successMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @errorMessage
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <button class="btn btn-success" @onclick="OpenAddModal">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                إضافة تقرير جديد
+                            </button>
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" @onclick="ExportPdf" disabled="@(!reports.Any())">
+                                <i class="bi bi-file-earmark-pdf me-2"></i>
+                                تصدير PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (reports.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>نوع البرنامج</th>
+                                        <th>اسم البرنامج</th>
+                                        <th>المادة</th>
+                                        <th>التاريخ</th>
+                                        <th>المنفذ</th>
+                                        <th>مكان التنفيذ</th>
+                                        <th>عدد الحضور</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var report in reports)
+                                    {
+                                        <tr>
+                                            <td>@report.ProgramType</td>
+                                            <td>@report.ProgramName</td>
+                                            <td>@report.Subject</td>
+                                            <td>@report.Date.ToString("yyyy-MM-dd")</td>
+                                            <td>@report.Executor</td>
+                                            <td>@report.ExecutionLocation</td>
+                                            <td>@report.NumberOfAttendees</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => OpenEditModal(report)">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteReport(report.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox display-1 text-muted"></i>
+                            <h4 class="text-muted mt-3">لا توجد تقارير</h4>
+                            <p class="text-muted">لم يتم إضافة أي تقارير برامج إنماء مهني بعد</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @(currentReport.Id == 0 ? "إضافة تقرير جديد" : "تعديل التقرير")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="currentReport" OnValidSubmit="SaveReport">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="programType" class="form-label">نوع البرنامج</label>
+                                    <InputSelect id="programType" class="form-select" @bind-Value="currentReport.ProgramType">
+                                        <option value="">اختر نوع البرنامج</option>
+                                        <option value="ورشة عمل">ورشة عمل</option>
+                                        <option value="دورة تدريبية">دورة تدريبية</option>
+                                        <option value="محاضرة">محاضرة</option>
+                                        <option value="ندوة">ندوة</option>
+                                        <option value="برنامج تطويري">برنامج تطويري</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => currentReport.ProgramType)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="programName" class="form-label">اسم البرنامج</label>
+                                    <InputText id="programName" class="form-control" @bind-Value="currentReport.ProgramName" />
+                                    <ValidationMessage For="@(() => currentReport.ProgramName)" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="subject" class="form-label">المادة</label>
+                                    <InputText id="subject" class="form-control" @bind-Value="currentReport.Subject" />
+                                    <ValidationMessage For="@(() => currentReport.Subject)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="date" class="form-label">التاريخ</label>
+                                    <InputDate id="date" class="form-control" @bind-Value="currentReport.Date" />
+                                    <ValidationMessage For="@(() => currentReport.Date)" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="executor" class="form-label">المنفذ</label>
+                                    <InputText id="executor" class="form-control" @bind-Value="currentReport.Executor" />
+                                    <ValidationMessage For="@(() => currentReport.Executor)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="executionLocation" class="form-label">مكان التنفيذ</label>
+                                    <InputText id="executionLocation" class="form-control" @bind-Value="currentReport.ExecutionLocation" />
+                                    <ValidationMessage For="@(() => currentReport.ExecutionLocation)" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="numberOfAttendees" class="form-label">عدد الحضور</label>
+                                    <InputNumber id="numberOfAttendees" class="form-control" @bind-Value="currentReport.NumberOfAttendees" />
+                                    <ValidationMessage For="@(() => currentReport.NumberOfAttendees)" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="programJustifications" class="form-label">مبررات البرنامج</label>
+                            <InputTextArea id="programJustifications" class="form-control" rows="3" @bind-Value="currentReport.ProgramJustifications" />
+                            <ValidationMessage For="@(() => currentReport.ProgramJustifications)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="imageUpload" class="form-label">إضافة صورة</label>
+                            <InputFile id="imageUpload" OnChange="OnImageSelected" accept=".jpg,.jpeg,.png,.gif" />
+                            <ValidationMessage For="@(() => currentReport.ImagePath)" />
+                            @if (!string.IsNullOrEmpty(uploadedImagePreview))
+                            {
+                                <div class="mt-2">
+                                    <img src="@uploadedImagePreview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
+                                    <button type="button" class="btn btn-danger btn-sm ms-2" @onclick="RemoveImage">حذف الصورة</button>
+                                </div>
+                            }
+                            else if (!string.IsNullOrEmpty(currentReport.ImagePath))
+                            {
+                                <div class="mt-2">
+                                    <img src="@currentReport.ImagePath" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
+                                    <button type="button" class="btn btn-danger btn-sm ms-2" @onclick="RemoveImage">حذف الصورة</button>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">إلغاء</button>
+                            <button type="submit" class="btn btn-primary">
+                                @(currentReport.Id == 0 ? "إضافة" : "حفظ التعديلات")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProfessionalDevelopmentProgram> reports = new();
+    private ProfessionalDevelopmentProgram currentReport = new ProfessionalDevelopmentProgram();
+    private bool showModal = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    
+    // Image upload variables
+    private IBrowserFile? selectedImage;
+    private string uploadedImagePreview = string.Empty;
+    private string uploadedImagePath = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReports();
+    }
+
+    private async Task LoadReports()
+    {
+        try
+        {
+            reports = await ProfessionalDevelopmentService.GetAllProgramsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تحميل التقارير: " + ex.Message;
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        currentReport = new ProfessionalDevelopmentProgram();
+        showModal = true;
+        ClearMessages();
+        ClearImageData();
+    }
+
+    private void OpenEditModal(ProfessionalDevelopmentProgram report)
+    {
+        currentReport = new ProfessionalDevelopmentProgram
+        {
+            Id = report.Id,
+            ProgramType = report.ProgramType,
+            ProgramName = report.ProgramName,
+            Subject = report.Subject,
+            Date = report.Date,
+            Executor = report.Executor,
+            ExecutionLocation = report.ExecutionLocation,
+            NumberOfAttendees = report.NumberOfAttendees,
+            ProgramJustifications = report.ProgramJustifications,
+            ImagePath = report.ImagePath
+        };
+        showModal = true;
+        ClearMessages();
+        ClearImageData();
+    }
+
+    private async Task SaveReport()
+    {
+        try
+        {
+            // Save image if uploaded
+            if (selectedImage != null)
+            {
+                uploadedImagePath = await SaveImage(selectedImage);
+                currentReport.ImagePath = uploadedImagePath;
+            }
+            else if (string.IsNullOrEmpty(uploadedImagePreview) && !string.IsNullOrEmpty(currentReport.ImagePath))
+            {
+                // If image was removed, clear the path
+                currentReport.ImagePath = null;
+            }
+
+            if (currentReport.Id == 0)
+            {
+                await ProfessionalDevelopmentService.AddProgramAsync(currentReport);
+                successMessage = "تم إضافة التقرير بنجاح";
+            }
+            else
+            {
+                await ProfessionalDevelopmentService.UpdateProgramAsync(currentReport);
+                successMessage = "تم تحديث التقرير بنجاح";
+            }
+
+            await LoadReports();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حفظ التقرير: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteReport(int id)
+    {
+        try
+        {
+            await ProfessionalDevelopmentService.DeleteProgramAsync(id);
+            successMessage = "تم حذف التقرير بنجاح";
+            await LoadReports();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في حذف التقرير: " + ex.Message;
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        ClearMessages();
+        ClearImageData();
+    }
+
+    private void ClearMessages()
+    {
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+    }
+
+    private void ClearImageData()
+    {
+        selectedImage = null;
+        uploadedImagePreview = string.Empty;
+        uploadedImagePath = string.Empty;
+    }
+
+    private async Task OnImageSelected(ChangeEventArgs e)
+    {
+        try
+        {
+            var files = (IBrowserFile[])e.Value!;
+            if (files.Length > 0)
+            {
+                selectedImage = files[0];
+                
+                // Validate file type
+                var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif" };
+                if (!allowedTypes.Contains(selectedImage.ContentType))
+                {
+                    errorMessage = "نوع الملف غير مدعوم. يرجى اختيار صورة (JPG, PNG, GIF)";
+                    return;
+                }
+                
+                // Validate file size (max 5MB)
+                if (selectedImage.Size > 5 * 1024 * 1024)
+                {
+                    errorMessage = "حجم الصورة كبير جداً. الحد الأقصى هو 5 ميجابايت.";
+                    return;
+                }
+
+                var buffer = new byte[selectedImage.Size];
+                await selectedImage.OpenReadStream().ReadAsync(buffer);
+                uploadedImagePreview = $"data:{selectedImage.ContentType};base64,{Convert.ToBase64String(buffer)}";
+                errorMessage = string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تحميل الصورة: " + ex.Message;
+        }
+    }
+
+    private void RemoveImage()
+    {
+        selectedImage = null;
+        uploadedImagePreview = string.Empty;
+        uploadedImagePath = string.Empty;
+        currentReport.ImagePath = null;
+    }
+
+    private async Task<string> SaveImage(IBrowserFile file)
+    {
+        var uploadsFolder = Path.Combine(WebHostEnvironment.WebRootPath, "uploads", "professional-development");
+        if (!Directory.Exists(uploadsFolder))
+        {
+            Directory.CreateDirectory(uploadsFolder);
+        }
+
+        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+
+        using (var stream = File.Create(filePath))
+        {
+            await file.OpenReadStream().CopyToAsync(stream);
+        }
+
+        return $"/uploads/professional-development/{fileName}";
+    }
+
+    private async Task ExportPdf()
+    {
+        try
+        {
+            var html = GeneratePdfHtml();
+            await JSRuntime.InvokeVoidAsync("downloadPdf", html, "تقرير_برامج_الإنماء_المهني.pdf");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+
+    private string GeneratePdfHtml()
+    {
+        var reportItemsHtml = string.Join("", reports.Select((report, index) => GenerateReportItemHtml(report, index)));
+
+        return $@"
+<!DOCTYPE html>
+<html dir='rtl' lang='ar'>
+<head>
+    <meta charset='UTF-8'>
+    <title>تقرير برامج الإنماء المهني</title>
+    <style>
+        body {{
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            direction: rtl;
+            text-align: right;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }}
+        .header h1 {{
+            color: #2c3e50;
+            margin: 0;
+        }}
+        .header p {{
+            color: #7f8c8d;
+            margin: 5px 0;
+        }}
+        .report-item {{
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }}
+        .report-item h3 {{
+            color: #2c3e50;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 10px;
+        }}
+        .report-details {{
+            margin-bottom: 15px;
+        }}
+        .detail-row {{
+            display: flex;
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }}
+        .detail-label {{
+            font-weight: bold;
+            color: #34495e;
+            min-width: 120px;
+            margin-left: 10px;
+        }}
+        .detail-value {{
+            color: #2c3e50;
+            flex: 1;
+        }}
+        .justifications {{
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            border-right: 4px solid #3498db;
+        }}
+        .justifications .detail-label {{
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }}
+        .justifications .detail-value {{
+            line-height: 1.6;
+            color: #34495e;
+        }}
+        .report-image {{
+            margin-top: 15px;
+            text-align: center;
+        }}
+        .report-image img {{
+            max-width: 300px;
+            max-height: 300px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+        .report-image p {{
+            color: #7f8c8d;
+            font-style: italic;
+            margin: 10px 0;
+        }}
+        .footer {{
+            margin-top: 40px;
+            text-align: center;
+            color: #7f8c8d;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }}
+    </style>
+</head>
+<body>
+    <div class='header'>
+        <h1>تقرير برامج الإنماء المهني</h1>
+        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+        <p>إجمالي عدد البرامج: {reports.Count}</p>
+    </div>
+
+    {reportItemsHtml}
+
+    <div class='footer'>
+        <p>تم إنشاء هذا التقرير تلقائياً من نظام إدارة المدرسة</p>
+        <p>© {DateTime.Now.Year} جميع الحقوق محفوظة</p>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateReportItemHtml(ProfessionalDevelopmentProgram report, int index)
+    {
+        var imageSection = !string.IsNullOrEmpty(report.ImagePath) 
+            ? $@"<div class='report-image'>
+                    <img src='{report.ImagePath}' alt='صورة البرنامج' />
+                </div>"
+            : @"<div class='report-image'>
+                    <p>لا توجد صورة مرفقة.</p>
+                </div>";
+
+        return $@"
+            <div class='report-item'>
+                <h3>تقرير برنامج الإنماء المهني رقم {index + 1}</h3>
+                <div class='report-details'>
+                    <div class='detail-row'>
+                        <span class='detail-label'>نوع البرنامج:</span>
+                        <span class='detail-value'>{report.ProgramType}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>اسم البرنامج:</span>
+                        <span class='detail-value'>{report.ProgramName}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>المادة:</span>
+                        <span class='detail-value'>{report.Subject}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>التاريخ:</span>
+                        <span class='detail-value'>{report.Date:yyyy-MM-dd}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>المنفذ:</span>
+                        <span class='detail-value'>{report.Executor}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>مكان التنفيذ:</span>
+                        <span class='detail-value'>{report.ExecutionLocation}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='detail-label'>عدد الحضور:</span>
+                        <span class='detail-value'>{report.NumberOfAttendees}</span>
+                    </div>
+                    {(string.IsNullOrEmpty(report.ProgramJustifications) ? "" : $@"
+                    <div class='justifications'>
+                        <div class='detail-label'>مبررات البرنامج:</div>
+                        <div class='detail-value'>{report.ProgramJustifications}</div>
+                    </div>")}
+                </div>
+                {imageSection}
+            </div>";
+    }
+}

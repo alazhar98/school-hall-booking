@@ -187,4 +187,3 @@ https://school-hall-booking-v2.azurewebsites.net
 
 **ملاحظة:** هذا الدليل يفترض أنك تستخدم SQLite. إذا كنت تريد استخدام SQL Server، سيحتاج الأمر خطوات إضافية.
 
-

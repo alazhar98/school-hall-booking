@@ -776,74 +776,133 @@ else
         {
             <div class="card mt-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <div class="fw-bold">كشف متابعة الغياب</div>
+                    <div class="fw-bold">كشوف متابعة الغياب</div>
                     <div>
-                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveAbsence">حفظ البيانات</button>
-                        <button class="btn btn-sm btn-secondary me-2" @onclick="LoadAbsence">استرجاع</button>
+                        <button class="btn btn-sm btn-outline-success me-2" @onclick="AddNewAbsenceSheet">+ إضافة كشف جديد</button>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveAllAbsenceSheets">حفظ جميع الكشوف</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="LoadAllAbsenceSheets">استرجاع</button>
                         <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
-                        <button class="btn btn-sm btn-success" @onclick="PrintAbsence">طباعة PDF</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintAllAbsenceSheets">طباعة جميع الكشوف PDF</button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-3">
-                            <label class="form-label">اليوم</label>
-                            <InputText class="form-control" @bind-Value="absenceDay" placeholder="مثال: الاثنين" />
+                    @if (absenceSheets.Count == 0)
+                    {
+                        <div class="alert alert-info text-center">
+                            <i class="bi bi-info-circle me-2"></i>
+                            لا توجد كشوف غياب. اضغط على "إضافة كشف جديد" لإنشاء كشف.
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">التاريخ</label>
-                            <InputDate class="form-control" @bind-Value="absenceDate" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">الصف</label>
-                            <InputText class="form-control" @bind-Value="absenceClass" placeholder="مثال: ثامن 1" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">المادة</label>
-                            <InputText class="form-control" @bind-Value="absenceSubject" placeholder="مثال: الرياضيات" />
-                        </div>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">إجمالي عدد الطلبة في الصف</label>
-                            <InputNumber class="form-control" @bind-Value="totalStudents" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">الغياب</label>
-                            <InputNumber class="form-control" @bind-Value="absentStudents" />
-                        </div>
-                    </div>
-
-                    <div class="table-responsive mb-3">
-                        <table class="table table-bordered text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:70px;">م</th>
-                                    <th>اسم الطالب</th>
-                                    <th style="width:120px;">إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (int i = 0; i < absenceStudents.Count; i++)
+                    }
+                    else
+                    {
+                        @foreach (var sheet in absenceSheets)
+                        {
+                            var isEditing = currentAbsenceSheet != null && currentAbsenceSheet.Id == sheet.Id;
+                            <div class="card mb-3 @(isEditing ? "border-primary" : "")">
+                                <div class="card-header d-flex justify-content-between align-items-center @(isEditing ? "bg-primary text-white" : "bg-light")">
+                                    <div>
+                                        <strong>كشف @sheet.Id:</strong> @sheet.Subject - @sheet.Class (@sheet.Day)
+                                    </div>
+                                    <div>
+                                        @if (!isEditing)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditAbsenceSheet(sheet)">تعديل</button>
+                                            <button class="btn btn-sm btn-outline-info me-2" @onclick="() => PrintSingleAbsenceSheet(sheet)">طباعة</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAbsenceSheet(sheet.Id)">حذف</button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-light me-2" @onclick="SaveCurrentSheet">حفظ التعديلات</button>
+                                            <button class="btn btn-sm btn-secondary" @onclick="CancelEditSheet">إلغاء</button>
+                                        }
+                                    </div>
+                                </div>
+                                @if (isEditing)
                                 {
-                                    var idx = i;
-                                    <tr>
-                                        <td>@(idx + 1)</td>
-                                        <td><input class="form-control form-control-sm" value="@absenceStudents[idx]" @oninput="(e => absenceStudents[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
-                                        <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveAbsenceStudent(idx))">حذف</button></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    <button class="btn btn-sm btn-outline-primary mb-3" @onclick="AddAbsenceStudent">+ إضافة طالب</button>
+                                    <div class="card-body">
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label">اليوم</label>
+                                                <InputText class="form-control" @bind-Value="currentAbsenceSheet.Day" placeholder="مثال: الاثنين" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">التاريخ</label>
+                                                <InputDate class="form-control" @bind-Value="currentAbsenceSheet.Date" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">الصف</label>
+                                                <InputText class="form-control" @bind-Value="currentAbsenceSheet.Class" placeholder="مثال: ثامن 1" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">المادة</label>
+                                                <InputText class="form-control" @bind-Value="currentAbsenceSheet.Subject" placeholder="مثال: الرياضيات" />
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">إجمالي عدد الطلبة في الصف</label>
+                                                <InputNumber class="form-control" @bind-Value="currentAbsenceSheet.TotalStudents" />
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">الغياب (محسوب تلقائياً)</label>
+                                                <input type="number" class="form-control" value="@currentAbsenceSheet.Students.Count" readonly />
+                                            </div>
+                                        </div>
 
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">التوقيع</label>
-                            <InputText class="form-control" @bind-Value="absenceSignature" placeholder="توقيع المعلم" disabled />
-                        </div>
-                    </div>
+                                        <div class="table-responsive mb-3">
+                                            <table class="table table-bordered text-center align-middle">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="width:70px;">م</th>
+                                                        <th>اسم الطالب</th>
+                                                        <th style="width:120px;">إجراءات</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @for (int i = 0; i < currentAbsenceSheet.Students.Count; i++)
+                                                    {
+                                                        var idx = i;
+                                                        <tr>
+                                                            <td>@(idx + 1)</td>
+                                                            <td><input class="form-control form-control-sm" value="@currentAbsenceSheet.Students[idx]" @oninput="(e => currentAbsenceSheet.Students[idx] = e.Value?.ToString() ?? string.Empty)" /></td>
+                                                            <td><button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveStudentFromSheet(idx))">حذف</button></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary mb-3" @onclick="AddStudentToSheet">+ إضافة طالب</button>
+
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">التوقيع</label>
+                                                <InputText class="form-control" @bind-Value="currentAbsenceSheet.Signature" placeholder="توقيع المعلم" disabled />
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="card-body">
+                                        <div class="row g-2">
+                                            <div class="col-md-3">
+                                                <strong>التاريخ:</strong> @sheet.Date?.ToString("yyyy-MM-dd")
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>إجمالي الطلبة:</strong> @sheet.TotalStudents
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>الغياب:</strong> @sheet.AbsentStudents
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>عدد الطلبة الغائبين:</strong> @sheet.Students.Count
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
                 </div>
             </div>
         }
@@ -967,6 +1026,24 @@ else
     private List<GradeStudent> gradeStudents = new() { new GradeStudent { Grades = new List<GradeRow> { new GradeRow() } } };
 
     // Absence state (Slide 7)
+    private class AbsenceSheet
+    {
+        public int Id { get; set; }
+        public string Day { get; set; } = string.Empty;
+        public DateTime? Date { get; set; }
+        public string Class { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public int TotalStudents { get; set; } = 0;
+        public int AbsentStudents { get; set; } = 0;
+        public List<string> Students { get; set; } = new();
+        public string Signature { get; set; } = string.Empty;
+    }
+    
+    private List<AbsenceSheet> absenceSheets = new();
+    private AbsenceSheet? currentAbsenceSheet = null;
+    private int absenceSheetIdCounter = 0;
+    
+    // Backward compatibility - single sheet mode (deprecated but kept for reference)
     private string absenceDay = string.Empty;
     private DateTime? absenceDate;
     private string absenceClass = string.Empty;
@@ -1732,7 +1809,7 @@ else
         }
     }
 
-    // Absence actions
+    // Absence actions - OLD (kept for backward compatibility)
     private void AddAbsenceStudent() => absenceStudents.Add(string.Empty);
     private void RemoveAbsenceStudent(int index) { if (index >= 0 && index < absenceStudents.Count) absenceStudents.RemoveAt(index); }
 
@@ -1773,6 +1850,157 @@ else
     {
         var html = CreateAbsenceHTML();
         await JSRuntime.InvokeVoidAsync("printHTML", html, "كشف متابعة الغياب");
+    }
+
+    // NEW: Multiple Absence Sheets Actions
+    private void AddNewAbsenceSheet()
+    {
+        absenceSheetIdCounter++;
+        var newSheet = new AbsenceSheet
+        {
+            Id = absenceSheetIdCounter,
+            Date = DateTime.Today,
+            AbsentStudents = 0 // سيتم تحديثه تلقائياً عند إضافة الطلاب
+        };
+        absenceSheets.Add(newSheet);
+        currentAbsenceSheet = newSheet;
+        StateHasChanged();
+    }
+
+    private void EditAbsenceSheet(AbsenceSheet sheet)
+    {
+        currentAbsenceSheet = sheet;
+        StateHasChanged();
+    }
+
+    private void SaveCurrentSheet()
+    {
+        if (currentAbsenceSheet != null)
+        {
+            // تحديث عدد الغياب تلقائياً قبل الحفظ
+            currentAbsenceSheet.AbsentStudents = currentAbsenceSheet.Students.Count;
+        }
+        currentAbsenceSheet = null;
+        StateHasChanged();
+    }
+
+    private void CancelEditSheet()
+    {
+        currentAbsenceSheet = null;
+        StateHasChanged();
+    }
+
+    private void DeleteAbsenceSheet(int id)
+    {
+        var sheet = absenceSheets.FirstOrDefault(s => s.Id == id);
+        if (sheet != null)
+        {
+            absenceSheets.Remove(sheet);
+            if (currentAbsenceSheet != null && currentAbsenceSheet.Id == id)
+            {
+                currentAbsenceSheet = null;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void AddStudentToSheet()
+    {
+        if (currentAbsenceSheet != null)
+        {
+            currentAbsenceSheet.Students.Add(string.Empty);
+            // تحديث عدد الغياب تلقائياً
+            currentAbsenceSheet.AbsentStudents = currentAbsenceSheet.Students.Count;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveStudentFromSheet(int index)
+    {
+        if (currentAbsenceSheet != null && index >= 0 && index < currentAbsenceSheet.Students.Count)
+        {
+            currentAbsenceSheet.Students.RemoveAt(index);
+            // تحديث عدد الغياب تلقائياً
+            currentAbsenceSheet.AbsentStudents = currentAbsenceSheet.Students.Count;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAllAbsenceSheets()
+    {
+        try
+        {
+            // تحديث عدد الغياب تلقائياً لجميع الكشوف قبل الحفظ
+            foreach (var sheet in absenceSheets)
+            {
+                sheet.AbsentStudents = sheet.Students.Count;
+            }
+            
+            var payload = new
+            {
+                sheets = absenceSheets,
+                counter = absenceSheetIdCounter
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(payload);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "absenceSheetsData", json);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving absence sheets: {ex.Message}");
+        }
+    }
+
+    private async Task LoadAllAbsenceSheets()
+    {
+        try
+        {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "absenceSheetsData");
+            if (!string.IsNullOrEmpty(json))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                
+                if (root.TryGetProperty("sheets", out var sheetsElement))
+                {
+                    absenceSheets = System.Text.Json.JsonSerializer.Deserialize<List<AbsenceSheet>>(sheetsElement.GetRawText()) ?? new();
+                    
+                    // تحديث عدد الغياب تلقائياً لكل كشف
+                    foreach (var sheet in absenceSheets)
+                    {
+                        sheet.AbsentStudents = sheet.Students.Count;
+                    }
+                }
+                
+                if (root.TryGetProperty("counter", out var counterElement))
+                {
+                    absenceSheetIdCounter = counterElement.GetInt32();
+                }
+                
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading absence sheets: {ex.Message}");
+        }
+    }
+
+    private async Task PrintSingleAbsenceSheet(AbsenceSheet sheet)
+    {
+        var html = CreateSingleAbsenceSheetHTML(sheet);
+        await JSRuntime.InvokeVoidAsync("printHTML", html, $"كشف_متابعة_الغياب_{sheet.Subject}_{sheet.Class}");
+    }
+
+    private async Task PrintAllAbsenceSheets()
+    {
+        if (absenceSheets.Count == 0)
+        {
+            return;
+        }
+
+        var combinedHtml = CreateCombinedAbsenceSheetsHTML();
+        await JSRuntime.InvokeVoidAsync("printHTML", combinedHtml, "جميع_كشوف_متابعة_الغياب");
     }
 
     private async Task SaveGrades()
@@ -2118,5 +2346,141 @@ else
         
         // الانتقال إلى القائمة الرئيسية
         activeSlide = 1;
+    }
+
+    // دالة إنشاء HTML لكشف غياب واحد
+    private string CreateSingleAbsenceSheetHTML(AbsenceSheet sheet)
+    {
+        var sb = new System.Text.StringBuilder();
+        
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;'><div style='text-align:center;line-height:1.5'><div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div></div><img src='/images/logo.png' style='height:110px' onerror=\"this.style.display='none'\"/></div>");
+        
+        sb.Append("<h3 style='text-align:center;margin:10px 0;'>كشف متابعة الغياب</h3>");
+        
+        // Date and Day
+        sb.Append("<div style='margin-bottom:15px;'>");
+        sb.Append($"<span style='margin-left:20px;'>اليوم: {System.Net.WebUtility.HtmlEncode(sheet.Day)}</span>");
+        sb.Append($"<span style='margin-left:20px;'>التاريخ: {(sheet.Date?.ToString("yyyy/MM/dd") ?? "")}</span>");
+        sb.Append($"<span style='margin-right:20px;'>المادة: {System.Net.WebUtility.HtmlEncode(sheet.Subject)}</span>");
+        sb.Append("</div>");
+        
+        // Main table
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px'>");
+        sb.Append("<thead>");
+        sb.Append("<tr style='background-color:#f8f9fa;'>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:15%;text-align:center'>الصف</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:10%;text-align:center'>العدد</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:8%;text-align:center'>الحضور</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:8%;text-align:center'>الغياب</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:35%;text-align:center'>أسماء الطلاب</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:12%;text-align:center'>التوقيع</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:12%;text-align:center'>ملاحظات</th>");
+        sb.Append("</tr>");
+        sb.Append("</thead>");
+        sb.Append("<tbody>");
+        
+        // Single row for the class
+        sb.Append("<tr>");
+        sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(sheet.Class)}</td>");
+        sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{sheet.TotalStudents}</td>");
+        sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'></td>");
+        sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{sheet.AbsentStudents}</td>");
+        
+        // Student names
+        sb.Append("<td style='border:1px solid #000;padding:8px;vertical-align:top'>");
+        for (int i = 0; i < sheet.Students.Count; i++)
+        {
+            if (!string.IsNullOrEmpty(sheet.Students[i]))
+            {
+                sb.Append($"<div style='margin-bottom:4px;'>( ) {System.Net.WebUtility.HtmlEncode(sheet.Students[i])}</div>");
+            }
+        }
+        sb.Append("</td>");
+        
+        sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'></td>");
+        sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'></td>");
+        sb.Append("</tr>");
+        
+        sb.Append("</tbody>");
+        sb.Append("</table>");
+        
+        // Footer
+        sb.Append("<div style='text-align:center;margin-top:20px;'>");
+        sb.Append($"تم إدخال الغياب: ( ) {System.Net.WebUtility.HtmlEncode(sheet.Signature)}");
+        sb.Append("</div>");
+        
+        sb.Append("</div>");
+        
+        return sb.ToString();
+    }
+
+    // دالة إنشاء HTML لجميع الكشوف في جدول واحد
+    private string CreateCombinedAbsenceSheetsHTML()
+    {
+        var sb = new System.Text.StringBuilder();
+        
+        sb.Append("<div class='print-container' style='font-family:Tahoma,Arial;direction:rtl;color:#000;'>");
+        sb.Append("<div style='display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;'><div style='text-align:center;line-height:1.5'><div>سلطنة عمان</div><div>وزارة التربية والتعليم</div><div>المديرية العامة للتربية والتعليم بمحافظة جنوب الباطنة</div><div style='margin-bottom:6px'>مدرسة الفضل بن العباس للتعليم الأساسي (٨-١٠)</div></div><img src='/images/logo.png' style='height:110px' onerror=\"this.style.display='none'\"/></div>");
+        
+        sb.Append("<h3 style='text-align:center;margin:10px 0;'>كشف متابعة الغياب - جميع الكشوف</h3>");
+        
+        // جدول واحد يحتوي على جميع الكشوف
+        sb.Append("<table style='width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px'>");
+        sb.Append("<thead>");
+        sb.Append("<tr style='background-color:#f8f9fa;'>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:8%;text-align:center'>اليوم</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:10%;text-align:center'>التاريخ</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:12%;text-align:center'>المادة</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:10%;text-align:center'>الصف</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:8%;text-align:center'>العدد</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:6%;text-align:center'>الحضور</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:6%;text-align:center'>الغياب</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:30%;text-align:center'>أسماء الطلاب الغائبين</th>");
+        sb.Append("<th style='border:1px solid #000;padding:8px;width:10%;text-align:center'>ملاحظات</th>");
+        sb.Append("</tr>");
+        sb.Append("</thead>");
+        sb.Append("<tbody>");
+        
+        // إضافة صف لكل كشف
+        for (int i = 0; i < absenceSheets.Count; i++)
+        {
+            var sheet = absenceSheets[i];
+            
+            sb.Append("<tr>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(sheet.Day)}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{(sheet.Date?.ToString("yyyy/MM/dd") ?? "")}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(sheet.Subject)}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{System.Net.WebUtility.HtmlEncode(sheet.Class)}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{sheet.TotalStudents}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{sheet.TotalStudents - sheet.AbsentStudents}</td>");
+            sb.Append($"<td style='border:1px solid #000;padding:8px;text-align:center'>{sheet.AbsentStudents}</td>");
+            
+            // Student names
+            sb.Append("<td style='border:1px solid #000;padding:6px;vertical-align:top'>");
+            for (int j = 0; j < sheet.Students.Count; j++)
+            {
+                if (!string.IsNullOrEmpty(sheet.Students[j]))
+                {
+                    sb.Append($"<div style='margin-bottom:2px;'>• {System.Net.WebUtility.HtmlEncode(sheet.Students[j])}</div>");
+                }
+            }
+            sb.Append("</td>");
+            
+            sb.Append("<td style='border:1px solid #000;padding:8px;text-align:center'></td>");
+            sb.Append("</tr>");
+        }
+        
+        sb.Append("</tbody>");
+        sb.Append("</table>");
+        
+        // Footer
+        sb.Append("<div style='text-align:center;margin-top:20px;'>");
+        sb.Append($"<strong>عدد الكشوف: {absenceSheets.Count}</strong>");
+        sb.Append("</div>");
+        
+        sb.Append("</div>");
+        
+        return sb.ToString();
     }
 }

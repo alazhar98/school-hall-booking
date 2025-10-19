@@ -3,12 +3,19 @@
 @using SchoolHallBooking.Services
 @inject IProfessionalDevelopmentService ProfessionalDevelopmentService
 @inject IJSRuntime JSRuntime
+@inject IWebHostEnvironment WebHostEnvironment
+@inject NavigationManager NavigationManager
 
 <PageTitle>تقرير برنامج الانماء المهني</PageTitle>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary">تقرير برنامج الانماء المهني</h2>
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-outline-secondary" @onclick="@(() => NavigationManager.NavigateTo("/professional-development"))">
+                <i class="bi bi-arrow-right"></i> الرجوع
+            </button>
+            <h2 class="text-primary mb-0">تقرير برنامج الانماء المهني</h2>
+        </div>
         <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
             <i class="bi bi-plus"></i> إضافة تقرير جديد
         </button>
@@ -38,8 +45,8 @@
                 <button class="btn btn-light btn-sm me-2" @onclick="@(() => ExportToExcel())">
                     <i class="bi bi-file-excel"></i> Excel
                 </button>
-                <button class="btn btn-light btn-sm" @onclick="@(() => ExportToPDF())">
-                    <i class="bi bi-file-pdf"></i> PDF
+                <button class="btn btn-light btn-sm" @onclick="@(() => ExportTableToPDF())">
+                    <i class="bi bi-file-pdf"></i> PDF (جدول)
                 </button>
             </div>
         </div>
@@ -93,6 +100,9 @@
                                     <td class="text-center">@report.NumberOfAttendees</td>
                                     <td>
                                         <div class="d-flex justify-content-center gap-1">
+                                            <button class="btn btn-info btn-sm" @onclick="@(() => ExportSingleReportToPDF(report))" title="تصدير PDF">
+                                                <i class="bi bi-file-pdf"></i>
+                                            </button>
                                             <button class="btn btn-warning btn-sm" @onclick="@(() => OpenEditModal(report))" title="تعديل">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
@@ -168,8 +178,27 @@
                     </div>
                     <div class="mb-3">
                         <label for="programJustifications" class="form-label">مبررات البرنامج</label>
-                        <InputTextArea id="programJustifications" class="form-control" rows="3" @bind-Value="currentReport.ProgramJustifications" />
+                        <InputTextArea id="programJustifications" class="form-control" rows="3" @bind-Value="currentReport.ProgramJustifications" placeholder="أدخل مبررات البرنامج..." />
                         <ValidationMessage For="@(() => currentReport.ProgramJustifications)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="trainingProgramSummary" class="form-label">ملخص البرنامج التدريبي</label>
+                        <InputTextArea id="trainingProgramSummary" class="form-control" rows="4" @bind-Value="currentReport.TrainingProgramSummary" placeholder="أدخل ملخص البرنامج التدريبي..." />
+                        <ValidationMessage For="@(() => currentReport.TrainingProgramSummary)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="imageUpload" class="form-label">صورة البرنامج</label>
+                        <InputFile id="imageUpload" class="form-control" OnChange="@OnImageSelected" accept="image/*" />
+                        <small class="form-text text-muted">الحد الأقصى للحجم: 5MB. الصيغ المدعومة: JPG, PNG, GIF</small>
+                        @if (!string.IsNullOrEmpty(currentReport.ImagePath))
+                        {
+                            <div class="mt-2">
+                                <img src="@currentReport.ImagePath" alt="صورة البرنامج" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
+                                <button type="button" class="btn btn-sm btn-danger ms-2" @onclick="RemoveImage">
+                                    <i class="bi bi-trash"></i> إزالة الصورة
+                                </button>
+                            </div>
+                        }
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -208,6 +237,7 @@
     private bool showModal = false;
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
+    private IBrowserFile? selectedImage = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -245,7 +275,9 @@
             Executor = report.Executor,
             ExecutionLocation = report.ExecutionLocation,
             NumberOfAttendees = report.NumberOfAttendees,
-            ProgramJustifications = report.ProgramJustifications
+            ProgramJustifications = report.ProgramJustifications,
+            TrainingProgramSummary = report.TrainingProgramSummary,
+            ImagePath = report.ImagePath
         };
         showModal = true;
         StateHasChanged();
@@ -255,6 +287,39 @@
     {
         showModal = false;
         currentReport = new ProfessionalDevelopmentProgram();
+        selectedImage = null;
+        StateHasChanged();
+    }
+
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        selectedImage = e.File;
+        
+        if (selectedImage != null)
+        {
+            // Validate file size (5MB max)
+            if (selectedImage.Size > 5 * 1024 * 1024)
+            {
+                errorMessage = "حجم الصورة يجب أن يكون أقل من 5MB";
+                selectedImage = null;
+                return;
+            }
+            
+            // Validate file type
+            var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif" };
+            if (!allowedTypes.Contains(selectedImage.ContentType.ToLower()))
+            {
+                errorMessage = "نوع الملف غير مدعوم. الرجاء اختيار صورة JPG أو PNG أو GIF";
+                selectedImage = null;
+                return;
+            }
+        }
+    }
+
+    private void RemoveImage()
+    {
+        currentReport.ImagePath = null;
+        selectedImage = null;
         StateHasChanged();
     }
 
@@ -262,6 +327,33 @@
     {
         try
         {
+            // Save image if one was selected
+            if (selectedImage != null)
+            {
+                var uploadsFolder = Path.Combine(WebHostEnvironment.WebRootPath, "uploads", "professional-development");
+                Directory.CreateDirectory(uploadsFolder);
+                
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(selectedImage.Name)}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+                
+                using (var stream = File.Create(filePath))
+                {
+                    await selectedImage.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(stream);
+                }
+                
+                // Delete old image if exists
+                if (!string.IsNullOrEmpty(currentReport.ImagePath))
+                {
+                    var oldImagePath = Path.Combine(WebHostEnvironment.WebRootPath, currentReport.ImagePath.TrimStart('/'));
+                    if (File.Exists(oldImagePath))
+                    {
+                        File.Delete(oldImagePath);
+                    }
+                }
+                
+                currentReport.ImagePath = $"/uploads/professional-development/{fileName}";
+            }
+            
             if (currentReport.Id == 0)
             {
                 await ProfessionalDevelopmentService.AddProgramAsync(currentReport);
@@ -332,7 +424,7 @@
         }
     }
 
-    private async Task ExportToPDF()
+    private async Task ExportTableToPDF()
     {
         try
         {
@@ -401,5 +493,143 @@
         {
             errorMessage = "خطأ في تصدير PDF: " + ex.Message;
         }
+    }
+
+    private async Task ExportSingleReportToPDF(ProfessionalDevelopmentProgram report)
+    {
+        try
+        {
+            var html = CreateSingleReportHtml(report);
+            await JSRuntime.InvokeVoidAsync("exportToPDF", html, $"تقرير_برنامج_الإنماء_المهني");
+            successMessage = "تم تصدير التقرير إلى PDF بنجاح";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "خطأ في تصدير PDF: " + ex.Message;
+        }
+    }
+
+    private string CreateSingleReportHtml(ProfessionalDevelopmentProgram report)
+    {
+        var summaryText = System.Net.WebUtility.HtmlEncode(report.TrainingProgramSummary ?? "");
+        var summaryHtml = !string.IsNullOrEmpty(report.TrainingProgramSummary) 
+            ? $"<div style='margin: 20px 0; padding: 15px; background-color: #e3f2fd; border-radius: 5px; border-right: 4px solid #2196f3;'><strong style='color: #1976d2;'>ملخص البرنامج التدريبي:</strong><br/>{summaryText}</div>"
+            : "";
+        
+        var imagePath = System.Net.WebUtility.HtmlEncode(report.ImagePath ?? "");
+        var imageHtml = !string.IsNullOrEmpty(report.ImagePath) 
+            ? $"<div style='text-align: center; margin: 20px 0;'><img src='{imagePath}' style='max-width: 100%; max-height: 400px; border-radius: 5px;' /></div>"
+            : "";
+        
+        var justificationText = string.IsNullOrEmpty(report.ProgramJustifications) ? "غير محدد" : System.Net.WebUtility.HtmlEncode(report.ProgramJustifications);
+
+        return $@"
+            <html>
+            <head>
+                <meta charset='utf-8'>
+                <title>تقرير برنامج الإنماء المهني</title>
+                <style>
+                    body {{ 
+                        font-family: 'Arial', 'Tahoma', sans-serif; 
+                        direction: rtl; 
+                        margin: 0; 
+                        padding: 20px; 
+                        background-color: white;
+                    }}
+                    .container {{ 
+                        max-width: 1000px; 
+                        margin: 0 auto; 
+                        background-color: white; 
+                        padding: 30px; 
+                        border-radius: 10px; 
+                        box-shadow: 0 0 20px rgba(0,0,0,0.1); 
+                    }}
+                    .header {{ 
+                        text-align: center; 
+                        margin-bottom: 40px; 
+                        border-bottom: 3px solid #007bff; 
+                        padding-bottom: 20px; 
+                    }}
+                    .header h1 {{ 
+                        color: #007bff; 
+                        font-size: 28px; 
+                        margin: 0 0 10px 0; 
+                    }}
+                    .header p {{ 
+                        color: #666; 
+                        font-size: 16px; 
+                        margin: 0; 
+                    }}
+                    .details {{ 
+                        display: grid; 
+                        grid-template-columns: 1fr 1fr; 
+                        gap: 15px; 
+                        margin-bottom: 20px; 
+                    }}
+                    .detail-row {{ 
+                        display: flex; 
+                        align-items: center; 
+                        padding: 8px 0; 
+                        border-bottom: 1px solid #f0f0f0; 
+                    }}
+                    .detail-label {{ 
+                        font-weight: bold; 
+                        color: #333; 
+                        min-width: 120px; 
+                        margin-left: 10px; 
+                    }}
+                    .detail-value {{ 
+                        color: #666; 
+                        flex: 1; 
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>تقرير برنامج الإنماء المهني</h1>
+                        <p>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    </div>
+                    <div class='details'>
+                        <div class='detail-row'>
+                            <span class='detail-label'>نوع البرنامج:</span>
+                            <span class='detail-value'>{report.ProgramType}</span>
+                        </div>
+                        <div class='detail-row'>
+                            <span class='detail-label'>اسم البرنامج:</span>
+                            <span class='detail-value'>{report.ProgramName}</span>
+                        </div>
+                        <div class='detail-row'>
+                            <span class='detail-label'>المادة:</span>
+                            <span class='detail-value'>{report.Subject}</span>
+                        </div>
+                        <div class='detail-row'>
+                            <span class='detail-label'>التاريخ:</span>
+                            <span class='detail-value'>{report.Date:yyyy-MM-dd}</span>
+                        </div>
+                        <div class='detail-row'>
+                            <span class='detail-label'>المنفذ:</span>
+                            <span class='detail-value'>{report.Executor}</span>
+                        </div>
+                        <div class='detail-row'>
+                            <span class='detail-label'>مكان التنفيذ:</span>
+                            <span class='detail-value'>{report.ExecutionLocation}</span>
+                        </div>
+                        <div class='detail-row'>
+                            <span class='detail-label'>عدد الحضور:</span>
+                            <span class='detail-value'>{report.NumberOfAttendees}</span>
+                        </div>
+                        <div class='detail-row'>
+                            <span class='detail-label'>مبررات البرنامج:</span>
+                            <span class='detail-value'>{justificationText}</span>
+                        </div>
+                    </div>
+                    
+                    {summaryHtml}
+                    
+                    {imageHtml}
+                </div>
+            </body>
+            </html>";
     }
 }

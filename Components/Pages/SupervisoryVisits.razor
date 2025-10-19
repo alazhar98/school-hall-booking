@@ -133,6 +133,28 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        <!-- Filter Section -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="subjectFilter" class="form-label">فلترة بالمادة:</label>
+                                <select id="subjectFilter" class="form-select" @onchange="OnSubjectFilterChanged">
+                                    <option value="">جميع المواد</option>
+                                    @foreach (var subject in subjects)
+                                    {
+                                        <option value="@subject" selected="@(selectedFilterSubject == subject)">@subject</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="teacherFilter" class="form-label">فلترة بالمعلم الزائر:</label>
+                                <input type="text" id="teacherFilter" class="form-control" placeholder="ابحث بالمعلم الزائر..." @oninput="OnTeacherFilterChanged" value="@teacherFilter" />
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary" @onclick="ClearFilters">
+                                    <i class="bi bi-x-circle"></i> مسح الفلاتر
+                                </button>
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table id="supervisory-visits-table" class="table table-hover table-bordered align-middle text-center">
                                 <thead class="table-primary">
@@ -147,7 +169,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if (visits == null || !visits.Any())
+                                    @if (filteredVisits == null || !filteredVisits.Any())
                                     {
                                         <tr>
                                             <td colspan="7">لا توجد زيارات لعرضها.</td>
@@ -156,7 +178,7 @@
                                     else
                                     {
                                         int rowIndex = 1;
-                                        @foreach (var visit in visits.OrderByDescending(v => v.Date).ThenBy(v => v.VisitorTeacherName))
+                                        @foreach (var visit in filteredVisits.OrderByDescending(v => v.Date).ThenBy(v => v.VisitorTeacherName))
                                         {
                                             <tr>
                                                 <td class="text-center fw-bold">@rowIndex</td>
@@ -258,11 +280,16 @@
 
     private SupervisoryVisit currentVisit = new();
     private List<SupervisoryVisit> visits = new();
+    private List<SupervisoryVisit> filteredVisits = new();
     private bool showEditModal = false;
     private SupervisoryVisit editingVisit = new();
 
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
+    
+    // Filter variables
+    private string selectedFilterSubject = string.Empty;
+    private string teacherFilter = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -276,11 +303,53 @@
         try
         {
             visits = await SupervisoryVisitService.GetAllVisitsAsync();
+            ApplyFilters();
         }
         catch (Exception ex)
         {
             errorMessage = "خطأ في تحميل الزيارات: " + ex.Message;
         }
+    }
+    
+    private void ApplyFilters()
+    {
+        var query = visits.AsEnumerable();
+        
+        // Filter by subject
+        if (!string.IsNullOrEmpty(selectedFilterSubject))
+        {
+            query = query.Where(v => v.Subject == selectedFilterSubject);
+        }
+        
+        // Filter by teacher name
+        if (!string.IsNullOrEmpty(teacherFilter))
+        {
+            query = query.Where(v => 
+                v.VisitorTeacherName.Contains(teacherFilter, StringComparison.OrdinalIgnoreCase) ||
+                v.VisitedTeacherName.Contains(teacherFilter, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        filteredVisits = query.ToList();
+        StateHasChanged();
+    }
+    
+    private void OnSubjectFilterChanged(ChangeEventArgs e)
+    {
+        selectedFilterSubject = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+    
+    private void OnTeacherFilterChanged(ChangeEventArgs e)
+    {
+        teacherFilter = e.Value?.ToString() ?? string.Empty;
+        ApplyFilters();
+    }
+    
+    private void ClearFilters()
+    {
+        selectedFilterSubject = string.Empty;
+        teacherFilter = string.Empty;
+        ApplyFilters();
     }
 
     private void SelectSubject(string subject)
@@ -401,13 +470,25 @@
     {
         try
         {
-            var tableRows = string.Join("", visits.Select((v, index) => 
+            var visitsToExport = filteredVisits ?? visits;
+            var tableRows = string.Join("", visitsToExport.Select((v, index) => 
                 $"<tr><td>{index + 1}</td><td>{v.Subject}</td><td>{v.VisitorTeacherName}</td><td>{v.VisitedTeacherName}</td><td>{v.Day}</td><td>{v.Date:yyyy-MM-dd}</td><td>{v.LessonTitle}</td><td>{v.Notes ?? ""}</td></tr>"));
+
+            var filterInfo = "";
+            if (!string.IsNullOrEmpty(selectedFilterSubject))
+            {
+                filterInfo += $"<p style='font-size: 12px; color: #666;'>المادة المفلترة: {selectedFilterSubject}</p>";
+            }
+            if (!string.IsNullOrEmpty(teacherFilter))
+            {
+                filterInfo += $"<p style='font-size: 12px; color: #666;'>البحث بالمعلم: {teacherFilter}</p>";
+            }
 
             var html = $@"
                 <div style='text-align: center; margin-bottom: 30px;'>
                     <h1 style='color: #198754; font-size: 24px; margin-bottom: 10px;'>الزيارات الإشرافية</h1>
                     <p style='font-size: 14px; color: #666;'>تاريخ التقرير: {DateTime.Now:yyyy-MM-dd}</p>
+                    {filterInfo}
                 </div>
                 <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
                     <thead>
@@ -427,7 +508,13 @@
                     </tbody>
                 </table>";
 
-            await JSRuntime.InvokeVoidAsync("printHTML", html, "الزيارات_الإشرافية");
+            var fileName = "الزيارات_الإشرافية";
+            if (!string.IsNullOrEmpty(selectedFilterSubject))
+            {
+                fileName = $"الزيارات_الإشرافية_{selectedFilterSubject}";
+            }
+
+            await JSRuntime.InvokeVoidAsync("printHTML", html, fileName);
             successMessage = "تم تصدير البيانات إلى PDF بنجاح";
         }
         catch (Exception ex)

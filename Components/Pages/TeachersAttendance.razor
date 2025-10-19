@@ -42,7 +42,7 @@ else
 
         <!-- الشريحة 1: اختيار القسم -->
         <div class="card mb-4">
-            <div class="card-header bg-success text-white">اختر من الشريحة 1</div>
+            <div class="card-header bg-success text-white">اختر</div>
             <div class="card-body d-flex gap-3 flex-wrap">
                 <button class="btn btn-info btn-lg" @onclick='@(() => currentView = "workshops")'>الدورات والمشاغل</button>
                 <button class="btn btn-primary btn-lg" @onclick='@(() => currentView = "leaves")'>الاستئذان</button>
@@ -70,10 +70,17 @@ else
                         <div class="row g-2 mb-3">
                             <div class="col-md-4"><InputText class="form-control" @bind-Value="currentWorkshop.TeacherName" /><small class="text-muted">اسم المعلم</small></div>
                             <div class="col-md-4"><InputText class="form-control" @bind-Value="currentWorkshop.TrainingProgram" /><small class="text-muted">البرنامج التدريبي</small></div>
-                            <div class="col-md-4"><InputText class="form-control" @bind-Value="currentWorkshop.TimePeriod" /><small class="text-muted">الفترة الزمنية</small></div>
+                            <div class="col-md-2">
+                                <label class="form-label">من تاريخ</label>
+                                <InputDate TValue="DateTime?" class="form-control" @bind-Value="workshopStartDate" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">إلى تاريخ</label>
+                                <InputDate TValue="DateTime?" class="form-control" @bind-Value="workshopEndDate" />
+                            </div>
                             <div class="col-12 d-flex gap-2">
                                 <button class="btn btn-success" @onclick="SaveWorkshop">حفظ</button>
-                                <button class="btn btn-secondary" @onclick='@(() => { currentWorkshop = new(); StateHasChanged(); })'>إلغاء</button>
+                                <button class="btn btn-secondary" @onclick='@(() => { currentWorkshop = new(); workshopStartDate = null; workshopEndDate = null; StateHasChanged(); })'>إلغاء</button>
                             </div>
                         </div>
                     }
@@ -87,7 +94,7 @@ else
                                 <tr>
                                     <td>@w.TeacherName</td><td>@w.TrainingProgram</td><td>@w.TimePeriod</td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => { currentWorkshop = w; StateHasChanged(); })'>تعديل</button>
+                                        <button class="btn btn-sm btn-outline-primary me-2" @onclick='@(() => EditWorkshop(w))'>تعديل</button>
                                         <button class="btn btn-sm btn-outline-danger" @onclick='@(() => DeleteWorkshop(w.Id))'>حذف</button>
                                     </td>
                                 </tr>
@@ -228,6 +235,10 @@ else
     private List<TeacherWorkshopRecordEntity> workshops = new();
     private TeacherWorkshopRecordEntity currentWorkshop = new();
     private List<TeacherLeaveRequestEntity> leaves = new();
+    
+    // متغيرات الفترة الزمنية للدورات والمشاغل
+    private DateTime? workshopStartDate;
+    private DateTime? workshopEndDate;
 
     // Print modal variables
     private bool showPrintModal = false;
@@ -269,12 +280,72 @@ else
     private void OpenAddWorkshop()
     {
         currentWorkshop = new TeacherWorkshopRecordEntity();
+        workshopStartDate = DateTime.Today;
+        workshopEndDate = DateTime.Today;
         workshops.Insert(0, currentWorkshop);
+    }
+
+    private void EditWorkshop(TeacherWorkshopRecordEntity workshop)
+    {
+        currentWorkshop = workshop;
+        ParseTimePeriod(workshop.TimePeriod);
+        StateHasChanged();
+    }
+
+    private void ParseTimePeriod(string timePeriod)
+    {
+        if (string.IsNullOrEmpty(timePeriod))
+        {
+            workshopStartDate = DateTime.Today;
+            workshopEndDate = DateTime.Today;
+            return;
+        }
+
+        // البحث عن نمط "من تاريخ إلى تاريخ"
+        if (timePeriod.Contains(" إلى "))
+        {
+            var parts = timePeriod.Split(" إلى ");
+            if (parts.Length == 2)
+            {
+                if (DateTime.TryParse(parts[0].Trim(), out var startDate))
+                    workshopStartDate = startDate;
+                if (DateTime.TryParse(parts[1].Trim(), out var endDate))
+                    workshopEndDate = endDate;
+            }
+        }
+        else
+        {
+            // إذا كان تاريخ واحد فقط
+            if (DateTime.TryParse(timePeriod, out var singleDate))
+            {
+                workshopStartDate = singleDate;
+                workshopEndDate = singleDate;
+            }
+            else
+            {
+                workshopStartDate = DateTime.Today;
+                workshopEndDate = DateTime.Today;
+            }
+        }
     }
 
 
     private async Task SaveWorkshop()
     {
+        // تجميع التواريخ في حقل الفترة الزمنية
+        if (workshopStartDate.HasValue && workshopEndDate.HasValue)
+        {
+            currentWorkshop.TimePeriod = $"{workshopStartDate.Value:yyyy-MM-dd} إلى {workshopEndDate.Value:yyyy-MM-dd}";
+        }
+        else if (workshopStartDate.HasValue)
+        {
+            currentWorkshop.TimePeriod = workshopStartDate.Value.ToString("yyyy-MM-dd");
+        }
+        else if (workshopEndDate.HasValue)
+        {
+            currentWorkshop.TimePeriod = workshopEndDate.Value.ToString("yyyy-MM-dd");
+        }
+        
         if (currentWorkshop.Id == 0)
         {
             await AttendanceService.AddWorkshopAsync(currentWorkshop);
@@ -285,6 +356,8 @@ else
         }
         workshops = await AttendanceService.GetWorkshopsAsync();
         currentWorkshop = new();
+        workshopStartDate = null;
+        workshopEndDate = null;
         await InvokeAsync(StateHasChanged);
     }
 

@@ -4,6 +4,7 @@ namespace SchoolHallBooking.Services
 {
     public interface IAuthService
     {
+        event Action? OnAuthStateChanged;
         Task<Employee?> LoginAsync(string employeeId, string password);
         Task<bool> IsAuthenticatedAsync();
         Task<Employee?> GetCurrentUserAsync();

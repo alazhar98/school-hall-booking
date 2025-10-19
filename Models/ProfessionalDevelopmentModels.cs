@@ -33,6 +33,12 @@ namespace SchoolHallBooking.Models
         [StringLength(500, ErrorMessage = "يجب أن تكون مبررات البرنامج أقل من 500 حرف")]
         public string? ProgramJustifications { get; set; }
 
+        [StringLength(1000, ErrorMessage = "يجب أن يكون ملخص البرنامج التدريبي أقل من 1000 حرف")]
+        public string? TrainingProgramSummary { get; set; }
+
+        [StringLength(500, ErrorMessage = "يجب أن يكون مسار الصورة أقل من 500 حرف")]
+        public string? ImagePath { get; set; }
+
         public int NumberOfAttendees { get; set; } = 0;
 
         public bool IsActive { get; set; } = true;

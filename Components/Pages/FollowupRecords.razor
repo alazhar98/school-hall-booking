@@ -208,77 +208,13 @@ else
         }
         else if (activeSlide == 4)
         {
-            <!-- شريحة الصيانة الرئيسية -->
-            <div class="text-center mb-4">
-                <h3 class="mb-1">الصيانة</h3>
-                <small class="text-muted">اختر نوع السجل</small>
-            </div>
-            <div class="row g-3 justify-content-center">
-                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(5)">أرقام هواتف الصيانة</button>
-                </div>
-                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                    <button class="btn btn-primary w-100 py-3" @onclick="() => OpenSlide(6)">استمارة صيانة مدرسية</button>
-                </div>
-            </div>
-            <div class="text-center mt-4">
-                <button class="btn btn-secondary" @onclick="() => OpenSlide(1)">رجوع</button>
-            </div>
-        }
-        else if (activeSlide == 5)
-        {
-            <!-- الشريحة 5: أرقام هواتف الصيانة -->
-            <div class="card mt-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div class="fw-bold">أرقام هواتف الصيانة</div>
-                    <div>
-                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveMaintenancePhones">حفظ البيانات</button>
-                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(4)">رجوع</button>
-                        <button class="btn btn-sm btn-success" @onclick="PrintMaintenancePhones">طباعة PDF</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-middle text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:60px;">م</th>
-                                    <th>الفئة</th>
-                                    <th>الاسم</th>
-                                    <th>رقم الهاتف</th>
-                                    <th style="width:120px;">إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (int i = 0; i < maintenancePhones.Count; i++)
-                                {
-                                    var idx = i;
-                                    <tr>
-                                        <td>@(idx + 1)</td>
-                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].Category" @oninput="(e => maintenancePhones[idx].Category = e.Value?.ToString() ?? string.Empty)" /></td>
-                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].Name" @oninput="(e => maintenancePhones[idx].Name = e.Value?.ToString() ?? string.Empty)" /></td>
-                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].PhoneNumber" @oninput="(e => maintenancePhones[idx].PhoneNumber = e.Value?.ToString() ?? string.Empty)" /></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveMaintenancePhone(idx))">حذف</button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    <button class="btn btn-sm btn-outline-primary" @onclick="AddMaintenancePhone">+ إضافة رقم</button>
-                </div>
-            </div>
-        }
-        else if (activeSlide == 6)
-        {
-            <!-- الشريحة 6: استمارة صيانة مدرسية -->
+            <!-- استمارة صيانة مدرسية -->
             <div class="card mt-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="fw-bold">استمارة صيانة مدرسية</div>
                     <div>
                         <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveMaintenanceForm">حفظ البيانات</button>
-                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(4)">رجوع</button>
+                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => OpenSlide(1)">رجوع</button>
                         <button class="btn btn-sm btn-success" @onclick="PrintMaintenanceForm">طباعة PDF</button>
                     </div>
                 </div>
@@ -353,20 +289,59 @@ else
                                                 </div>
                                             </div>
                                         </td>
-                                        <td><textarea class="form-control form-control-sm" rows="3" value="@maintenanceForms[idx].ActionTaken" @oninput="(e => maintenanceForms[idx].ActionTaken = e.Value?.ToString() ?? string.Empty)"></textarea></td>
-                                        <td><textarea class="form-control form-control-sm" rows="3" value="@maintenanceForms[idx].WhatWasImplemented" @oninput="(e => maintenanceForms[idx].WhatWasImplemented = e.Value?.ToString() ?? string.Empty)"></textarea></td>
+                                        <td><input class="form-control form-control-sm" value="@maintenanceForms[idx].ActionTaken" @oninput="(e => maintenanceForms[idx].ActionTaken = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@maintenanceForms[idx].WhatWasImplemented" @oninput="(e => maintenanceForms[idx].WhatWasImplemented = e.Value?.ToString() ?? string.Empty)" /></td>
                                         <td>
-                                            <div class="d-flex gap-1">
-                                                <button class="btn btn-sm btn-outline-primary" @onclick="(() => PrintSingleMaintenanceForm(idx))">طباعة</button>
-                                                <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveMaintenanceForm(idx))">حذف</button>
-                                            </div>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveMaintenanceForm(idx))">حذف</button>
                                         </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
-                    <button class="btn btn-sm btn-outline-primary" @onclick="AddMaintenanceForm">+ إضافة استمارة</button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddMaintenanceForm">+ إضافة صف</button>
+                </div>
+            </div>
+
+            <!-- جدول أرقام هواتف الصيانة -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="fw-bold">أرقام هواتف الصيانة</div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="SaveMaintenancePhones">حفظ البيانات</button>
+                        <button class="btn btn-sm btn-success" @onclick="PrintMaintenancePhones">طباعة PDF</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px;">م</th>
+                                    <th>الفئة</th>
+                                    <th>الاسم</th>
+                                    <th>رقم الهاتف</th>
+                                    <th style="width:120px;">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < maintenancePhones.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>@(idx + 1)</td>
+                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].Category" @oninput="(e => maintenancePhones[idx].Category = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].Name" @oninput="(e => maintenancePhones[idx].Name = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td><input class="form-control form-control-sm" value="@maintenancePhones[idx].PhoneNumber" @oninput="(e => maintenancePhones[idx].PhoneNumber = e.Value?.ToString() ?? string.Empty)" /></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="(() => RemoveMaintenancePhone(idx))">حذف</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="AddMaintenancePhone">+ إضافة رقم</button>
                 </div>
             </div>
         }
@@ -523,12 +498,9 @@ else
         {
             await LoadTransport();
         }
-        else if (slide == 5)
+        else if (slide == 4)
         {
             await LoadMaintenancePhones();
-        }
-        else if (slide == 6)
-        {
             await LoadMaintenanceForm();
         }
         else if (slide == 7)

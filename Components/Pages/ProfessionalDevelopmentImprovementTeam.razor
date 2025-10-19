@@ -3,15 +3,21 @@
 @using SchoolHallBooking.Services
 @inject IProfessionalDevelopmentService ProfessionalDevelopmentService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <PageTitle>فريق التحسين والتطوير</PageTitle>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary">فريق التحسين والتطوير</h2>
-        <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
-            <i class="bi bi-plus"></i> إضافة عضو جديد
-        </button>
+        <h2 class="text-primary mb-0">فريق التحسين والتطوير</h2>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-primary" @onclick="@(() => OpenAddModal())">
+                <i class="bi bi-plus"></i> إضافة عضو جديد
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="@(() => NavigationManager.NavigateTo("/professional-development"))">
+                <i class="bi bi-arrow-right"></i> الرجوع
+            </button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(successMessage))
