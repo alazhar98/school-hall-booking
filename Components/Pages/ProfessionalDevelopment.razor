@@ -208,18 +208,18 @@
 
     private void NavigateToReports()
     {
-        NavigationManager.NavigateTo("/professional-development/report");
+        NavigateToSubjectPage("/professional-development/report");
     }
 
     private void NavigateToDesign()
     {
-        NavigationManager.NavigateTo("/professional-development/design");
+        NavigateToSubjectPage("/professional-development/design");
     }
 
 
     private void NavigateToAttendance()
     {
-        NavigationManager.NavigateTo("/professional-development/attendance");
+        NavigateToSubjectPage("/professional-development/attendance");
     }
 
     private void NavigateToTeam()
@@ -234,6 +234,21 @@
 
     private void NavigateToFinalEvaluation()
     {
-        NavigationManager.NavigateTo("/professional-development/final-evaluation");
+        NavigateToSubjectPage("/professional-development/evaluation");
+    }
+
+    private void NavigateToSubjectPage(string path)
+    {
+        if (string.IsNullOrWhiteSpace(selectedSubject))
+        {
+            errorMessage = "يرجى اختيار المادة أولاً.";
+            successMessage = string.Empty;
+            StateHasChanged();
+            return;
+        }
+
+        errorMessage = string.Empty;
+        var encodedSubject = Uri.EscapeDataString(selectedSubject);
+        NavigationManager.NavigateTo($"{path}?subject={encodedSubject}");
     }
 }

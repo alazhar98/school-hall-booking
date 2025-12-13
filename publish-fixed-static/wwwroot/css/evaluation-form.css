@@ -1,0 +1,267 @@
+.evaluation-form {
+    font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+    direction: rtl;
+    text-align: right;
+    background: white;
+    padding: 20px;
+    max-width: 100%;
+}
+
+.form-header {
+    margin-bottom: 30px;
+    border-bottom: 2px solid #333;
+    padding-bottom: 20px;
+}
+
+.header-logos {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.green-schools-logo, .moe-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.leaf-icon, .emblem {
+    font-size: 24px;
+}
+
+.center-content {
+    text-align: center;
+}
+
+.ministry-text {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.directorate-text {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.school-text {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.form-title-text {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+
+.section {
+    margin-bottom: 30px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    background: #fafafa;
+}
+
+.section-title {
+    background: #007bff;
+    color: white;
+    padding: 10px 15px;
+    margin: -20px -20px 20px -20px;
+    border-radius: 8px 8px 0 0;
+    font-weight: bold;
+    text-align: center;
+}
+
+.general-info-grid {
+    display: grid;
+    gap: 15px;
+}
+
+.info-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.info-label {
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.job-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.job-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.related-functions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.qualification-options {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.qualification-options input[type="radio"] {
+    margin-left: 5px;
+}
+
+.program-title-input, .subject-select {
+    min-width: 200px;
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.job-title-input {
+    min-width: 150px;
+    margin-right: 10px;
+}
+
+.evaluation-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.evaluation-table th,
+.evaluation-table td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.evaluation-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.category-header {
+    background-color: #e9ecef;
+    font-weight: bold;
+    text-align: right;
+    padding: 10px;
+}
+
+.learning-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.learning-table th,
+.learning-table td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.learning-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.development-textarea {
+    margin-top: 15px;
+}
+
+.development-text {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.signature-section {
+    margin-top: 30px;
+    border: 1px solid #ddd;
+    padding: 20px;
+    background: #f9f9f9;
+}
+
+.signature-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.signature-item {
+    text-align: center;
+}
+
+.signature-name {
+    font-weight: bold;
+    font-size: 16px;
+    display: block;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+    min-width: 200px;
+}
+
+.signature-text {
+    font-weight: bold;
+    font-size: 16px;
+    display: block;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+    min-width: 200px;
+}
+
+.section-description {
+    margin-bottom: 15px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #555;
+}
+
+/* Print Styles */
+@media print {
+    .evaluation-form {
+        background: white;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .section {
+        border: 1px solid #000;
+        background: white;
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+    }
+    
+    .evaluation-table,
+    .learning-table {
+        border-collapse: collapse;
+    }
+    
+    .evaluation-table th,
+    .evaluation-table td,
+    .learning-table th,
+    .learning-table td {
+        border: 1px solid #000;
+    }
+}
